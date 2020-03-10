@@ -1140,6 +1140,7 @@ instance GHC.Classes.Ord Cardano.Wallet.Primitive.Types.ChimericAccount
 instance GHC.Classes.Eq Cardano.Wallet.Primitive.Types.ChimericAccount
 instance GHC.Show.Show Cardano.Wallet.Primitive.Types.ChimericAccount
 instance GHC.Generics.Generic Cardano.Wallet.Primitive.Types.ChimericAccount
+instance GHC.Classes.Eq Cardano.Wallet.Primitive.Types.ProtocolMagic
 instance GHC.Show.Show Cardano.Wallet.Primitive.Types.ProtocolMagic
 instance GHC.Generics.Generic Cardano.Wallet.Primitive.Types.ProtocolMagic
 instance GHC.Show.Show Cardano.Wallet.Primitive.Types.SlotParameters
@@ -1316,6 +1317,7 @@ instance Control.DeepSeq.NFData Cardano.Wallet.Primitive.Types.PoolRegistrationC
 instance Formatting.Buildable.Buildable Cardano.Wallet.Primitive.Types.PoolRegistrationCertificate
 instance Control.DeepSeq.NFData Cardano.Wallet.Primitive.Types.DelegationCertificate
 instance Control.DeepSeq.NFData Cardano.Wallet.Primitive.Types.ChimericAccount
+instance Data.Text.Class.ToText Cardano.Wallet.Primitive.Types.ProtocolMagic
 instance Control.DeepSeq.NFData Cardano.Wallet.Primitive.Types.StartTime
 instance Control.DeepSeq.NFData Cardano.Wallet.Primitive.Types.EpochLength
 instance Control.DeepSeq.NFData Cardano.Wallet.Primitive.Types.SlotLength
@@ -2268,7 +2270,7 @@ instance (Control.DeepSeq.NFData (k 'Cardano.Wallet.Primitive.AddressDerivation.
 instance Cardano.Wallet.Primitive.AddressDerivation.PersistPublicKey (k 'Cardano.Wallet.Primitive.AddressDerivation.AccountK) => Formatting.Buildable.Buildable (Cardano.Wallet.Primitive.AddressDiscovery.Sequential.SeqState n k)
 instance (Cardano.Wallet.Primitive.AddressDerivation.SoftDerivation k, Cardano.Wallet.Primitive.AddressDerivation.MkKeyFingerprint k (k 'Cardano.Wallet.Primitive.AddressDerivation.AddressK Cardano.Crypto.Wallet.XPub), Cardano.Wallet.Primitive.AddressDerivation.MkKeyFingerprint k Cardano.Wallet.Primitive.Types.Address) => Cardano.Wallet.Primitive.AddressDiscovery.IsOurs (Cardano.Wallet.Primitive.AddressDiscovery.Sequential.SeqState n k) Cardano.Wallet.Primitive.Types.Address
 instance Cardano.Wallet.Primitive.AddressDerivation.WalletKey k => Cardano.Wallet.Primitive.AddressDiscovery.IsOurs (Cardano.Wallet.Primitive.AddressDiscovery.Sequential.SeqState n k) Cardano.Wallet.Primitive.Types.ChimericAccount
-instance (Cardano.Wallet.Primitive.AddressDerivation.SoftDerivation k, Cardano.Wallet.Primitive.AddressDerivation.DelegationAddress n k) => Cardano.Wallet.Primitive.AddressDiscovery.GenChange (Cardano.Wallet.Primitive.AddressDiscovery.Sequential.SeqState n k)
+instance Cardano.Wallet.Primitive.AddressDerivation.SoftDerivation k => Cardano.Wallet.Primitive.AddressDiscovery.GenChange (Cardano.Wallet.Primitive.AddressDiscovery.Sequential.SeqState n k)
 instance (Cardano.Wallet.Primitive.AddressDerivation.SoftDerivation k, Cardano.Wallet.Primitive.AddressDerivation.MkKeyFingerprint k (k 'Cardano.Wallet.Primitive.AddressDerivation.AddressK Cardano.Crypto.Wallet.XPub), Cardano.Wallet.Primitive.AddressDerivation.MkKeyFingerprint k Cardano.Wallet.Primitive.Types.Address, Cardano.Wallet.Primitive.AddressDerivation.AddressIndexDerivationType k Data.Type.Equality.~ 'Cardano.Wallet.Primitive.AddressDerivation.Soft) => Cardano.Wallet.Primitive.AddressDiscovery.IsOwned (Cardano.Wallet.Primitive.AddressDiscovery.Sequential.SeqState n k) k
 instance (Cardano.Wallet.Primitive.AddressDerivation.MkKeyFingerprint k (k 'Cardano.Wallet.Primitive.AddressDerivation.AddressK Cardano.Crypto.Wallet.XPub), Cardano.Wallet.Primitive.AddressDerivation.MkKeyFingerprint k Cardano.Wallet.Primitive.Types.Address, Cardano.Wallet.Primitive.AddressDerivation.SoftDerivation k) => Cardano.Wallet.Primitive.AddressDiscovery.CompareDiscovery (Cardano.Wallet.Primitive.AddressDiscovery.Sequential.SeqState n k)
 instance Cardano.Wallet.Primitive.AddressDerivation.DelegationAddress n k => Cardano.Wallet.Primitive.AddressDiscovery.KnownAddresses (Cardano.Wallet.Primitive.AddressDiscovery.Sequential.SeqState n k)
@@ -6096,11 +6098,19 @@ type PostByronWallet = "byron-wallets" :> ReqBody '[JSON] SomeByronWalletPostDat
 -- | 
 --   <a>https://input-output-hk.github.io/cardano-wallet/api/#operation/forceResyncByron</a>
 type ForceResyncByronWallet = "byron-wallets" :> Capture "walletId" (ApiT WalletId) :> "tip" :> ReqBody '[JSON] ApiNetworkTip :> PutNoContent
-type ByronTransactions n = ListByronTransactions n :<|> DeleteByronTransaction
+type ByronTransactions n = CreateByronTransaction n :<|> ListByronTransactions n :<|> PostByronTransactionFee n :<|> DeleteByronTransaction
+
+-- | 
+--   <a>https://input-output-hk.github.io/cardano-wallet/api/#operation/postByronTransaction</a>
+type CreateByronTransaction n = "byron-wallets" :> Capture "walletId" (ApiT WalletId) :> "transactions" :> ReqBody '[JSON] (PostTransactionData n) :> PostAccepted '[JSON] (ApiTransaction n)
 
 -- | 
 --   <a>https://input-output-hk.github.io/cardano-wallet/api/#operation/listByronTransactions</a>
 type ListByronTransactions n = "byron-wallets" :> Capture "walletId" (ApiT WalletId) :> "transactions" :> QueryParam "start" Iso8601Time :> QueryParam "end" Iso8601Time :> QueryParam "order" (ApiT SortOrder) :> Get '[JSON] [ApiTransaction n]
+
+-- | 
+--   <a>https://input-output-hk.github.io/cardano-wallet/api/#operation/postByronTransactionFee</a>
+type PostByronTransactionFee n = "byron-wallets" :> Capture "walletId" (ApiT WalletId) :> "payment-fees" :> ReqBody '[JSON] (PostTransactionFeeData n) :> PostAccepted '[JSON] ApiFee
 
 -- | 
 --   <a>https://input-output-hk.github.io/cardano-wallet/api/#operation/deleteByronTransaction</a>
@@ -6176,10 +6186,10 @@ forceResyncWallet :: forall style w. (HasType (ApiT WalletId) w, Discriminate st
 listAddresses :: forall w. HasType (ApiT WalletId) w => w -> (Method, Text)
 listAddresses' :: forall w. HasType (ApiT WalletId) w => w -> Maybe AddressState -> (Method, Text)
 selectCoins :: forall w. HasType (ApiT WalletId) w => w -> (Method, Text)
-createTransaction :: forall w. HasType (ApiT WalletId) w => w -> (Method, Text)
+createTransaction :: forall style w. (HasType (ApiT WalletId) w, Discriminate style) => w -> (Method, Text)
 listTransactions :: forall (style :: WalletStyle) w. (Discriminate style, HasType (ApiT WalletId) w) => w -> (Method, Text)
 listTransactions' :: forall (style :: WalletStyle) w. (Discriminate style, HasType (ApiT WalletId) w) => w -> Maybe Iso8601Time -> Maybe Iso8601Time -> Maybe SortOrder -> (Method, Text)
-getTransactionFee :: forall w. HasType (ApiT WalletId) w => w -> (Method, Text)
+getTransactionFee :: forall style w. (HasType (ApiT WalletId) w, Discriminate style) => w -> (Method, Text)
 deleteTransaction :: forall (style :: WalletStyle) w t. (Discriminate style, HasType (ApiT WalletId) w, HasType (ApiT (Hash "Tx")) t) => w -> t -> (Method, Text)
 listStakePools :: (Method, Text)
 joinStakePool :: forall s w. (HasType (ApiT PoolId) s, HasType (ApiT WalletId) w) => s -> w -> (Method, Text)
@@ -6539,7 +6549,7 @@ serve :: HasServer api ([] :: [Type]) => Proxy api -> Server api -> Application
 server :: forall t n byron icarus shelley. (byron ~ ApiLayer (RndState  'Mainnet) t ByronKey, icarus ~ ApiLayer (SeqState  'Mainnet IcarusKey) t IcarusKey, shelley ~ ApiLayer (SeqState n ShelleyKey) t ShelleyKey, DelegationAddress n ShelleyKey, Buildable (ErrValidateSelection t)) => byron -> icarus -> shelley -> StakePoolLayer IO -> NtpClient -> Server (Api n)
 
 -- | A diminished servant server to serve Byron wallets only.
-byronServer :: forall t n. () => ApiLayer (RndState  'Mainnet) t ByronKey -> ApiLayer (SeqState  'Mainnet IcarusKey) t IcarusKey -> NtpClient -> Server (Api n)
+byronServer :: forall t n. (Buildable (ErrValidateSelection t), PaymentAddress n IcarusKey) => ApiLayer (RndState  'Mainnet) t ByronKey -> ApiLayer (SeqState  'Mainnet IcarusKey) t IcarusKey -> NtpClient -> Server (Api n)
 
 -- | Create a new instance of the wallet layer.
 newApiLayer :: forall ctx s t k. ctx ~ ApiLayer s t k => Tracer IO (WorkerLog WalletId WalletLog) -> (Block, BlockchainParameters, SyncTolerance) -> NetworkLayer IO t Block -> TransactionLayer t k -> DBFactory IO s k -> [WalletId] -> IO ctx

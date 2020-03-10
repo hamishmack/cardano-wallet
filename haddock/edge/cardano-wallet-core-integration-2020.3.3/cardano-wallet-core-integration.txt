@@ -248,12 +248,38 @@ listAllTransactions :: Context t -> ApiWallet -> IO [ApiTransaction  'Testnet]
 -- | teardown after each test (currently only deleting all wallets)
 tearDown :: Context t -> IO ()
 fixtureRawTx :: Context t -> (Address, Natural) -> IO ByteString
-
--- | Restore a faucet Random wallet and wait until funds are available.
 fixtureRandomWallet :: Context t -> IO ApiByronWallet
 
--- | Restore a faucet Icarus wallet and wait until funds are available.
+-- | Restore a faucet Random wallet and wait until funds are available.
+fixtureRandomWalletMws :: Context t -> IO (ApiByronWallet, Mnemonic 12)
+fixtureRandomWalletAddrs :: forall (n :: NetworkDiscriminant) t. PaymentAddress n ByronKey => Context t -> IO (ApiByronWallet, [Address])
+
+-- | Restore a wallet with the given UTxO distribution. Note that there's a
+--   limitation to what can be done here. We only have 10 UTxO available in
+--   each faucet and they "only" have 'faucetUtxoAmt = 100_000 Ada' in
+--   each.
+--   
+--   This function makes no attempt at ensuring the request is valid, so be
+--   careful.
+--   
+--   TODO: Remove duplication between Shelley / Byron fixtures.
+fixtureRandomWalletWith :: forall (n :: NetworkDiscriminant) t. (EncodeAddress n, DecodeAddress n, PaymentAddress n ByronKey) => Context t -> [Natural] -> IO ApiByronWallet
 fixtureIcarusWallet :: Context t -> IO ApiByronWallet
+
+-- | Restore a faucet Icarus wallet and wait until funds are available.
+fixtureIcarusWalletMws :: Context t -> IO (ApiByronWallet, Mnemonic 15)
+fixtureIcarusWalletAddrs :: forall (n :: NetworkDiscriminant) t. PaymentAddress n IcarusKey => Context t -> IO (ApiByronWallet, [Address])
+
+-- | Restore a wallet with the given UTxO distribution. Note that there's a
+--   limitation to what can be done here. We only have 10 UTxO available in
+--   each faucet and they "only" have 'faucetUtxoAmt = 100_000 Ada' in
+--   each.
+--   
+--   This function makes no attempt at ensuring the request is valid, so be
+--   careful.
+--   
+--   TODO: Remove duplication between Shelley / Byron fixtures.
+fixtureIcarusWalletWith :: forall (n :: NetworkDiscriminant) t. (EncodeAddress n, DecodeAddress n, PaymentAddress n IcarusKey) => Context t -> [Natural] -> IO ApiByronWallet
 
 -- | Restore a faucet and wait until funds are available.
 fixtureWallet :: Context t -> IO ApiWallet
@@ -314,6 +340,26 @@ withMethod :: Method -> (Method, Text) -> (Method, Text)
 --   ( "GET", "v2/stake-pools/2512a00e9653fe49a44a5886202e24d77eeb998f/wallets/patate" )
 --   </pre>
 withPathParam :: Int -> (Text -> Text) -> (Method, Text) -> (Method, Text)
+
+-- | Generate an infinite list of addresses for icarus wallets
+--   
+--   To be typically used as:
+--   
+--   <pre>
+--   &gt;&gt;&gt; take 1 (icarusAddresses @n)
+--   [addr]
+--   </pre>
+icarusAddresses :: forall (n :: NetworkDiscriminant). PaymentAddress n IcarusKey => Mnemonic 15 -> [Address]
+
+-- | Generate an infinite list of addresses for random wallets.
+--   
+--   To be typically used as:
+--   
+--   <pre>
+--   &gt;&gt;&gt; take 1 (randomAddresses @n)
+--   [addr]
+--   </pre>
+randomAddresses :: forall (n :: NetworkDiscriminant). PaymentAddress n ByronKey => Mnemonic 12 -> [Address]
 
 -- | Handy constructor for ApiEpochInfo
 mkEpochInfo :: EpochNo -> SlotParameters -> ApiEpochInfo
@@ -381,6 +427,7 @@ errMsg400StartTimeLaterThanEndTime :: String -> String -> String
 errMsg403Fee :: String
 errMsg403DelegationFee :: Natural -> String
 errMsg403NotEnoughMoney :: Int -> Int -> String
+errMsg403NotEnoughMoney_ :: String
 errMsg403UTxO :: String
 errMsg403WrongPass :: String
 errMsg403NoPendingAnymore :: Text -> String
