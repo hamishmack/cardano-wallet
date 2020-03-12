@@ -375,6 +375,7 @@ command :: CmdResult r => [CmdOption] -> String -> [String] -> IO r
 cardanoWalletCLI :: forall t r. (CmdResult r, KnownCommand t) => [String] -> IO r
 generateMnemonicsViaCLI :: forall t r. (CmdResult r, KnownCommand t) => [String] -> IO r
 createWalletViaCLI :: forall t s. (HasType (Port "wallet") s, KnownCommand t) => s -> [String] -> String -> String -> String -> IO (ExitCode, String, Text)
+createWalletFromPublicKeyViaCLI :: forall t r s. (CmdResult r, HasType (Port "wallet") s, KnownCommand t) => s -> [String] -> String -> IO r
 deleteWalletViaCLI :: forall t r s. (CmdResult r, KnownCommand t, HasType (Port "wallet") s) => s -> String -> IO r
 getWalletUtxoStatisticsViaCLI :: forall t r s. (CmdResult r, KnownCommand t, HasType (Port "wallet") s) => s -> String -> IO r
 getWalletViaCLI :: forall t r s. (CmdResult r, KnownCommand t, HasType (Port "wallet") s) => s -> String -> IO r

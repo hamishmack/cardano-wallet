@@ -4927,13 +4927,13 @@ SomeIcarusWallet :: ByronWalletPostData (AllowedMnemonics  'Icarus) -> SomeByron
 SomeTrezorWallet :: ByronWalletPostData (AllowedMnemonics  'Trezor) -> SomeByronWalletPostData
 SomeLedgerWallet :: ByronWalletPostData (AllowedMnemonics  'Ledger) -> SomeByronWalletPostData
 data AccountPostData
-AccountPostData :: !ApiT WalletName -> !AccountPublicKey -> !Maybe (ApiT AddressPoolGap) -> AccountPostData
+AccountPostData :: !ApiT WalletName -> !ApiAccountPublicKey -> !Maybe (ApiT AddressPoolGap) -> AccountPostData
 [$sel:name:AccountPostData] :: AccountPostData -> !ApiT WalletName
-[$sel:accountPublicKey:AccountPostData] :: AccountPostData -> !AccountPublicKey
+[$sel:accountPublicKey:AccountPostData] :: AccountPostData -> !ApiAccountPublicKey
 [$sel:addressPoolGap:AccountPostData] :: AccountPostData -> !Maybe (ApiT AddressPoolGap)
-newtype AccountPublicKey
-AccountPublicKey :: ApiT (ShelleyKey  'AccountK XPub) -> AccountPublicKey
-[$sel:key:AccountPublicKey] :: AccountPublicKey -> ApiT (ShelleyKey  'AccountK XPub)
+newtype ApiAccountPublicKey
+ApiAccountPublicKey :: ApiT (ShelleyKey  'AccountK XPub) -> ApiAccountPublicKey
+[$sel:key:ApiAccountPublicKey] :: ApiAccountPublicKey -> ApiT (ShelleyKey  'AccountK XPub)
 newtype WalletOrAccountPostData
 WalletOrAccountPostData :: Either WalletPostData AccountPostData -> WalletOrAccountPostData
 [$sel:postData:WalletOrAccountPostData] :: WalletOrAccountPostData -> Either WalletPostData AccountPostData
@@ -5039,9 +5039,9 @@ instance GHC.Classes.Eq Cardano.Wallet.Api.Types.ApiUtxoStatistics
 instance GHC.Show.Show Cardano.Wallet.Api.Types.AccountPostData
 instance GHC.Generics.Generic Cardano.Wallet.Api.Types.AccountPostData
 instance GHC.Classes.Eq Cardano.Wallet.Api.Types.AccountPostData
-instance GHC.Show.Show Cardano.Wallet.Api.Types.AccountPublicKey
-instance GHC.Generics.Generic Cardano.Wallet.Api.Types.AccountPublicKey
-instance GHC.Classes.Eq Cardano.Wallet.Api.Types.AccountPublicKey
+instance GHC.Show.Show Cardano.Wallet.Api.Types.ApiAccountPublicKey
+instance GHC.Generics.Generic Cardano.Wallet.Api.Types.ApiAccountPublicKey
+instance GHC.Classes.Eq Cardano.Wallet.Api.Types.ApiAccountPublicKey
 instance GHC.Show.Show Cardano.Wallet.Api.Types.WalletPutData
 instance GHC.Generics.Generic Cardano.Wallet.Api.Types.WalletPutData
 instance GHC.Classes.Eq Cardano.Wallet.Api.Types.WalletPutData
@@ -5183,8 +5183,9 @@ instance Data.Aeson.Types.FromJSON.FromJSON Cardano.Wallet.Api.Types.ApiUtxoStat
 instance Data.Aeson.Types.ToJSON.ToJSON Cardano.Wallet.Api.Types.ApiUtxoStatistics
 instance Data.Aeson.Types.FromJSON.FromJSON Cardano.Wallet.Api.Types.AccountPostData
 instance Data.Aeson.Types.ToJSON.ToJSON Cardano.Wallet.Api.Types.AccountPostData
-instance Data.Aeson.Types.FromJSON.FromJSON Cardano.Wallet.Api.Types.AccountPublicKey
-instance Data.Aeson.Types.ToJSON.ToJSON Cardano.Wallet.Api.Types.AccountPublicKey
+instance Data.Text.Class.FromText Cardano.Wallet.Api.Types.ApiAccountPublicKey
+instance Data.Aeson.Types.FromJSON.FromJSON Cardano.Wallet.Api.Types.ApiAccountPublicKey
+instance Data.Aeson.Types.ToJSON.ToJSON Cardano.Wallet.Api.Types.ApiAccountPublicKey
 instance Data.Aeson.Types.FromJSON.FromJSON Cardano.Wallet.Api.Types.WalletPutData
 instance Data.Aeson.Types.ToJSON.ToJSON Cardano.Wallet.Api.Types.WalletPutData
 instance Data.Aeson.Types.FromJSON.FromJSON Cardano.Wallet.Api.Types.WalletPutPassphraseData
