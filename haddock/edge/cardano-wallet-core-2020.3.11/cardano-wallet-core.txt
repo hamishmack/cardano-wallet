@@ -4626,6 +4626,7 @@ instance Cardano.Wallet.Primitive.AddressDerivation.HardDerivation Cardano.Walle
 instance Cardano.Wallet.Primitive.AddressDerivation.SoftDerivation Cardano.Wallet.Primitive.AddressDerivation.Icarus.IcarusKey
 instance Cardano.Wallet.Primitive.AddressDerivation.WalletKey Cardano.Wallet.Primitive.AddressDerivation.Icarus.IcarusKey
 instance Cardano.Wallet.Primitive.AddressDerivation.PaymentAddress 'Cardano.Wallet.Primitive.AddressDerivation.Mainnet Cardano.Wallet.Primitive.AddressDerivation.Icarus.IcarusKey
+instance Cardano.Wallet.Primitive.AddressDerivation.PaymentAddress 'Cardano.Wallet.Primitive.AddressDerivation.Testnet Cardano.Wallet.Primitive.AddressDerivation.Icarus.IcarusKey
 instance Cardano.Wallet.Primitive.AddressDerivation.MkKeyFingerprint Cardano.Wallet.Primitive.AddressDerivation.Icarus.IcarusKey Cardano.Wallet.Primitive.Types.Address
 instance Cardano.Wallet.Primitive.AddressDerivation.MkKeyFingerprint Cardano.Wallet.Primitive.AddressDerivation.Icarus.IcarusKey (Cardano.Wallet.Primitive.AddressDerivation.Icarus.IcarusKey 'Cardano.Wallet.Primitive.AddressDerivation.AddressK Cardano.Crypto.Wallet.XPub)
 instance Cardano.Wallet.Primitive.AddressDerivation.PersistPrivateKey (Cardano.Wallet.Primitive.AddressDerivation.Icarus.IcarusKey 'Cardano.Wallet.Primitive.AddressDerivation.RootK)

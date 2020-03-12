@@ -28,7 +28,7 @@ cmdWallet :: forall t. (DecodeAddress t, EncodeAddress t) => Mod CommandFields (
 cmdTransaction :: forall t. (DecodeAddress t, EncodeAddress t) => Mod CommandFields (IO ())
 cmdAddress :: forall t. (DecodeAddress t, EncodeAddress t) => Mod CommandFields (IO ())
 cmdStakePool :: forall t. (DecodeAddress t, EncodeAddress t) => Mod CommandFields (IO ())
-cmdNetwork :: forall t. (DecodeAddress t, EncodeAddress t) => Mod CommandFields (IO ())
+cmdNetwork :: Mod CommandFields (IO ())
 cmdVersion :: Mod CommandFields (IO ())
 cmdKey :: Mod CommandFields (IO ())
 
