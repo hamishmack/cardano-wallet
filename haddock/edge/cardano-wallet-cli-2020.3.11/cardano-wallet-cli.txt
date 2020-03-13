@@ -66,6 +66,11 @@ nodePortOption :: Parser (Port "Node")
 nodePortMaybeOption :: Parser (Maybe (Port "Node"))
 
 -- | <ul>
+--   <li><i>--shutdown-handler</i></li>
+--   </ul>
+shutdownHandlerFlag :: Parser Bool
+
+-- | <ul>
 --   <li>-state-dir=DIR, default:
 --   ~<i>.cardano-wallet</i>$backend/$network</li>
 --   </ul>
