@@ -1338,6 +1338,7 @@ instance Control.DeepSeq.NFData Cardano.Wallet.Primitive.Types.TxMeta
 instance Formatting.Buildable.Buildable Cardano.Wallet.Primitive.Types.TxMeta
 instance Control.DeepSeq.NFData Cardano.Wallet.Primitive.Types.SlotId
 instance Formatting.Buildable.Buildable Cardano.Wallet.Primitive.Types.SlotId
+instance Data.Text.Class.ToText Cardano.Wallet.Primitive.Types.EpochNo
 instance Formatting.Buildable.Buildable Cardano.Wallet.Primitive.Types.EpochNo
 instance Control.DeepSeq.NFData Cardano.Wallet.Primitive.Types.EpochNo
 instance Control.DeepSeq.NFData Cardano.Wallet.Primitive.Types.ActiveSlotCoefficient
@@ -3678,7 +3679,7 @@ instance Control.DeepSeq.NFData Cardano.Wallet.Network.BlockHeaders.BlockHeaders
 
 module Cardano.Wallet.Network
 data NetworkLayer m target block
-NetworkLayer :: (Cursor target -> ExceptT ErrGetBlock m (NextBlocksResult (Cursor target) block)) -> ([BlockHeader] -> m (Cursor target)) -> (Cursor target -> SlotId) -> ExceptT ErrCurrentNodeTip m BlockHeader -> (SealedTx -> ExceptT ErrPostTx m ()) -> ExceptT ErrNetworkUnavailable m (EpochNo, Map PoolId (Quantity "lovelace" Word64)) -> (ChimericAccount -> ExceptT ErrGetAccountBalance m (Quantity "lovelace" Word64)) -> NetworkLayer m target block
+NetworkLayer :: (Cursor target -> ExceptT ErrGetBlock m (NextBlocksResult (Cursor target) block)) -> ([BlockHeader] -> m (Cursor target)) -> (Cursor target -> SlotId) -> ExceptT ErrCurrentNodeTip m BlockHeader -> (SealedTx -> ExceptT ErrPostTx m ()) -> (EpochNo -> ExceptT ErrNetworkUnavailable m (Map PoolId (Quantity "lovelace" Word64))) -> (ChimericAccount -> ExceptT ErrGetAccountBalance m (Quantity "lovelace" Word64)) -> NetworkLayer m target block
 
 -- | Starting from the given <a>Cursor</a>, fetches a contiguous sequence
 --   of blocks from the node, if they are available. An updated cursor will
@@ -3705,7 +3706,7 @@ NetworkLayer :: (Cursor target -> ExceptT ErrGetBlock m (NextBlocksResult (Curso
 
 -- | Broadcast a transaction to the chain producer
 [postTx] :: NetworkLayer m target block -> SealedTx -> ExceptT ErrPostTx m ()
-[stakeDistribution] :: NetworkLayer m target block -> ExceptT ErrNetworkUnavailable m (EpochNo, Map PoolId (Quantity "lovelace" Word64))
+[stakeDistribution] :: NetworkLayer m target block -> EpochNo -> ExceptT ErrNetworkUnavailable m (Map PoolId (Quantity "lovelace" Word64))
 [getAccountBalance] :: NetworkLayer m target block -> ChimericAccount -> ExceptT ErrGetAccountBalance m (Quantity "lovelace" Word64)
 
 -- | The result of <a>nextBlocks</a>, which is instructions for what the
@@ -6306,7 +6307,6 @@ StakePoolLayer :: ExceptT ErrListStakePools m [(StakePool, Maybe StakePoolMetada
 newStakePoolLayer :: Tracer IO StakePoolLog -> BlockHeader -> (EpochNo -> Quantity "lovelace" Word64 -> EpochConstants) -> DBLayer IO -> NetworkLayer IO t Block -> FilePath -> StakePoolLayer IO
 data ErrListStakePools
 ErrMetricsIsUnsynced :: Quantity "percent" Percentage -> ErrListStakePools
-ErrListStakePoolsMetricsInconsistency :: ErrMetricsInconsistency -> ErrListStakePools
 ErrListStakePoolsCurrentNodeTip :: ErrCurrentNodeTip -> ErrListStakePools
 
 -- | <a>monitorStakePools</a> follows the chain and puts pool productions
@@ -6317,19 +6317,6 @@ ErrListStakePoolsCurrentNodeTip :: ErrCurrentNodeTip -> ErrListStakePools
 --   be from different forks such that it's safe for readers to access it.
 monitorStakePools :: Tracer IO StakePoolLog -> (Block, Quantity "block" Word32) -> NetworkLayer IO t Block -> DBLayer IO -> IO ()
 
--- | Possible errors returned by <a>combineMetrics</a>.
-newtype ErrMetricsInconsistency
-
--- | Somehow, we tried to combine invalid metrics together and passed a
---   passed a block production that doesn't match the producers found in
---   the stake activity.
---   
---   Note that the opposite case is okay as we only observe pools that have
---   produced blocks. So it could be the case that a pool exists in the
---   distribution but not in the production! (In which case, we'll assign
---   it a production of '0').
-ErrProducerNotInDistribution :: PoolId -> ErrMetricsInconsistency
-
 -- | Combines three different sources of data into one:
 --   
 --   <ol>
@@ -6338,20 +6325,12 @@ ErrProducerNotInDistribution :: PoolId -> ErrMetricsInconsistency
 --   <li>A pool-performance map</li>
 --   </ol>
 --   
---   If a pool has produced a block without existing in the
---   stake-distribution, i.e it exists in (2) but not (1), this function
---   will return <tt>Left ErrMetricsInconsistency</tt>.
---   
---   If a pool is in (1) but not (2), it simply means it has produced 0
---   blocks so far.
---   
---   Similarly, if we do have metrics about a pool in (3), but this pool is
---   unknown from (1) &amp; (2), this function also returns <tt>Left
---   ErrMetricsInconsistency</tt>.
+--   If a pool is in 2 or 3 but not in 1, it means that the pool has been
+--   de-registered.
 --   
 --   If a pool is in (1+2) but not in (3), it simply means it has produced
 --   0 blocks so far.
-combineMetrics :: Map PoolId (Quantity "lovelace" Word64) -> Map PoolId (Quantity "block" Word64) -> Map PoolId Double -> Either ErrMetricsInconsistency (Map PoolId (Quantity "lovelace" Word64, Quantity "block" Word64, Double))
+combineMetrics :: Map PoolId (Quantity "lovelace" Word64) -> Map PoolId (Quantity "block" Word64) -> Map PoolId Double -> Map PoolId (Quantity "lovelace" Word64, Quantity "block" Word64, Double)
 
 -- | Given a mapping from <a>PoolId</a> -&gt; <a>PoolOwner</a> and a
 --   mapping between <a>PoolOwner</a> <a>-</a> <a>StakePoolMetadata</a>,
@@ -6387,8 +6366,6 @@ MsgUsingTotalStakeForRanking :: Quantity "lovelace" Word64 -> StakePoolLog
 instance GHC.Classes.Eq Cardano.Pool.Metrics.StakePoolLog
 instance GHC.Show.Show Cardano.Pool.Metrics.StakePoolLog
 instance GHC.Show.Show Cardano.Pool.Metrics.ErrListStakePools
-instance GHC.Classes.Eq Cardano.Pool.Metrics.ErrMetricsInconsistency
-instance GHC.Show.Show Cardano.Pool.Metrics.ErrMetricsInconsistency
 instance GHC.Classes.Eq Cardano.Pool.Metrics.ErrMonitorStakePools
 instance GHC.Show.Show Cardano.Pool.Metrics.ErrMonitorStakePools
 instance GHC.Generics.Generic Cardano.Pool.Metrics.StakePool
@@ -6602,7 +6579,6 @@ instance Cardano.Wallet.Api.Server.LiftHandler Cardano.Wallet.ErrListTransaction
 instance Cardano.Wallet.Api.Server.LiftHandler Cardano.Wallet.ErrStartTimeLaterThanEndTime
 instance Cardano.Wallet.Api.Server.LiftHandler Cardano.Wallet.Network.ErrCurrentNodeTip
 instance Cardano.Wallet.Api.Server.LiftHandler Cardano.Pool.Metrics.ErrListStakePools
-instance Cardano.Wallet.Api.Server.LiftHandler Cardano.Pool.Metrics.ErrMetricsInconsistency
 instance Cardano.Wallet.Api.Server.LiftHandler Cardano.Wallet.ErrSelectForDelegation
 instance Cardano.Wallet.Api.Server.LiftHandler Cardano.Wallet.ErrSignDelegation
 instance Cardano.Wallet.Api.Server.LiftHandler Cardano.Wallet.ErrJoinStakePool
