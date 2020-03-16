@@ -115,6 +115,7 @@ module Cardano.Startup
 --   
 --   On Windows the current console code page is changed to UTF-8.
 withUtf8Encoding :: IO a -> IO a
+setUtf8EncodingHandles :: IO ()
 
 -- | Runs the given action with a cross-platform clean shutdown handler.
 --   

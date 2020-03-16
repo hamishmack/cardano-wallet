@@ -9,6 +9,86 @@
 @version 2020.3.16
 
 
+-- | A function to wait until a suitable time to delete a SQLite database
+--   file, and a function to delete a SQLite database file, which isn't as
+--   straightforward as it sounds.
+module Cardano.DB.Sqlite.Delete
+
+-- | Remove a SQLite database file.
+--   
+--   If <a>SQLite temporary files</a> are present (<tt>-wal</tt> and
+--   <tt>-shm</tt>), we remove them as well. Normally, they would be
+--   removed when the SQLite connection is closed. But we attempt to remove
+--   them anyway, in case cardano-wallet was unable to close the SQLite
+--   connection.
+--   
+--   Additionally, on Windows, the deletion operations will be retried for
+--   a short time if they fail. The reason for this is that a FileDelete
+--   command just marks a file for deletion. The file is really only
+--   removed when the last handle to the file is closed. Unfortunately
+--   there are a lot of system services that can have a file temporarily
+--   opened using a shared read-only lock, such as the built in AV and
+--   search indexer.
+--   
+--   We can't really guarantee that these are all off, so what we can do is
+--   whenever after an rm the file still exists to try again and wait a
+--   bit.
+--   
+--   See <a>https://github.com/haskell/directory/issues/96</a> for more
+--   information about this issue.
+deleteSqliteDatabase :: Tracer IO DeleteSqliteDatabaseLog -> FilePath -> IO ()
+
+-- | A variant of <a>deleteSqliteDatabase</a> where the caller can specify
+--   the <a>RetryPolicy</a>.
+deleteSqliteDatabase' :: Tracer IO DeleteSqliteDatabaseLog -> RetryPolicy -> FilePath -> IO ()
+
+-- | Recommended retry policy for <a>deleteSqliteDatabase</a>.
+deleteSqliteDatabaseRetryPolicy :: RetryPolicy
+
+-- | Log messages that may arise from <a>deleteSqliteDatabase</a>.
+data DeleteSqliteDatabaseLog
+MsgRetryDelete :: Int -> DeleteSqliteDatabaseLog
+MsgGaveUpDelete :: String -> DeleteSqliteDatabaseLog
+
+-- | Mutable variable containing reference counts to IDs of type
+--   <tt>ix</tt>.
+data RefCount ix
+
+-- | Construct a <a>RefCount</a> with zero references.
+newRefCount :: Ord ix => IO (RefCount ix)
+
+-- | Acquire a reference to the given identifier, perform the given action,
+--   then release the reference. Multiple <a>withRef</a> calls can take
+--   references at the same time.
+withRef :: Ord ix => RefCount ix -> ix -> IO a -> IO a
+
+-- | Attempt to wait until all <a>withRef</a> calls for the given
+--   identifier have completed, then perform an action.
+--   
+--   This will block for up to 2 minutes before running the action. The
+--   action is passed the reference count, which should be <tt>0</tt> under
+--   normal conditions.
+--   
+--   No new references can be taken using <a>withRef</a> while the action
+--   is running.
+waitForFree :: Ord ix => Tracer IO (Maybe Int) -> RefCount ix -> ix -> (Int -> IO a) -> IO a
+
+-- | A variant of <a>waitForFree</a> where the caller can specify the
+--   <a>RetryPolicy</a>.
+waitForFree' :: Ord ix => Tracer IO (Maybe Int) -> RetryPolicy -> RefCount ix -> ix -> (Int -> IO a) -> IO a
+
+-- | Recommended retry schedule for polling the <a>RefCount</a>. It will
+--   poll for up to 2 minutes.
+waitForFreeRetryPolicy :: RetryPolicy
+instance Data.Aeson.Types.ToJSON.ToJSON Cardano.DB.Sqlite.Delete.DeleteSqliteDatabaseLog
+instance GHC.Classes.Eq Cardano.DB.Sqlite.Delete.DeleteSqliteDatabaseLog
+instance GHC.Show.Show Cardano.DB.Sqlite.Delete.DeleteSqliteDatabaseLog
+instance GHC.Generics.Generic Cardano.DB.Sqlite.Delete.DeleteSqliteDatabaseLog
+instance Data.Text.Class.ToText Cardano.DB.Sqlite.Delete.DeleteSqliteDatabaseLog
+instance Cardano.BM.Data.Tracer.DefinePrivacyAnnotation Cardano.DB.Sqlite.Delete.DeleteSqliteDatabaseLog
+instance Cardano.BM.Data.Tracer.DefineSeverity Cardano.DB.Sqlite.Delete.DeleteSqliteDatabaseLog
+
+
 -- | An implementation of the DBLayer which uses Persistent and SQLite.
 module Cardano.DB.Sqlite
 
@@ -90,7 +170,10 @@ MsgClosing :: Maybe FilePath -> DBLog
 MsgDatabaseReset :: DBLog
 MsgIsAlreadyClosed :: Text -> DBLog
 MsgStatementAlreadyFinalized :: Text -> DBLog
+MsgWaitingForDatabase :: Text -> Maybe Int -> DBLog
+MsgRemovingInUse :: Text -> Int -> DBLog
 MsgRemoving :: Text -> DBLog
+MsgRemovingDatabaseFile :: Text -> DeleteSqliteDatabaseLog -> DBLog
 MsgManualMigrationNeeded :: DBField -> Text -> DBLog
 MsgManualMigrationNotNeeded :: DBField -> DBLog
 MsgUpdatingForeignKeysSetting :: ForeignKeysSetting -> DBLog
