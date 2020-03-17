@@ -19,6 +19,12 @@ type NodeVersionData = (NodeToClientVersionData, CodecCBORTerm Text NodeToClient
 class KnownNetwork (n :: NetworkDiscriminant)
 blockchainParameters :: KnownNetwork n => BlockchainParameters
 versionData :: KnownNetwork n => NodeVersionData
+
+-- | Settings for configuring a MainNet network client
+mainnetVersionData :: NodeVersionData
+
+-- | Settings for configuring a TestNet network client
+testnetVersionData :: ProtocolMagic -> NodeVersionData
 emptyGenesis :: BlockchainParameters -> Block
 genesisTip :: Tip ByronBlock
 toByronHash :: Hash "BlockHeader" -> ByronHash
@@ -43,7 +49,6 @@ fromTxAux :: TxAux -> Tx
 fromTxIn :: TxIn -> TxIn
 fromTxOut :: TxOut -> TxOut
 instance Cardano.Wallet.Byron.Compatibility.KnownNetwork 'Cardano.Wallet.Primitive.AddressDerivation.Mainnet
-instance Cardano.Wallet.Byron.Compatibility.KnownNetwork 'Cardano.Wallet.Primitive.AddressDerivation.Testnet
 
 
 -- | Network Layer for talking to Haskell re-written nodes.
@@ -85,19 +90,21 @@ class MaxSizeOf (t :: *) (n :: NetworkDiscriminant) (k :: Depth -> * -> *)
 minSizeOf :: MinSizeOf t n k => Int
 class MinSizeOf (t :: *) (n :: NetworkDiscriminant) (k :: Depth -> * -> *)
 instance Cardano.Wallet.Byron.Transaction.Size.MinSizeOf Cardano.Wallet.Primitive.Types.Address 'Cardano.Wallet.Primitive.AddressDerivation.Mainnet Cardano.Wallet.Primitive.AddressDerivation.Icarus.IcarusKey
-instance Cardano.Wallet.Byron.Transaction.Size.MinSizeOf Cardano.Wallet.Primitive.Types.Address 'Cardano.Wallet.Primitive.AddressDerivation.Testnet Cardano.Wallet.Primitive.AddressDerivation.Icarus.IcarusKey
+instance Cardano.Wallet.Byron.Transaction.Size.MinSizeOf Cardano.Wallet.Primitive.Types.Address ('Cardano.Wallet.Primitive.AddressDerivation.Testnet pm) Cardano.Wallet.Primitive.AddressDerivation.Icarus.IcarusKey
 instance Cardano.Wallet.Byron.Transaction.Size.MinSizeOf Cardano.Wallet.Primitive.Types.Address 'Cardano.Wallet.Primitive.AddressDerivation.Mainnet Cardano.Wallet.Primitive.AddressDerivation.Byron.ByronKey
-instance Cardano.Wallet.Byron.Transaction.Size.MinSizeOf Cardano.Wallet.Primitive.Types.Address 'Cardano.Wallet.Primitive.AddressDerivation.Testnet Cardano.Wallet.Primitive.AddressDerivation.Byron.ByronKey
+instance Cardano.Wallet.Byron.Transaction.Size.MinSizeOf Cardano.Wallet.Primitive.Types.Address ('Cardano.Wallet.Primitive.AddressDerivation.Testnet pm) Cardano.Wallet.Primitive.AddressDerivation.Byron.ByronKey
 instance Cardano.Wallet.Byron.Transaction.Size.MaxSizeOf Cardano.Wallet.Primitive.Types.Address 'Cardano.Wallet.Primitive.AddressDerivation.Mainnet Cardano.Wallet.Primitive.AddressDerivation.Icarus.IcarusKey
-instance Cardano.Wallet.Byron.Transaction.Size.MaxSizeOf Cardano.Wallet.Primitive.Types.Address 'Cardano.Wallet.Primitive.AddressDerivation.Testnet Cardano.Wallet.Primitive.AddressDerivation.Icarus.IcarusKey
+instance Cardano.Wallet.Byron.Transaction.Size.MaxSizeOf Cardano.Wallet.Primitive.Types.Address ('Cardano.Wallet.Primitive.AddressDerivation.Testnet pm) Cardano.Wallet.Primitive.AddressDerivation.Icarus.IcarusKey
 instance Cardano.Wallet.Byron.Transaction.Size.MaxSizeOf Cardano.Wallet.Primitive.Types.Address 'Cardano.Wallet.Primitive.AddressDerivation.Mainnet Cardano.Wallet.Primitive.AddressDerivation.Byron.ByronKey
-instance Cardano.Wallet.Byron.Transaction.Size.MaxSizeOf Cardano.Wallet.Primitive.Types.Address 'Cardano.Wallet.Primitive.AddressDerivation.Testnet Cardano.Wallet.Primitive.AddressDerivation.Byron.ByronKey
+instance Cardano.Wallet.Byron.Transaction.Size.MaxSizeOf Cardano.Wallet.Primitive.Types.Address ('Cardano.Wallet.Primitive.AddressDerivation.Testnet pm) Cardano.Wallet.Primitive.AddressDerivation.Byron.ByronKey
 
 
 -- | Working with Byron transactions.
 module Cardano.Wallet.Byron.Transaction
 newTransactionLayer :: forall (n :: NetworkDiscriminant) k t. (t ~ IO Byron, WalletKey k, MaxSizeOf Address n k) => Proxy n -> ProtocolMagic -> TransactionLayer t k
-fromGenesisTxOut :: TxOut -> Tx
+
+-- | Construct an initial genesis block from a genesis UTxO.
+fromGenesisTxOut :: BlockchainParameters -> [TxOut] -> Block
 instance Formatting.Buildable.Buildable Cardano.Wallet.Byron.Transaction.ErrInvalidTxOutAmount
 
 
@@ -115,7 +122,7 @@ module Cardano.Wallet.Byron
 -- | Encapsulate a network discriminant and the necessary constraints it
 --   should satisfy.
 data SomeNetworkDiscriminant
-[SomeNetworkDiscriminant] :: forall (n :: NetworkDiscriminant). (KnownNetwork n, NetworkDiscriminantVal n, PaymentAddress n IcarusKey, DecodeAddress n, EncodeAddress n, MaxSizeOf Address n IcarusKey, MaxSizeOf Address n ByronKey) => Proxy n -> SomeNetworkDiscriminant
+[SomeNetworkDiscriminant] :: forall (n :: NetworkDiscriminant). (NetworkDiscriminantVal n, PaymentAddress n IcarusKey, DecodeAddress n, EncodeAddress n, MaxSizeOf Address n IcarusKey, MaxSizeOf Address n ByronKey) => Proxy n -> SomeNetworkDiscriminant
 
 -- | The <tt>cardano-wallet-shelley</tt> main function. It takes the
 --   configuration which was passed from the CLI and environment and starts
@@ -154,7 +161,7 @@ tracerSeverities :: Maybe Severity -> TracerSeverities
 -- | Log messages related to application startup and shutdown.
 data ApplicationLog
 MsgStarting :: AddrInfo -> ApplicationLog
-MsgNetworkName :: NetworkDiscriminant -> ProtocolMagic -> ApplicationLog
+MsgNetworkName :: Text -> ApplicationLog
 MsgServerStartupError :: ListenError -> ApplicationLog
 MsgDatabaseStartup :: DatabasesStartupLog -> ApplicationLog
 instance GHC.Classes.Eq Cardano.Wallet.Byron.ApplicationLog

@@ -165,7 +165,7 @@ data ConfigParam
 Block0Date :: StartTime -> ConfigParam
 
 -- | Address discrimination. Testnet / Mainnet.
-Discrimination :: NetworkDiscriminant -> ConfigParam
+ConfigDiscrimination :: Discrimination -> ConfigParam
 
 -- | Consensus version. BFT / Genesis Praos.
 Consensus :: ConsensusVersion -> ConfigParam
@@ -384,6 +384,9 @@ instance GHC.Generics.Generic Cardano.Wallet.Jormungandr.Binary.LeaderId
 instance GHC.Show.Show Cardano.Wallet.Jormungandr.Binary.Milli
 instance GHC.Classes.Eq Cardano.Wallet.Jormungandr.Binary.Milli
 instance GHC.Generics.Generic Cardano.Wallet.Jormungandr.Binary.Milli
+instance GHC.Show.Show Cardano.Wallet.Jormungandr.Binary.Discrimination
+instance GHC.Classes.Eq Cardano.Wallet.Jormungandr.Binary.Discrimination
+instance GHC.Generics.Generic Cardano.Wallet.Jormungandr.Binary.Discrimination
 instance GHC.Classes.Eq Cardano.Wallet.Jormungandr.Binary.StakeDelegationType
 instance GHC.Show.Show Cardano.Wallet.Jormungandr.Binary.StakeDelegationType
 instance GHC.Generics.Generic Cardano.Wallet.Jormungandr.Binary.StakeDelegationType
@@ -399,6 +402,7 @@ instance Control.DeepSeq.NFData Cardano.Wallet.Jormungandr.Binary.PerCertificate
 instance Control.DeepSeq.NFData Cardano.Wallet.Jormungandr.Binary.ConsensusVersion
 instance Control.DeepSeq.NFData Cardano.Wallet.Jormungandr.Binary.LeaderId
 instance Control.DeepSeq.NFData Cardano.Wallet.Jormungandr.Binary.Milli
+instance Control.DeepSeq.NFData Cardano.Wallet.Jormungandr.Binary.Discrimination
 instance Control.DeepSeq.NFData Cardano.Wallet.Jormungandr.Binary.StakeDelegationType
 instance Control.DeepSeq.NFData Cardano.Wallet.Jormungandr.Binary.BlockHeader
 
@@ -811,7 +815,7 @@ tracerSeverities :: Maybe Severity -> TracerSeverities
 -- | Log messages related to application startup and shutdown.
 data ApplicationLog
 MsgStarting :: JormungandrBackend -> ApplicationLog
-MsgNetworkName :: NetworkDiscriminant -> ApplicationLog
+MsgNetworkName :: Text -> ApplicationLog
 MsgWalletStartupError :: ErrStartup -> ApplicationLog
 MsgServerStartupError :: ListenError -> ApplicationLog
 MsgDatabaseStartup :: DatabasesStartupLog -> ApplicationLog

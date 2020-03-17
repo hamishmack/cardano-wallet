@@ -237,13 +237,13 @@ emptyWalletWith :: Context t -> (Text, Text, Int) -> IO ApiWallet
 getFromResponse :: Lens' s a -> (Status, Either RequestException s) -> a
 getFromResponseList :: Int -> Lens' s a -> (Status, Either RequestException [s]) -> a
 json :: QuasiQuoter
-joinStakePool :: forall t w. HasType (ApiT WalletId) w => Context t -> ApiT PoolId -> (w, Text) -> IO (Status, Either RequestException (ApiTransaction  'Testnet))
+joinStakePool :: forall n t w. (HasType (ApiT WalletId) w, DecodeAddress n) => Context t -> ApiT PoolId -> (w, Text) -> IO (Status, Either RequestException (ApiTransaction n))
 delegationFee :: forall t w. HasType (ApiT WalletId) w => Context t -> w -> IO (Status, Either RequestException ApiFee)
-quitStakePool :: forall t w. HasType (ApiT WalletId) w => Context t -> (w, Text) -> IO (Status, Either RequestException (ApiTransaction  'Testnet))
-selectCoins :: forall t w. HasType (ApiT WalletId) w => Context t -> w -> NonEmpty (AddressAmount  'Testnet) -> IO (Status, Either RequestException (ApiCoinSelection  'Testnet))
-listAddresses :: Context t -> ApiWallet -> IO [ApiAddress  'Testnet]
-listTransactions :: Context t -> ApiWallet -> Maybe UTCTime -> Maybe UTCTime -> Maybe SortOrder -> IO [ApiTransaction  'Testnet]
-listAllTransactions :: Context t -> ApiWallet -> IO [ApiTransaction  'Testnet]
+quitStakePool :: forall n t w. (HasType (ApiT WalletId) w, DecodeAddress n) => Context t -> (w, Text) -> IO (Status, Either RequestException (ApiTransaction n))
+selectCoins :: forall n t w. (HasType (ApiT WalletId) w, DecodeAddress n, EncodeAddress n) => Context t -> w -> NonEmpty (AddressAmount n) -> IO (Status, Either RequestException (ApiCoinSelection n))
+listAddresses :: forall n t. DecodeAddress n => Context t -> ApiWallet -> IO [ApiAddress n]
+listTransactions :: forall n t. DecodeAddress n => Context t -> ApiWallet -> Maybe UTCTime -> Maybe UTCTime -> Maybe SortOrder -> IO [ApiTransaction n]
+listAllTransactions :: forall n t. DecodeAddress n => Context t -> ApiWallet -> IO [ApiTransaction n]
 
 -- | teardown after each test (currently only deleting all wallets)
 tearDown :: Context t -> IO ()
@@ -291,7 +291,7 @@ fixtureWallet :: Context t -> IO ApiWallet
 --   
 --   This function makes no attempt at ensuring the request is valid, so be
 --   careful.
-fixtureWalletWith :: Context t -> [Natural] -> IO ApiWallet
+fixtureWalletWith :: forall n t. (EncodeAddress n, DecodeAddress n) => Context t -> [Natural] -> IO ApiWallet
 fixtureWalletWithMnemonics :: Context t -> IO (ApiWallet, [Text])
 
 -- | Total amount on each faucet wallet
@@ -314,7 +314,7 @@ eventuallyUsingDelay :: Int -> String -> IO a -> IO a
 -- | Default passphrase used for fixture wallets
 fixturePassphrase :: Text
 waitForNextEpoch :: Context t -> IO ()
-waitAllTxsInLedger :: forall t n. n ~  'Testnet => Context t -> ApiWallet -> IO ()
+waitAllTxsInLedger :: forall n t. DecodeAddress n => Context t -> ApiWallet -> IO ()
 toQueryString :: [(Text, Text)] -> Text
 
 -- | Override the method of a particular endpoint, mostly to exercise
@@ -457,28 +457,28 @@ errMsgNotInDictionary :: String
 errMsg403RejectedTip :: String
 
 module Test.Integration.Scenario.API.Addresses
-spec :: forall t n. n ~  'Testnet => SpecWith (Context t)
+spec :: forall n t. (DecodeAddress n, EncodeAddress n) => SpecWith (Context t)
 
 module Test.Integration.Scenario.API.ByronTransactions
-spec :: forall t n. n ~  'Testnet => SpecWith (Context t)
+spec :: forall n t. DecodeAddress n => SpecWith (Context t)
 
 module Test.Integration.Scenario.API.ByronWallets
-spec :: forall t n. n ~  'Testnet => SpecWith (Context t)
+spec :: forall n t. DecodeAddress n => SpecWith (Context t)
 
 module Test.Integration.Scenario.API.HWWallets
-spec :: forall t n. n ~  'Testnet => SpecWith (Context t)
+spec :: forall n t. (DecodeAddress n, EncodeAddress n) => SpecWith (Context t)
 
 module Test.Integration.Scenario.API.Network
 spec :: forall t. SpecWith (Context t)
 
 module Test.Integration.Scenario.API.Transactions
-spec :: forall t n. n ~  'Testnet => SpecWith (Context t)
+spec :: forall n t. (DecodeAddress n, EncodeAddress n) => SpecWith (Context t)
 
 module Test.Integration.Scenario.API.Wallets
-spec :: forall t n. n ~  'Testnet => SpecWith (Context t)
+spec :: forall n t. (DecodeAddress n, EncodeAddress n) => SpecWith (Context t)
 
 module Test.Integration.Scenario.CLI.Addresses
-spec :: forall t n. (n ~  'Testnet, KnownCommand t) => SpecWith (Context t)
+spec :: forall n t. (KnownCommand t, DecodeAddress n, EncodeAddress n) => SpecWith (Context t)
 
 module Test.Integration.Scenario.CLI.Miscellaneous
 spec :: forall t. KnownCommand t => SpecWith ()
@@ -493,7 +493,7 @@ module Test.Integration.Scenario.CLI.Port
 spec :: forall t s. (HasType (Port "wallet") s, KnownCommand t) => SpecWith s
 
 module Test.Integration.Scenario.CLI.Transactions
-spec :: forall t n. (n ~  'Testnet, KnownCommand t) => SpecWith (Context t)
+spec :: forall n t. (KnownCommand t, DecodeAddress n, EncodeAddress n) => SpecWith (Context t)
 
 module Test.Integration.Scenario.CLI.Wallets
-spec :: forall t n. (n ~  'Testnet, KnownCommand t) => SpecWith (Context t)
+spec :: forall n t. (KnownCommand t, DecodeAddress n, EncodeAddress n) => SpecWith (Context t)
