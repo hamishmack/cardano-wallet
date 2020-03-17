@@ -1173,6 +1173,7 @@ invariant :: String -> a -> (a -> Bool) -> a
 
 -- | Compute distance between two numeric values |a - b|
 distance :: (Ord a, Num a) => a -> a -> a
+hashFromText :: forall t. KnownSymbol t => Int -> Text -> Either TextDecodingError (Hash t)
 instance GHC.Classes.Ord a => GHC.Classes.Ord (Cardano.Wallet.Primitive.Types.ShowFmt a)
 instance GHC.Classes.Eq a => GHC.Classes.Eq (Cardano.Wallet.Primitive.Types.ShowFmt a)
 instance GHC.Generics.Generic (Cardano.Wallet.Primitive.Types.ShowFmt a)
@@ -4999,10 +5000,24 @@ ByronWalletPostData :: !ApiMnemonicT mw -> !ApiT WalletName -> !ApiT (Passphrase
 [$sel:name:ByronWalletPostData] :: ByronWalletPostData mw -> !ApiT WalletName
 [$sel:passphrase:ByronWalletPostData] :: ByronWalletPostData mw -> !ApiT (Passphrase "encryption")
 data SomeByronWalletPostData
-SomeRandomWallet :: ByronWalletPostData (AllowedMnemonics  'Random) -> SomeByronWalletPostData
+RandomWalletFromMnemonic :: ByronWalletPostData (AllowedMnemonics  'Random) -> SomeByronWalletPostData
+RandomWalletFromXPrv :: ByronWalletFromXPrvPostData -> SomeByronWalletPostData
 SomeIcarusWallet :: ByronWalletPostData (AllowedMnemonics  'Icarus) -> SomeByronWalletPostData
 SomeTrezorWallet :: ByronWalletPostData (AllowedMnemonics  'Trezor) -> SomeByronWalletPostData
 SomeLedgerWallet :: ByronWalletPostData (AllowedMnemonics  'Ledger) -> SomeByronWalletPostData
+data ByronWalletFromXPrvPostData
+ByronWalletFromXPrvPostData :: !ApiT WalletName -> !ApiT XPrv -> !ApiT (Hash "encryption") -> ByronWalletFromXPrvPostData
+[$sel:name:ByronWalletFromXPrvPostData] :: ByronWalletFromXPrvPostData -> !ApiT WalletName
+
+-- | A root private key hex-encoded, encrypted using a given passphrase.
+--   The underlying key should contain: private key, chain code, and public
+--   key
+[$sel:encryptedRootPrivateKey:ByronWalletFromXPrvPostData] :: ByronWalletFromXPrvPostData -> !ApiT XPrv
+
+-- | A hash of master passphrase. The hash should be a 64-byte output of a
+--   Scrypt function with the following parameters: - logN = 14 - r = 8 - p
+--   = 1
+[$sel:passphraseHash:ByronWalletFromXPrvPostData] :: ByronWalletFromXPrvPostData -> !ApiT (Hash "encryption")
 data AccountPostData
 AccountPostData :: !ApiT WalletName -> !ApiAccountPublicKey -> !Maybe (ApiT AddressPoolGap) -> AccountPostData
 [$sel:name:AccountPostData] :: AccountPostData -> !ApiT WalletName
@@ -5113,6 +5128,9 @@ instance GHC.Classes.Eq Cardano.Wallet.Api.Types.ApiStakePool
 instance GHC.Show.Show Cardano.Wallet.Api.Types.ApiUtxoStatistics
 instance GHC.Generics.Generic Cardano.Wallet.Api.Types.ApiUtxoStatistics
 instance GHC.Classes.Eq Cardano.Wallet.Api.Types.ApiUtxoStatistics
+instance GHC.Show.Show Cardano.Wallet.Api.Types.ByronWalletFromXPrvPostData
+instance GHC.Generics.Generic Cardano.Wallet.Api.Types.ByronWalletFromXPrvPostData
+instance GHC.Classes.Eq Cardano.Wallet.Api.Types.ByronWalletFromXPrvPostData
 instance GHC.Show.Show Cardano.Wallet.Api.Types.AccountPostData
 instance GHC.Generics.Generic Cardano.Wallet.Api.Types.AccountPostData
 instance GHC.Classes.Eq Cardano.Wallet.Api.Types.AccountPostData
@@ -5258,6 +5276,8 @@ instance Data.Aeson.Types.FromJSON.FromJSON Cardano.Wallet.Api.Types.ApiStakePoo
 instance Data.Aeson.Types.ToJSON.ToJSON Cardano.Wallet.Api.Types.ApiStakePool
 instance Data.Aeson.Types.FromJSON.FromJSON Cardano.Wallet.Api.Types.ApiUtxoStatistics
 instance Data.Aeson.Types.ToJSON.ToJSON Cardano.Wallet.Api.Types.ApiUtxoStatistics
+instance Data.Aeson.Types.FromJSON.FromJSON Cardano.Wallet.Api.Types.ByronWalletFromXPrvPostData
+instance Data.Aeson.Types.ToJSON.ToJSON Cardano.Wallet.Api.Types.ByronWalletFromXPrvPostData
 instance Data.Aeson.Types.FromJSON.FromJSON Cardano.Wallet.Api.Types.AccountPostData
 instance Data.Aeson.Types.ToJSON.ToJSON Cardano.Wallet.Api.Types.AccountPostData
 instance Data.Text.Class.FromText Cardano.Wallet.Api.Types.ApiAccountPublicKey
@@ -5279,8 +5299,17 @@ instance Data.Aeson.Types.FromJSON.FromJSON Cardano.Wallet.Api.Types.ApiBlockRef
 instance Data.Aeson.Types.ToJSON.ToJSON Cardano.Wallet.Api.Types.ApiBlockReference
 instance Data.Aeson.Types.FromJSON.FromJSON Cardano.Wallet.Api.Types.ApiNetworkTip
 instance Data.Aeson.Types.ToJSON.ToJSON Cardano.Wallet.Api.Types.ApiNetworkTip
+instance Data.Text.Class.FromText (Cardano.Wallet.Api.Types.ApiT Cardano.Crypto.Wallet.XPrv)
+instance GHC.Show.Show (Cardano.Wallet.Api.Types.ApiT Cardano.Crypto.Wallet.XPrv)
+instance GHC.Classes.Eq (Cardano.Wallet.Api.Types.ApiT Cardano.Crypto.Wallet.XPrv)
+instance Data.Text.Class.ToText (Cardano.Wallet.Api.Types.ApiT Cardano.Crypto.Wallet.XPrv)
+instance Data.Text.Class.FromText (Cardano.Wallet.Api.Types.ApiT (Cardano.Wallet.Primitive.Types.Hash "encryption"))
 instance Data.Aeson.Types.FromJSON.FromJSON (Cardano.Wallet.Api.Types.ApiT Cardano.Wallet.Primitive.Types.AddressState)
 instance Data.Aeson.Types.ToJSON.ToJSON (Cardano.Wallet.Api.Types.ApiT Cardano.Wallet.Primitive.Types.AddressState)
+instance Data.Aeson.Types.FromJSON.FromJSON (Cardano.Wallet.Api.Types.ApiT (Cardano.Wallet.Primitive.Types.Hash "encryption"))
+instance Data.Aeson.Types.ToJSON.ToJSON (Cardano.Wallet.Api.Types.ApiT (Cardano.Wallet.Primitive.Types.Hash "encryption"))
+instance Data.Aeson.Types.FromJSON.FromJSON (Cardano.Wallet.Api.Types.ApiT Cardano.Crypto.Wallet.XPrv)
+instance Data.Aeson.Types.ToJSON.ToJSON (Cardano.Wallet.Api.Types.ApiT Cardano.Crypto.Wallet.XPrv)
 instance (Cardano.Wallet.Primitive.AddressDerivation.PassphraseMaxLength purpose, Cardano.Wallet.Primitive.AddressDerivation.PassphraseMinLength purpose) => Data.Aeson.Types.FromJSON.FromJSON (Cardano.Wallet.Api.Types.ApiT (Cardano.Wallet.Primitive.AddressDerivation.Passphrase purpose))
 instance Data.Aeson.Types.ToJSON.ToJSON (Cardano.Wallet.Api.Types.ApiT (Cardano.Wallet.Primitive.AddressDerivation.Passphrase purpose))
 instance Data.Aeson.Types.FromJSON.FromJSON (Cardano.Wallet.Api.Types.ApiT Cardano.Wallet.Primitive.Types.WalletId)
