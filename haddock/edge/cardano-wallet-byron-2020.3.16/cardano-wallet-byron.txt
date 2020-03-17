@@ -43,6 +43,7 @@ fromChainHash :: Hash "Genesis" -> ChainHash ByronBlock -> Hash "BlockHeader"
 -- | Convert genesis data into blockchain params and an initial set of UTxO
 fromGenesisData :: (GenesisData, GenesisHash) -> (BlockchainParameters, [TxOut])
 fromNetworkMagic :: NetworkMagic -> ProtocolMagic
+fromProtocolMagicId :: ProtocolMagicId -> ProtocolMagic
 fromSlotNo :: EpochLength -> SlotNo -> SlotId
 fromTip :: Hash "Genesis" -> EpochLength -> Tip ByronBlock -> BlockHeader
 fromTxAux :: TxAux -> Tx
