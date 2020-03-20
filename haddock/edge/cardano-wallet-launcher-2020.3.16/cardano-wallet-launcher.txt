@@ -130,9 +130,6 @@ setUtf8EncodingHandles :: IO ()
 --   So, when running <tt>cardano-wallet</tt> as a subprocess, the parent
 --   process should pass a pipe for <a>stdin</a>, then close the pipe when
 --   it wants <tt>cardano-wallet</tt> to shut down.
---   
---   TODO: may need to add <tt>forkIO</tt> if <tt>hGet</tt> blocks on
---   windows
 withShutdownHandler :: Tracer IO ShutdownHandlerLog -> IO a -> IO (Maybe a)
 
 -- | A variant of <a>withShutdownHandler</a> where the handle to read can
