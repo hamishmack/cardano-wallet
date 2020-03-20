@@ -100,6 +100,16 @@ fromGenesisTxOut :: BlockchainParameters -> [TxOut] -> Block
 instance Formatting.Buildable.Buildable Cardano.Wallet.Byron.Transaction.ErrInvalidTxOutAmount
 
 
+-- | Provides a function to launch cardano-node for <i>testing</i>.
+module Cardano.Wallet.Byron.Launch
+
+-- | Spins up a <tt>cardano-node</tt> in another process.
+--   
+--   IMPORTANT: <tt>cardano-node</tt> must be available on the current
+--   path.
+withCardanoNode :: Trace IO Text -> FilePath -> (FilePath -> Block -> (BlockchainParameters, NodeVersionData) -> IO a) -> IO a
+
+
 -- | This module provides the main wallet server function for the
 --   Byron-rewrite Haskell node backend.
 --   
