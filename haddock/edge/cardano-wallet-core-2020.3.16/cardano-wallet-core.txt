@@ -1020,9 +1020,19 @@ data WalletDelegationNext
 WalletDelegationNext :: !EpochNo -> !WalletDelegationStatus -> WalletDelegationNext
 [$sel:changesAt:WalletDelegationNext] :: WalletDelegationNext -> !EpochNo
 [$sel:status:WalletDelegationNext] :: WalletDelegationNext -> !WalletDelegationStatus
-newtype WalletPassphraseInfo
-WalletPassphraseInfo :: UTCTime -> WalletPassphraseInfo
+data WalletPassphraseInfo
+WalletPassphraseInfo :: UTCTime -> PassphraseScheme -> WalletPassphraseInfo
 [$sel:lastUpdatedAt:WalletPassphraseInfo] :: WalletPassphraseInfo -> UTCTime
+[$sel:passphraseScheme:WalletPassphraseInfo] :: WalletPassphraseInfo -> PassphraseScheme
+
+-- | A type to capture which encryption scheme should be used
+data PassphraseScheme
+
+-- | Legacy encryption scheme for passphrases
+EncryptWithScrypt :: PassphraseScheme
+
+-- | Encryption scheme used since cardano-wallet
+EncryptWithPBKDF2 :: PassphraseScheme
 data WalletBalance
 WalletBalance :: !Quantity "lovelace" Natural -> !Quantity "lovelace" Natural -> !Quantity "lovelace" Natural -> WalletBalance
 [$sel:available:WalletBalance] :: WalletBalance -> !Quantity "lovelace" Natural
@@ -1365,6 +1375,11 @@ instance GHC.Show.Show Cardano.Wallet.Primitive.Types.WalletPassphraseInfo
 instance GHC.Classes.Ord Cardano.Wallet.Primitive.Types.WalletPassphraseInfo
 instance GHC.Classes.Eq Cardano.Wallet.Primitive.Types.WalletPassphraseInfo
 instance GHC.Generics.Generic Cardano.Wallet.Primitive.Types.WalletPassphraseInfo
+instance GHC.Read.Read Cardano.Wallet.Primitive.Types.PassphraseScheme
+instance GHC.Show.Show Cardano.Wallet.Primitive.Types.PassphraseScheme
+instance GHC.Classes.Ord Cardano.Wallet.Primitive.Types.PassphraseScheme
+instance GHC.Classes.Eq Cardano.Wallet.Primitive.Types.PassphraseScheme
+instance GHC.Generics.Generic Cardano.Wallet.Primitive.Types.PassphraseScheme
 instance GHC.Show.Show Cardano.Wallet.Primitive.Types.WalletId
 instance GHC.Classes.Ord Cardano.Wallet.Primitive.Types.WalletId
 instance GHC.Classes.Eq Cardano.Wallet.Primitive.Types.WalletId
@@ -1466,6 +1481,7 @@ instance Data.Text.Class.FromText Cardano.Wallet.Primitive.Types.PoolId
 instance Data.Text.Class.ToText Cardano.Wallet.Primitive.Types.SortOrder
 instance Data.Text.Class.FromText Cardano.Wallet.Primitive.Types.SortOrder
 instance Control.DeepSeq.NFData Cardano.Wallet.Primitive.Types.WalletPassphraseInfo
+instance Control.DeepSeq.NFData Cardano.Wallet.Primitive.Types.PassphraseScheme
 instance Control.DeepSeq.NFData Cardano.Wallet.Primitive.Types.WalletId
 instance Data.Text.Class.FromText Cardano.Wallet.Primitive.Types.WalletId
 instance Data.Text.Class.ToText Cardano.Wallet.Primitive.Types.WalletId
@@ -1843,7 +1859,7 @@ class WalletKey (key :: Depth -> * -> *)
 --   is correct! Caller is expected to have already checked that. Using an
 --   incorrect passphrase here will lead to very bad thing.</li>
 --   </ul>
-changePassphrase :: WalletKey key => Passphrase "encryption-old" -> Passphrase "encryption-new" -> key depth XPrv -> key depth XPrv
+changePassphrase :: WalletKey key => Passphrase "encryption" -> Passphrase "encryption" -> key depth XPrv -> key depth XPrv
 
 -- | Extract the public key part of a private key.
 publicKey :: WalletKey key => key depth XPrv -> key depth XPub
@@ -1951,12 +1967,28 @@ FromMnemonicError :: String -> FromMnemonicError
 data ErrWrongPassphrase
 ErrWrongPassphrase :: ErrWrongPassphrase
 
+-- | A type to capture which encryption scheme should be used
+data PassphraseScheme
+
+-- | Legacy encryption scheme for passphrases
+EncryptWithScrypt :: PassphraseScheme
+
+-- | Encryption scheme used since cardano-wallet
+EncryptWithPBKDF2 :: PassphraseScheme
+
 -- | Encrypt a <a>Passphrase</a> into a format that is suitable for storing
 --   on disk
-encryptPassphrase :: MonadRandom m => Passphrase purpose -> m (Hash purpose)
+encryptPassphrase :: MonadRandom m => Passphrase "encryption" -> m (Hash "encryption")
 
 -- | Check whether a <a>Passphrase</a> matches with a stored <a>Hash</a>
-checkPassphrase :: Passphrase purpose -> Hash purpose -> Either ErrWrongPassphrase ()
+checkPassphrase :: PassphraseScheme -> Passphrase "raw" -> Hash "encryption" -> Either ErrWrongPassphrase ()
+
+-- | Manipulation done on legacy passphrases before getting encrypted.
+--   
+--   Yes there's CBOR. Yes it's hashed before being encrypted. You don't
+--   actually pronounce the <tt>l</tt> in salmon. A lot of things in the
+--   world don't make sense but we still live just fine.
+preparePassphrase :: PassphraseScheme -> Passphrase "raw" -> Passphrase "encryption"
 instance GHC.Show.Show Cardano.Wallet.Primitive.AddressDerivation.ErrXPrvFromStrippedPubXPrv
 instance GHC.Classes.Eq Cardano.Wallet.Primitive.AddressDerivation.ErrXPrvFromStrippedPubXPrv
 instance GHC.Show.Show Cardano.Wallet.Primitive.AddressDerivation.ErrUnXPrvStripPub
@@ -1996,13 +2028,9 @@ instance Cardano.Wallet.Primitive.AddressDerivation.NatVals '[]
 instance (GHC.TypeNats.KnownNat n, Cardano.Wallet.Primitive.AddressDerivation.NatVals rest) => Cardano.Wallet.Primitive.AddressDerivation.NatVals (n : rest)
 instance (n Data.Type.Equality.~ Crypto.Encoding.BIP39.EntropySize mw, csz Data.Type.Equality.~ Crypto.Encoding.BIP39.CheckSumBits n, Crypto.Encoding.BIP39.ConsistentEntropy n mw csz) => Cardano.Wallet.Primitive.AddressDerivation.FromMnemonic '[mw]
 instance GHC.Classes.Eq Cardano.Wallet.Primitive.AddressDerivation.SomeMnemonic
-instance Cardano.Wallet.Primitive.AddressDerivation.PassphraseMaxLength "encryption"
-instance Cardano.Wallet.Primitive.AddressDerivation.PassphraseMaxLength "encryption-old"
-instance Cardano.Wallet.Primitive.AddressDerivation.PassphraseMaxLength "encryption-new"
+instance Cardano.Wallet.Primitive.AddressDerivation.PassphraseMaxLength "raw"
 instance (Cardano.Wallet.Primitive.AddressDerivation.PassphraseMaxLength purpose, Cardano.Wallet.Primitive.AddressDerivation.PassphraseMinLength purpose) => Data.Text.Class.FromText (Cardano.Wallet.Primitive.AddressDerivation.Passphrase purpose)
-instance Cardano.Wallet.Primitive.AddressDerivation.PassphraseMinLength "encryption"
-instance Cardano.Wallet.Primitive.AddressDerivation.PassphraseMinLength "encryption-old"
-instance Cardano.Wallet.Primitive.AddressDerivation.PassphraseMinLength "encryption-new"
+instance Cardano.Wallet.Primitive.AddressDerivation.PassphraseMinLength "raw"
 instance Data.Text.Class.ToText (Cardano.Wallet.Primitive.AddressDerivation.Passphrase purpose)
 instance Crypto.Random.Types.MonadRandom ((->) (Cardano.Wallet.Primitive.AddressDerivation.Passphrase "salt"))
 instance Control.DeepSeq.NFData (Cardano.Wallet.Primitive.AddressDerivation.Index derivationType level)
@@ -2544,6 +2572,8 @@ instance Web.Internal.HttpApiData.FromHttpApiData Cardano.Wallet.Primitive.Types
 instance Database.Persist.Class.PersistField.PersistField Cardano.Wallet.Primitive.Types.PoolOwner
 instance Database.Persist.Sql.Class.PersistFieldSql Cardano.Wallet.Primitive.Types.PoolOwner
 instance GHC.Read.Read Cardano.Wallet.Primitive.Types.PoolOwner
+instance Database.Persist.Class.PersistField.PersistField Cardano.Wallet.Primitive.Types.PassphraseScheme
+instance Database.Persist.Sql.Class.PersistFieldSql Cardano.Wallet.Primitive.Types.PassphraseScheme
 
 
 -- | Auto-generated Sqlite &amp; Persistent machinery via Template-Haskell.
@@ -2556,11 +2586,12 @@ instance GHC.Read.Read Cardano.Wallet.Primitive.Types.PoolOwner
 --   module!
 module Cardano.Wallet.DB.Sqlite.TH
 data Wallet
-Wallet :: !WalletId -> !UTCTime -> !Text -> !Maybe UTCTime -> Wallet
+Wallet :: !WalletId -> !UTCTime -> !Text -> !Maybe UTCTime -> !Maybe PassphraseScheme -> Wallet
 [walId] :: Wallet -> !WalletId
 [walCreationTime] :: Wallet -> !UTCTime
 [walName] :: Wallet -> !Text
 [walPassphraseLastUpdatedAt] :: Wallet -> !Maybe UTCTime
+[walPassphraseScheme] :: Wallet -> !Maybe PassphraseScheme
 type WalletId = Key Wallet
 data PrivateKey
 PrivateKey :: !WalletId -> !ByteString -> !ByteString -> PrivateKey
@@ -4511,6 +4542,8 @@ generateKeyFromSeed :: SomeMnemonic -> Passphrase "encryption" -> ByronKey  'Roo
 -- | The amount of entropy carried by a BIP-39 12-word mnemonic is 16
 --   bytes.
 minSeedLengthBytes :: Int
+unsafeMkByronKeyFromMasterKey :: DerivationPath depth -> XPrv -> ByronKey depth XPrv
+mkByronKeyFromMasterKey :: XPrv -> ByronKey  'RootK XPrv
 
 -- | Derives account private key from the given root private key, using
 --   derivation scheme 1.
@@ -4807,18 +4840,21 @@ ApiStakePoolMetrics :: !Quantity "lovelace" Natural -> !Quantity "block" Natural
 [$sel:controlledStake:ApiStakePoolMetrics] :: ApiStakePoolMetrics -> !Quantity "lovelace" Natural
 [$sel:producedBlocks:ApiStakePoolMetrics] :: ApiStakePoolMetrics -> !Quantity "block" Natural
 data ApiWallet
-ApiWallet :: !ApiT WalletId -> !ApiT AddressPoolGap -> !ApiT WalletBalance -> !ApiWalletDelegation -> !ApiT WalletName -> !Maybe (ApiT WalletPassphraseInfo) -> !ApiT SyncProgress -> !ApiBlockReference -> ApiWallet
+ApiWallet :: !ApiT WalletId -> !ApiT AddressPoolGap -> !ApiT WalletBalance -> !ApiWalletDelegation -> !ApiT WalletName -> !Maybe ApiWalletPassphraseInfo -> !ApiT SyncProgress -> !ApiBlockReference -> ApiWallet
 [$sel:id:ApiWallet] :: ApiWallet -> !ApiT WalletId
 [$sel:addressPoolGap:ApiWallet] :: ApiWallet -> !ApiT AddressPoolGap
 [$sel:balance:ApiWallet] :: ApiWallet -> !ApiT WalletBalance
 [$sel:delegation:ApiWallet] :: ApiWallet -> !ApiWalletDelegation
 [$sel:name:ApiWallet] :: ApiWallet -> !ApiT WalletName
-[$sel:passphrase:ApiWallet] :: ApiWallet -> !Maybe (ApiT WalletPassphraseInfo)
+[$sel:passphrase:ApiWallet] :: ApiWallet -> !Maybe ApiWalletPassphraseInfo
 [$sel:state:ApiWallet] :: ApiWallet -> !ApiT SyncProgress
 [$sel:tip:ApiWallet] :: ApiWallet -> !ApiBlockReference
 newtype ApiWalletPassphrase
-ApiWalletPassphrase :: ApiT (Passphrase "encryption") -> ApiWalletPassphrase
-[$sel:passphrase:ApiWalletPassphrase] :: ApiWalletPassphrase -> ApiT (Passphrase "encryption")
+ApiWalletPassphrase :: ApiT (Passphrase "raw") -> ApiWalletPassphrase
+[$sel:passphrase:ApiWalletPassphrase] :: ApiWalletPassphrase -> ApiT (Passphrase "raw")
+newtype ApiWalletPassphraseInfo
+ApiWalletPassphraseInfo :: UTCTime -> ApiWalletPassphraseInfo
+[$sel:lastUpdatedAt:ApiWalletPassphraseInfo] :: ApiWalletPassphraseInfo -> UTCTime
 data ApiUtxoStatistics
 ApiUtxoStatistics :: !Quantity "lovelace" Natural -> !ApiT BoundType -> !Map Word64 Word64 -> ApiUtxoStatistics
 [$sel:total:ApiUtxoStatistics] :: ApiUtxoStatistics -> !Quantity "lovelace" Natural
@@ -4830,23 +4866,23 @@ WalletBalance :: !Quantity "lovelace" Natural -> !Quantity "lovelace" Natural ->
 [$sel:total:WalletBalance] :: WalletBalance -> !Quantity "lovelace" Natural
 [$sel:reward:WalletBalance] :: WalletBalance -> !Quantity "lovelace" Natural
 data WalletPostData
-WalletPostData :: !Maybe (ApiT AddressPoolGap) -> !ApiMnemonicT (AllowedMnemonics  'Shelley) -> !Maybe (ApiMnemonicT (AllowedMnemonics  'SndFactor)) -> !ApiT WalletName -> !ApiT (Passphrase "encryption") -> WalletPostData
+WalletPostData :: !Maybe (ApiT AddressPoolGap) -> !ApiMnemonicT (AllowedMnemonics  'Shelley) -> !Maybe (ApiMnemonicT (AllowedMnemonics  'SndFactor)) -> !ApiT WalletName -> !ApiT (Passphrase "raw") -> WalletPostData
 [$sel:addressPoolGap:WalletPostData] :: WalletPostData -> !Maybe (ApiT AddressPoolGap)
 [$sel:mnemonicSentence:WalletPostData] :: WalletPostData -> !ApiMnemonicT (AllowedMnemonics  'Shelley)
 [$sel:mnemonicSecondFactor:WalletPostData] :: WalletPostData -> !Maybe (ApiMnemonicT (AllowedMnemonics  'SndFactor))
 [$sel:name:WalletPostData] :: WalletPostData -> !ApiT WalletName
-[$sel:passphrase:WalletPostData] :: WalletPostData -> !ApiT (Passphrase "encryption")
+[$sel:passphrase:WalletPostData] :: WalletPostData -> !ApiT (Passphrase "raw")
 newtype WalletPutData
 WalletPutData :: Maybe (ApiT WalletName) -> WalletPutData
 [$sel:name:WalletPutData] :: WalletPutData -> Maybe (ApiT WalletName)
 data WalletPutPassphraseData
-WalletPutPassphraseData :: !ApiT (Passphrase "encryption-old") -> !ApiT (Passphrase "encryption-new") -> WalletPutPassphraseData
-[$sel:oldPassphrase:WalletPutPassphraseData] :: WalletPutPassphraseData -> !ApiT (Passphrase "encryption-old")
-[$sel:newPassphrase:WalletPutPassphraseData] :: WalletPutPassphraseData -> !ApiT (Passphrase "encryption-new")
+WalletPutPassphraseData :: !ApiT (Passphrase "raw") -> !ApiT (Passphrase "raw") -> WalletPutPassphraseData
+[$sel:oldPassphrase:WalletPutPassphraseData] :: WalletPutPassphraseData -> !ApiT (Passphrase "raw")
+[$sel:newPassphrase:WalletPutPassphraseData] :: WalletPutPassphraseData -> !ApiT (Passphrase "raw")
 data PostTransactionData n
-PostTransactionData :: !NonEmpty (AddressAmount n) -> !ApiT (Passphrase "encryption") -> PostTransactionData n
+PostTransactionData :: !NonEmpty (AddressAmount n) -> !ApiT (Passphrase "raw") -> PostTransactionData n
 [$sel:payments:PostTransactionData] :: PostTransactionData n -> !NonEmpty (AddressAmount n)
-[$sel:passphrase:PostTransactionData] :: PostTransactionData n -> !ApiT (Passphrase "encryption")
+[$sel:passphrase:PostTransactionData] :: PostTransactionData n -> !ApiT (Passphrase "raw")
 newtype PostTransactionFeeData n
 PostTransactionFeeData :: NonEmpty (AddressAmount n) -> PostTransactionFeeData n
 [$sel:payments:PostTransactionFeeData] :: PostTransactionFeeData n -> NonEmpty (AddressAmount n)
@@ -4980,11 +5016,11 @@ data ApiPoolId
 ApiPoolIdPlaceholder :: ApiPoolId
 ApiPoolId :: PoolId -> ApiPoolId
 data ApiByronWallet
-ApiByronWallet :: !ApiT WalletId -> !ApiByronWalletBalance -> !ApiT WalletName -> !Maybe (ApiT WalletPassphraseInfo) -> !ApiT SyncProgress -> !ApiBlockReference -> ApiByronWallet
+ApiByronWallet :: !ApiT WalletId -> !ApiByronWalletBalance -> !ApiT WalletName -> !Maybe ApiWalletPassphraseInfo -> !ApiT SyncProgress -> !ApiBlockReference -> ApiByronWallet
 [$sel:id:ApiByronWallet] :: ApiByronWallet -> !ApiT WalletId
 [$sel:balance:ApiByronWallet] :: ApiByronWallet -> !ApiByronWalletBalance
 [$sel:name:ApiByronWallet] :: ApiByronWallet -> !ApiT WalletName
-[$sel:passphrase:ApiByronWallet] :: ApiByronWallet -> !Maybe (ApiT WalletPassphraseInfo)
+[$sel:passphrase:ApiByronWallet] :: ApiByronWallet -> !Maybe ApiWalletPassphraseInfo
 [$sel:state:ApiByronWallet] :: ApiByronWallet -> !ApiT SyncProgress
 [$sel:tip:ApiByronWallet] :: ApiByronWallet -> !ApiBlockReference
 data ApiByronWalletBalance
@@ -4995,10 +5031,10 @@ newtype ApiByronWalletMigrationInfo
 ApiByronWalletMigrationInfo :: Quantity "lovelace" Natural -> ApiByronWalletMigrationInfo
 [$sel:migrationCost:ApiByronWalletMigrationInfo] :: ApiByronWalletMigrationInfo -> Quantity "lovelace" Natural
 data ByronWalletPostData mw
-ByronWalletPostData :: !ApiMnemonicT mw -> !ApiT WalletName -> !ApiT (Passphrase "encryption") -> ByronWalletPostData mw
+ByronWalletPostData :: !ApiMnemonicT mw -> !ApiT WalletName -> !ApiT (Passphrase "raw") -> ByronWalletPostData mw
 [$sel:mnemonicSentence:ByronWalletPostData] :: ByronWalletPostData mw -> !ApiMnemonicT mw
 [$sel:name:ByronWalletPostData] :: ByronWalletPostData mw -> !ApiT WalletName
-[$sel:passphrase:ByronWalletPostData] :: ByronWalletPostData mw -> !ApiT (Passphrase "encryption")
+[$sel:passphrase:ByronWalletPostData] :: ByronWalletPostData mw -> !ApiT (Passphrase "raw")
 data SomeByronWalletPostData
 RandomWalletFromMnemonic :: ByronWalletPostData (AllowedMnemonics  'Random) -> SomeByronWalletPostData
 RandomWalletFromXPrv :: ByronWalletFromXPrvPostData -> SomeByronWalletPostData
@@ -5215,6 +5251,9 @@ instance GHC.Classes.Eq Cardano.Wallet.Api.Types.ApiStakePoolMetrics
 instance GHC.Show.Show Cardano.Wallet.Api.Types.ApiWalletDelegationStatus
 instance GHC.Generics.Generic Cardano.Wallet.Api.Types.ApiWalletDelegationStatus
 instance GHC.Classes.Eq Cardano.Wallet.Api.Types.ApiWalletDelegationStatus
+instance GHC.Show.Show Cardano.Wallet.Api.Types.ApiWalletPassphraseInfo
+instance GHC.Generics.Generic Cardano.Wallet.Api.Types.ApiWalletPassphraseInfo
+instance GHC.Classes.Eq Cardano.Wallet.Api.Types.ApiWalletPassphraseInfo
 instance GHC.Enum.Enum Cardano.Wallet.Api.Types.ByronWalletStyle
 instance GHC.Enum.Bounded Cardano.Wallet.Api.Types.ByronWalletStyle
 instance GHC.Classes.Eq Cardano.Wallet.Api.Types.ByronWalletStyle
@@ -5322,8 +5361,6 @@ instance Data.Aeson.Types.FromJSON.FromJSON (Cardano.Wallet.Api.Types.ApiT Carda
 instance Data.Aeson.Types.ToJSON.ToJSON (Cardano.Wallet.Api.Types.ApiT Cardano.Wallet.Primitive.Types.PoolId)
 instance Data.Aeson.Types.FromJSON.FromJSON (Cardano.Wallet.Api.Types.ApiT Cardano.Wallet.Primitive.Types.WalletName)
 instance Data.Aeson.Types.ToJSON.ToJSON (Cardano.Wallet.Api.Types.ApiT Cardano.Wallet.Primitive.Types.WalletName)
-instance Data.Aeson.Types.FromJSON.FromJSON (Cardano.Wallet.Api.Types.ApiT Cardano.Wallet.Primitive.Types.WalletPassphraseInfo)
-instance Data.Aeson.Types.ToJSON.ToJSON (Cardano.Wallet.Api.Types.ApiT Cardano.Wallet.Primitive.Types.WalletPassphraseInfo)
 instance Data.Aeson.Types.FromJSON.FromJSON (Cardano.Wallet.Api.Types.ApiT Cardano.Wallet.Primitive.Types.SyncProgress)
 instance Data.Aeson.Types.ToJSON.ToJSON (Cardano.Wallet.Api.Types.ApiT Cardano.Wallet.Primitive.Types.SyncProgress)
 instance Data.Aeson.Types.ToJSON.ToJSON (Cardano.Wallet.Api.Types.ApiT Cardano.Wallet.Primitive.Types.BoundType)
@@ -5382,6 +5419,8 @@ instance Data.Aeson.Types.FromJSON.FromJSON Cardano.Wallet.Api.Types.ApiStakePoo
 instance Data.Aeson.Types.ToJSON.ToJSON Cardano.Wallet.Api.Types.ApiStakePoolMetrics
 instance Data.Aeson.Types.FromJSON.FromJSON Cardano.Wallet.Api.Types.ApiWalletDelegationStatus
 instance Data.Aeson.Types.ToJSON.ToJSON Cardano.Wallet.Api.Types.ApiWalletDelegationStatus
+instance Data.Aeson.Types.FromJSON.FromJSON Cardano.Wallet.Api.Types.ApiWalletPassphraseInfo
+instance Data.Aeson.Types.ToJSON.ToJSON Cardano.Wallet.Api.Types.ApiWalletPassphraseInfo
 instance Data.Text.Class.FromText Cardano.Wallet.Api.Types.ByronWalletStyle
 instance Data.Text.Class.ToText Cardano.Wallet.Api.Types.ByronWalletStyle
 
@@ -5673,10 +5712,13 @@ createWallet :: forall ctx s k. (HasGenesisData ctx, HasDBLayer s k ctx, Show s,
 --   gap and resort to a default gap afterwards.
 createIcarusWallet :: forall ctx s k n. (HasGenesisData ctx, HasDBLayer s k ctx, PaymentAddress n k, k ~ IcarusKey, s ~ SeqState n k) => ctx -> WalletId -> WalletName -> (k  'RootK XPrv, Passphrase "encryption") -> ExceptT ErrWalletAlreadyExists IO WalletId
 
--- | Attach a given private key to a wallet. The private key is necessary
---   for some operations like signing transactions, or generating new
---   accounts.
-attachPrivateKey :: forall ctx s k. HasDBLayer s k ctx => ctx -> WalletId -> (k  'RootK XPrv, Passphrase "encryption") -> ExceptT ErrNoSuchWallet IO ()
+-- | The password here undergoes PBKDF2 encryption using HMAC with the hash
+--   algorithm SHA512 which is realized in encryptPassphare
+attachPrivateKeyFromPwd :: forall ctx s k. HasDBLayer s k ctx => ctx -> WalletId -> (k  'RootK XPrv, Passphrase "encryption") -> ExceptT ErrNoSuchWallet IO ()
+
+-- | The hash here is the output of Scrypt function with the following
+--   parameters: - logN = 14 - r = 8 - p = 1 - bytesNumber = 64
+attachPrivateKeyFromPwdHash :: forall ctx s k. HasDBLayer s k ctx => ctx -> WalletId -> (k  'RootK XPrv, Hash "encryption") -> ExceptT ErrNoSuchWallet IO ()
 
 -- | List the wallet's UTxO statistics.
 listUtxoStatistics :: forall ctx s k. HasDBLayer s k ctx => ctx -> WalletId -> ExceptT ErrListUTxOStatistics IO UTxOStatistics
@@ -5700,7 +5742,7 @@ restoreWallet :: forall ctx s t k. (HasLogger WalletLog ctx, HasNetworkLayer t c
 updateWallet :: forall ctx s k. HasDBLayer s k ctx => ctx -> WalletId -> (WalletMetadata -> WalletMetadata) -> ExceptT ErrNoSuchWallet IO ()
 
 -- | Change a wallet's passphrase to the given passphrase.
-updateWalletPassphrase :: forall ctx s k. (HasDBLayer s k ctx, WalletKey k) => ctx -> WalletId -> (Passphrase "encryption-old", Passphrase "encryption-new") -> ExceptT ErrUpdatePassphrase IO ()
+updateWalletPassphrase :: forall ctx s k. (HasDBLayer s k ctx, WalletKey k) => ctx -> WalletId -> (Passphrase "raw", Passphrase "raw") -> ExceptT ErrUpdatePassphrase IO ()
 walletSyncProgress :: forall ctx s. HasGenesisData ctx => ctx -> Wallet s -> IO SyncProgress
 
 -- | Fetch the reward balance of a given wallet.
@@ -5760,7 +5802,7 @@ selectCoinsForPayment :: forall ctx s t k e. (HasTransactionLayer t k ctx, HasLo
 --   Requires the encryption passphrase in order to decrypt the root
 --   private key. Note that this doesn't broadcast the transaction to the
 --   network. In order to do so, use <a>submitTx</a>.
-signPayment :: forall ctx s t k. (HasTransactionLayer t k ctx, HasDBLayer s k ctx, Show s, NFData s, IsOwned s k, GenChange s) => ctx -> WalletId -> ArgGenChange s -> Passphrase "encryption" -> CoinSelection -> ExceptT ErrSignPayment IO (Tx, TxMeta, UTCTime, SealedTx)
+signPayment :: forall ctx s t k. (HasTransactionLayer t k ctx, HasDBLayer s k ctx, Show s, NFData s, IsOwned s k, GenChange s) => ctx -> WalletId -> ArgGenChange s -> Passphrase "raw" -> CoinSelection -> ExceptT ErrSignPayment IO (Tx, TxMeta, UTCTime, SealedTx)
 data ErrSelectCoinsExternal e
 ErrSelectCoinsExternalNoSuchWallet :: ErrNoSuchWallet -> ErrSelectCoinsExternal e
 ErrSelectCoinsExternalUnableToMakeSelection :: ErrSelectForPayment e -> ErrSelectCoinsExternal e
@@ -5843,15 +5885,15 @@ ErrSelectForMigrationNoSuchWallet :: ErrNoSuchWallet -> ErrSelectForMigration
 ErrSelectForMigrationEmptyWallet :: WalletId -> ErrSelectForMigration
 
 -- | Helper function to factor necessary logic for joining a stake pool.
-joinStakePool :: forall ctx s t k. (HasDBLayer s k ctx, HasLogger WalletLog ctx, HasNetworkLayer t ctx, HasTransactionLayer t k ctx, Show s, NFData s, IsOwned s k, GenChange s, HardDerivation k, AddressIndexDerivationType k ~  'Soft) => ctx -> WalletId -> (PoolId, [PoolId]) -> ArgGenChange s -> Passphrase "encryption" -> ExceptT ErrJoinStakePool IO (Tx, TxMeta, UTCTime)
+joinStakePool :: forall ctx s t k. (HasDBLayer s k ctx, HasLogger WalletLog ctx, HasNetworkLayer t ctx, HasTransactionLayer t k ctx, Show s, NFData s, IsOwned s k, GenChange s, HardDerivation k, AddressIndexDerivationType k ~  'Soft) => ctx -> WalletId -> (PoolId, [PoolId]) -> ArgGenChange s -> Passphrase "raw" -> ExceptT ErrJoinStakePool IO (Tx, TxMeta, UTCTime)
 
 -- | Helper function to factor necessary logic for quitting a stake pool.
-quitStakePool :: forall ctx s t k. (HasDBLayer s k ctx, HasLogger WalletLog ctx, HasNetworkLayer t ctx, HasTransactionLayer t k ctx, Show s, NFData s, IsOwned s k, GenChange s, HardDerivation k, AddressIndexDerivationType k ~  'Soft) => ctx -> WalletId -> ArgGenChange s -> Passphrase "encryption" -> ExceptT ErrQuitStakePool IO (Tx, TxMeta, UTCTime)
+quitStakePool :: forall ctx s t k. (HasDBLayer s k ctx, HasLogger WalletLog ctx, HasNetworkLayer t ctx, HasTransactionLayer t k ctx, Show s, NFData s, IsOwned s k, GenChange s, HardDerivation k, AddressIndexDerivationType k ~  'Soft) => ctx -> WalletId -> ArgGenChange s -> Passphrase "raw" -> ExceptT ErrQuitStakePool IO (Tx, TxMeta, UTCTime)
 
 -- | Select necessary coins to cover for a single delegation request
 --   (including one certificate).
 selectCoinsForDelegation :: forall ctx s t k. (HasTransactionLayer t k ctx, HasLogger WalletLog ctx, HasDBLayer s k ctx) => ctx -> WalletId -> ExceptT ErrSelectForDelegation IO CoinSelection
-signDelegation :: forall ctx s t k. (HasTransactionLayer t k ctx, HasDBLayer s k ctx, Show s, NFData s, IsOwned s k, GenChange s, HardDerivation k, AddressIndexDerivationType k ~  'Soft) => ctx -> WalletId -> ArgGenChange s -> Passphrase "encryption" -> CoinSelection -> DelegationAction -> ExceptT ErrSignDelegation IO (Tx, TxMeta, UTCTime, SealedTx)
+signDelegation :: forall ctx s t k. (HasTransactionLayer t k ctx, HasDBLayer s k ctx, Show s, NFData s, IsOwned s k, GenChange s, HardDerivation k, AddressIndexDerivationType k ~  'Soft) => ctx -> WalletId -> ArgGenChange s -> Passphrase "raw" -> CoinSelection -> DelegationAction -> ExceptT ErrSignDelegation IO (Tx, TxMeta, UTCTime, SealedTx)
 guardJoin :: [PoolId] -> WalletDelegation -> PoolId -> Either ErrCannotJoin ()
 guardQuit :: WalletDelegation -> Either ErrCannotQuit ()
 data ErrJoinStakePool
@@ -5895,7 +5937,7 @@ submitExternalTx :: forall ctx t k. (HasNetworkLayer t ctx, HasTransactionLayer 
 
 -- | Very much like <a>signPayment</a>, but doesn't not generate change
 --   addresses.
-signTx :: forall ctx s t k. (HasTransactionLayer t k ctx, HasDBLayer s k ctx, Show s, NFData s, IsOwned s k) => ctx -> WalletId -> Passphrase "encryption" -> UnsignedTx -> ExceptT ErrSignPayment IO (Tx, TxMeta, UTCTime, SealedTx)
+signTx :: forall ctx s t k. (HasTransactionLayer t k ctx, HasDBLayer s k ctx, Show s, NFData s, IsOwned s k) => ctx -> WalletId -> Passphrase "raw" -> UnsignedTx -> ExceptT ErrSignPayment IO (Tx, TxMeta, UTCTime, SealedTx)
 
 -- | Broadcast a (signed) transaction to the network.
 submitTx :: forall ctx s t k. (HasNetworkLayer t ctx, HasDBLayer s k ctx) => ctx -> WalletId -> (Tx, TxMeta, SealedTx) -> ExceptT ErrSubmitTx IO ()
@@ -5957,7 +5999,24 @@ ErrStartTimeLaterThanEndTime :: UTCTime -> UTCTime -> ErrStartTimeLaterThanEndTi
 [$sel:errEndTime:ErrStartTimeLaterThanEndTime] :: ErrStartTimeLaterThanEndTime -> UTCTime
 
 -- | Execute an action which requires holding a root XPrv.
-withRootKey :: forall ctx s k e a. HasDBLayer s k ctx => ctx -> WalletId -> Passphrase "encryption" -> (ErrWithRootKey -> e) -> (k  'RootK XPrv -> ExceptT e IO a) -> ExceptT e IO a
+--   
+--   <a>withRootKey</a> takes a callback function with two arguments:
+--   
+--   <ul>
+--   <li>The encrypted root private key itself</li>
+--   <li>The underlying passphrase scheme (legacy or new)</li>
+--   </ul>
+--   
+--   Caller are then expected to use <a>preparePassphrase</a> with the
+--   given scheme in order to "prepare" the passphrase to be used by other
+--   function. This does nothing for the new encryption, but for the legacy
+--   encryption with Scrypt, passphrases needed to first be CBOR serialized
+--   and blake2b_256 hashed.
+--   
+--   @@<tt> withRootKey </tt>ctx <tt>s </tt>k ctx wid pwd OnError $ xprv
+--   scheme -&gt; changePassphrase (preparePassphrase scheme pwd) newPwd
+--   xprv @@@
+withRootKey :: forall ctx s k e a. HasDBLayer s k ctx => ctx -> WalletId -> Passphrase "raw" -> (ErrWithRootKey -> e) -> (k  'RootK XPrv -> PassphraseScheme -> ExceptT e IO a) -> ExceptT e IO a
 
 -- | Errors that can occur when trying to perform an operation on a wallet
 --   that requires a private key, but where none is attached to the wallet.
