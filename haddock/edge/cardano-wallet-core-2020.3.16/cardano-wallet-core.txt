@@ -217,13 +217,13 @@ fromLogObject :: Show a => Tracer IO a -> Tracer IO (LogObject a)
 
 -- | Tracer transformer which converts 'Trace m a' to 'Tracer m a' by
 --   wrapping typed log messages into a <a>LogObject</a>.
-trMessage :: (MonadIO m, DefinePrivacyAnnotation a, DefineSeverity a) => Tracer m (LogObject a) -> Tracer m a
+trMessage :: (MonadIO m, DefinePrivacyAnnotation a, DefineSeverity a) => Tracer m (LoggerName, LogObject a) -> Tracer m a
 
 -- | Tracer transformer which transforms traced items to their
 --   <a>ToText</a> representation and further traces them as a
 --   <a>LogObject</a>. If the <a>ToText</a> representation is empty, then
 --   no tracing happens.
-trMessageText :: (MonadIO m, ToText a, DefinePrivacyAnnotation a, DefineSeverity a) => Tracer m (LogObject Text) -> Tracer m a
+trMessageText :: (MonadIO m, ToText a, DefinePrivacyAnnotation a, DefineSeverity a) => Tracer m (LoggerName, LogObject Text) -> Tracer m a
 
 -- | Tracer transformer which removes tracing below the qgiven severity
 --   limit.
@@ -6517,10 +6517,10 @@ NtpClient :: STM NtpStatus -> IO NtpStatus -> Async Void -> NtpClient
 [ntpGetStatus] :: NtpClient -> STM NtpStatus
 [ntpQueryBlocking] :: NtpClient -> IO NtpStatus
 [ntpThread] :: NtpClient -> Async Void
-instance Data.Text.Class.ToText Network.NTP.Trace.IPVersion
-instance Data.Text.Class.ToText Network.NTP.Trace.NtpTrace
-instance Cardano.BM.Data.Tracer.DefinePrivacyAnnotation Network.NTP.Trace.NtpTrace
-instance Cardano.BM.Data.Tracer.DefineSeverity Network.NTP.Trace.NtpTrace
+instance Data.Text.Class.ToText Network.NTP.Client.Trace.IPVersion
+instance Data.Text.Class.ToText Network.NTP.Client.Trace.NtpTrace
+instance Cardano.BM.Data.Tracer.DefinePrivacyAnnotation Network.NTP.Client.Trace.NtpTrace
+instance Cardano.BM.Data.Tracer.DefineSeverity Network.NTP.Client.Trace.NtpTrace
 
 module Network.Wai.Middleware.Logging
 
