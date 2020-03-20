@@ -542,7 +542,7 @@ instance (GHC.TypeLits.KnownSymbol unit, Formatting.Buildable.Buildable a) => Fo
 --   Haskell translation of the <a>Formal Specification for a Cardano
 --   Wallet</a>
 --   
---   It doesn't contain any particular business-logic code, but define a
+--   It doesn't contain any particular business-logic code, but defines a
 --   few primitive operations on Wallet core types as well.
 module Cardano.Wallet.Primitive.Types
 data Block
@@ -576,7 +576,7 @@ Tx :: Hash "Tx" -> ![(TxIn, Coin)] -> ![TxOut] -> Tx
 --   which inputs are serialized in a specific order.
 [$sel:resolvedInputs:Tx] :: Tx -> ![(TxIn, Coin)]
 
--- | NOTE: Order of outputs matter in the transaction representations.
+-- | NOTE: Order of outputs matters in the transaction representations.
 --   Outputs are used as inputs for next transactions which refer to them
 --   using their indexes. It matters also for serialization.
 [$sel:outputs:Tx] :: Tx -> ![TxOut]
@@ -609,7 +609,7 @@ Pending :: TxStatus
 InLedger :: TxStatus
 
 -- | <tt>SealedTx</tt> is a serialised transaction that is ready to be
---   submited to the node.
+--   submitted to the node.
 newtype SealedTx
 SealedTx :: ByteString -> SealedTx
 [$sel:getSealedTx:SealedTx] :: SealedTx -> ByteString
@@ -667,10 +667,10 @@ inputs :: Tx -> [TxIn]
 --   
 --   For more details, see also <a>About Address Derivation</a>
 --   
---   Shelley base addresses can be declined into two types:
+--   Shelley base addresses can be divided into two types:
 --   
 --   <ul>
---   <li>Single Addresses: which only holds a public spending key</li>
+--   <li>Single Addresses: which only hold a public spending key</li>
 --   <li>Group Addresses: which hold both a spending and delegation
 --   keys</li>
 --   </ul>
@@ -690,7 +690,7 @@ inputs :: Tx -> [TxIn]
 --   fine-grained representation.
 --   
 --   Indeed, from the wallet core code, addresses are nothing more than an
---   opaque bunch of bytes that can be compared with each others. When
+--   opaque bunch of bytes that can be compared with each other. When
 --   signing transactions, we have to lookup addresses anyway and
 --   therefore, can re-derive their corresponding public keys. The only
 --   moment the distinction between address type matters is when it comes
@@ -939,7 +939,7 @@ flatSlot :: EpochLength -> SlotId -> Word64
 --   maximum value of <a>flatSlot</a> for the specified <a>EpochLength</a>.
 fromFlatSlot :: EpochLength -> Word64 -> SlotId
 
--- | The time that a slot begins.
+-- | The time when a slot begins.
 slotStartTime :: SlotParameters -> SlotId -> UTCTime
 
 -- | For the given time <tt>t</tt>, determine the ID of the earliest slot
@@ -983,7 +983,7 @@ slotRangeFromTimeRange :: SlotParameters -> Range UTCTime -> Maybe (Range SlotId
 --   from the blockchain like <tt>Wallet s</tt> is.
 --   
 --   Whereas <tt>Wallet s</tt> in <a>Primitive</a> can be updated using
---   <tt>applyBlock</tt>, <tt>WalletMetadata</tt> is not*.
+--   <tt>applyBlock</tt>, <tt>WalletMetadata</tt> can not*.
 --   
 --   <ul>
 --   <li>) Except for possibly <a>WalletDelegationNext</a> and
@@ -1004,7 +1004,7 @@ newtype WalletName
 WalletName :: Text -> WalletName
 [$sel:getWalletName:WalletName] :: WalletName -> Text
 
--- | Calling 'fromText @WalletName' on shorter longer string will fail.
+-- | Calling 'fromText @WalletName' on shorter string will fail.
 walletNameMinLength :: Int
 
 -- | Calling 'fromText @WalletName' on a longer string will fail.
@@ -4956,6 +4956,7 @@ InvalidRestorationParameters :: ApiErrorCode
 RejectedTip :: ApiErrorCode
 NoSuchEpochNo :: ApiErrorCode
 InvalidDelegationDiscovery :: ApiErrorCode
+NotImplemented :: ApiErrorCode
 data ApiNetworkInformation
 ApiNetworkInformation :: !ApiT SyncProgress -> !ApiEpochInfo -> !ApiBlockReference -> !ApiNetworkTip -> ApiNetworkInformation
 [$sel:syncProgress:ApiNetworkInformation] :: ApiNetworkInformation -> !ApiT SyncProgress

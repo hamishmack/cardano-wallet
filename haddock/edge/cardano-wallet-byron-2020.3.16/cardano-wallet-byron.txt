@@ -67,7 +67,11 @@ module Cardano.Wallet.Byron.Network
 pattern Cursor :: () => Point ByronBlock -> TQueue m (ChainSyncCmd m) -> Cursor (m Byron)
 
 -- | Create an instance of the network layer
-withNetworkLayer :: Trace IO Text -> BlockchainParameters -> FilePath -> (NodeToClientVersionData, CodecCBORTerm Text NodeToClientVersionData) -> (NetworkLayer IO (IO Byron) ByronBlock -> IO a) -> IO a
+withNetworkLayer :: Tracer IO NetworkLayerLog -> BlockchainParameters -> FilePath -> (NodeToClientVersionData, CodecCBORTerm Text NodeToClientVersionData) -> (NetworkLayer IO (IO Byron) ByronBlock -> IO a) -> IO a
+data NetworkLayerLog
+instance Data.Text.Class.ToText Cardano.Wallet.Byron.Network.NetworkLayerLog
+instance Cardano.BM.Data.Tracer.DefinePrivacyAnnotation Cardano.Wallet.Byron.Network.NetworkLayerLog
+instance Cardano.BM.Data.Tracer.DefineSeverity Cardano.Wallet.Byron.Network.NetworkLayerLog
 
 
 -- | Size estimation of cbor-encoded transactions in Byron
@@ -133,12 +137,13 @@ serveWallet :: forall t. t ~ IO Byron => SomeNetworkDiscriminant -> Tracers IO -
 
 -- | The types of trace events produced by the Byron API server.
 data Tracers' f
-Tracers :: f ApplicationLog -> f ApiLog -> f (WorkerLog WalletId WalletLog) -> f DBLog -> f NtpTrace -> Tracers' f
+Tracers :: f ApplicationLog -> f ApiLog -> f (WorkerLog WalletId WalletLog) -> f DBLog -> f NtpTrace -> f NetworkLayerLog -> Tracers' f
 [applicationTracer] :: Tracers' f -> f ApplicationLog
 [apiServerTracer] :: Tracers' f -> f ApiLog
 [walletEngineTracer] :: Tracers' f -> f (WorkerLog WalletId WalletLog)
 [walletDbTracer] :: Tracers' f -> f DBLog
 [ntpClientTracer] :: Tracers' f -> f NtpTrace
+[networkTracer] :: Tracers' f -> f NetworkLayerLog
 
 -- | All of the Byron <a>Tracer</a>s.
 type Tracers m = Tracers' (Tracer m)
