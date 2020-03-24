@@ -818,7 +818,6 @@ MsgStarting :: JormungandrBackend -> ApplicationLog
 MsgNetworkName :: Text -> ApplicationLog
 MsgWalletStartupError :: ErrStartup -> ApplicationLog
 MsgServerStartupError :: ListenError -> ApplicationLog
-MsgDatabaseStartup :: DatabasesStartupLog -> ApplicationLog
 instance GHC.Classes.Eq Cardano.Wallet.Jormungandr.ApplicationLog
 instance GHC.Show.Show Cardano.Wallet.Jormungandr.ApplicationLog
 instance GHC.Generics.Generic Cardano.Wallet.Jormungandr.ApplicationLog

@@ -170,7 +170,6 @@ data ApplicationLog
 MsgStarting :: FilePath -> ApplicationLog
 MsgNetworkName :: Text -> ApplicationLog
 MsgServerStartupError :: ListenError -> ApplicationLog
-MsgDatabaseStartup :: DatabasesStartupLog -> ApplicationLog
 instance GHC.Classes.Eq Cardano.Wallet.Byron.ApplicationLog
 instance GHC.Show.Show Cardano.Wallet.Byron.ApplicationLog
 instance GHC.Generics.Generic Cardano.Wallet.Byron.ApplicationLog

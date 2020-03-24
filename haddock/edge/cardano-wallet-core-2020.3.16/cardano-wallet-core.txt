@@ -177,6 +177,8 @@ MsgRemovingDatabaseFile :: Text -> DeleteSqliteDatabaseLog -> DBLog
 MsgManualMigrationNeeded :: DBField -> Text -> DBLog
 MsgManualMigrationNotNeeded :: DBField -> DBLog
 MsgUpdatingForeignKeysSetting :: ForeignKeysSetting -> DBLog
+MsgFoundDatabase :: FilePath -> Text -> DBLog
+MsgUnknownDBFile :: FilePath -> DBLog
 instance Data.Aeson.Types.ToJSON.ToJSON Cardano.DB.Sqlite.DBLog
 instance GHC.Classes.Eq Cardano.DB.Sqlite.DBLog
 instance GHC.Show.Show Cardano.DB.Sqlite.DBLog
@@ -866,6 +868,7 @@ slotParams :: BlockchainParameters -> SlotParameters
 data SyncProgress
 Ready :: SyncProgress
 Syncing :: !Quantity "percent" Percentage -> SyncProgress
+NotResponding :: SyncProgress
 newtype SyncTolerance
 SyncTolerance :: NominalDiffTime -> SyncTolerance
 
@@ -4092,7 +4095,7 @@ DBLayer :: (PrimaryKey WalletId -> Wallet s -> WalletMetadata -> [(Tx, TxMeta)] 
 
 -- | Instantiate database layers at will
 data DBFactory m s k
-DBFactory :: (forall a. WalletId -> (DBLayer m s k -> IO a) -> IO a) -> (WalletId -> IO ()) -> DBFactory m s k
+DBFactory :: (forall a. WalletId -> (DBLayer m s k -> IO a) -> IO a) -> (WalletId -> IO ()) -> IO [WalletId] -> DBFactory m s k
 
 -- | Creates a new or use an existing database, maintaining an open
 --   connection so long as necessary
@@ -4100,6 +4103,9 @@ DBFactory :: (forall a. WalletId -> (DBLayer m s k -> IO a) -> IO a) -> (WalletI
 
 -- | Erase any trace of the database
 [removeDatabase] :: DBFactory m s k -> WalletId -> IO ()
+
+-- | List existing wallet database found on disk.
+[listDatabases] :: DBFactory m s k -> IO [WalletId]
 
 -- | A primary key which can take many forms depending on the value. This
 --   may become a type family as we move forward, but for now, it
@@ -4642,7 +4648,7 @@ newDBFactory :: forall s k. (IsOurs s Address, IsOurs s ChimericAccount, NFData 
 
 -- | Return all wallet databases that match the specified key type within
 --   the specified directory.
-findDatabases :: forall k. WalletKey k => Tracer IO DatabasesStartupLog -> FilePath -> IO [WalletId]
+findDatabases :: forall k. WalletKey k => Tracer IO DBLog -> FilePath -> IO [WalletId]
 
 -- | Runs an action with a connection to the SQLite database.
 --   
@@ -4667,17 +4673,7 @@ selectState :: PersistState s => (WalletId, SlotId) -> SqlPersistT IO (Maybe s)
 newtype DefaultFieldValues
 DefaultFieldValues :: ActiveSlotCoefficient -> DefaultFieldValues
 [$sel:defaultActiveSlotCoefficient:DefaultFieldValues] :: DefaultFieldValues -> ActiveSlotCoefficient
-
--- | Log messages arising from accessing the wallet repository.
-data DatabasesStartupLog
-MsgFoundDatabase :: FilePath -> WalletId -> DatabasesStartupLog
-MsgUnknownFile :: FilePath -> DatabasesStartupLog
-instance GHC.Classes.Eq Cardano.Wallet.DB.Sqlite.DatabasesStartupLog
-instance GHC.Show.Show Cardano.Wallet.DB.Sqlite.DatabasesStartupLog
 instance GHC.Show.Show Cardano.Wallet.DB.Sqlite.ErrRollbackTo
-instance Data.Text.Class.ToText Cardano.Wallet.DB.Sqlite.DatabasesStartupLog
-instance Cardano.BM.Data.Tracer.DefinePrivacyAnnotation Cardano.Wallet.DB.Sqlite.DatabasesStartupLog
-instance Cardano.BM.Data.Tracer.DefineSeverity Cardano.Wallet.DB.Sqlite.DatabasesStartupLog
 instance (GHC.Classes.Eq (k 'Cardano.Wallet.Primitive.AddressDerivation.AccountK Cardano.Crypto.Wallet.XPub), Cardano.Wallet.Primitive.AddressDerivation.PersistPublicKey (k 'Cardano.Wallet.Primitive.AddressDerivation.AccountK), Cardano.Wallet.Primitive.AddressDerivation.PersistPublicKey (k 'Cardano.Wallet.Primitive.AddressDerivation.AddressK), Cardano.Wallet.Primitive.AddressDerivation.MkKeyFingerprint k (k 'Cardano.Wallet.Primitive.AddressDerivation.AddressK Cardano.Crypto.Wallet.XPub), Cardano.Wallet.Primitive.AddressDerivation.PaymentAddress n k, Cardano.Wallet.Primitive.AddressDerivation.SoftDerivation k) => Cardano.Wallet.DB.Sqlite.PersistState (Cardano.Wallet.Primitive.AddressDiscovery.Sequential.SeqState n k)
 instance Cardano.Wallet.DB.Sqlite.PersistState (Cardano.Wallet.Primitive.AddressDiscovery.Random.RndState t)
 instance GHC.Exception.Type.Exception Cardano.Wallet.DB.Sqlite.ErrRollbackTo
@@ -4957,6 +4953,7 @@ RejectedTip :: ApiErrorCode
 NoSuchEpochNo :: ApiErrorCode
 InvalidDelegationDiscovery :: ApiErrorCode
 NotImplemented :: ApiErrorCode
+WalletNotResponding :: ApiErrorCode
 data ApiNetworkInformation
 ApiNetworkInformation :: !ApiT SyncProgress -> !ApiEpochInfo -> !ApiBlockReference -> !ApiNetworkTip -> ApiNetworkInformation
 [$sel:syncProgress:ApiNetworkInformation] :: ApiNetworkInformation -> !ApiT SyncProgress
@@ -5786,6 +5783,10 @@ data ErrCheckWalletIntegrity
 ErrCheckWalletIntegrityNoSuchWallet :: ErrNoSuchWallet -> ErrCheckWalletIntegrity
 ErrCheckIntegrityDifferentGenesis :: Hash "Genesis" -> Hash "Genesis" -> ErrCheckWalletIntegrity
 
+-- | Can't perform given operation because the wallet died.
+newtype ErrWalletNotResponding
+ErrWalletNotResponding :: WalletId -> ErrWalletNotResponding
+
 -- | List all addresses of a wallet with their metadata. Addresses are
 --   ordered from the most-recently-discovered to the oldest known.
 listAddresses :: forall ctx s k n. (HasDBLayer s k ctx, IsOurs s Address, CompareDiscovery s, KnownAddresses s, MkKeyFingerprint k Address, DelegationAddress n k, HasRewardAccount s, k ~ RewardAccountKey s) => ctx -> WalletId -> ExceptT ErrNoSuchWallet IO [(Address, AddressState)]
@@ -6046,6 +6047,8 @@ MsgPaymentCoinSelectionAdjusted :: CoinSelection -> WalletLog
 instance GHC.Generics.Generic (Cardano.Wallet.WalletLayer s t k)
 instance GHC.Classes.Eq Cardano.Wallet.WalletLog
 instance GHC.Show.Show Cardano.Wallet.WalletLog
+instance GHC.Show.Show Cardano.Wallet.ErrWalletNotResponding
+instance GHC.Classes.Eq Cardano.Wallet.ErrWalletNotResponding
 instance GHC.Show.Show Cardano.Wallet.ErrQuitStakePool
 instance GHC.Classes.Eq Cardano.Wallet.ErrQuitStakePool
 instance GHC.Generics.Generic Cardano.Wallet.ErrQuitStakePool
@@ -6696,7 +6699,7 @@ server :: forall t n byron icarus shelley. (byron ~ ApiLayer (RndState  'Mainnet
 byronServer :: forall t n. (Buildable (ErrValidateSelection t), PaymentAddress n IcarusKey) => ApiLayer (RndState  'Mainnet) t ByronKey -> ApiLayer (SeqState  'Mainnet IcarusKey) t IcarusKey -> NtpClient -> Server (Api n)
 
 -- | Create a new instance of the wallet layer.
-newApiLayer :: forall ctx s t k. ctx ~ ApiLayer s t k => Tracer IO (WorkerLog WalletId WalletLog) -> (Block, BlockchainParameters, SyncTolerance) -> NetworkLayer IO t Block -> TransactionLayer t k -> DBFactory IO s k -> [WalletId] -> IO ctx
+newApiLayer :: forall ctx s t k. ctx ~ ApiLayer s t k => Tracer IO (WorkerLog WalletId WalletLog) -> (Block, BlockchainParameters, SyncTolerance) -> NetworkLayer IO t Block -> TransactionLayer t k -> DBFactory IO s k -> IO ctx
 
 -- | Run an action with a TCP socket bound to a port specified by the
 --   <a>Listen</a> parameter.
@@ -6706,6 +6709,7 @@ withListeningSocket :: HostPreference -> Listen -> (Either ListenError (Port, So
 --   error to a corresponding servant error.
 class LiftHandler e
 liftHandler :: LiftHandler e => ExceptT e IO a -> Handler a
+liftE :: LiftHandler e => e -> Handler a
 handler :: LiftHandler e => e -> ServerError
 instance GHC.Show.Show Cardano.Wallet.Api.Server.ErrRejectedTip
 instance GHC.Classes.Eq Cardano.Wallet.Api.Server.ErrRejectedTip
@@ -6724,6 +6728,7 @@ instance Cardano.Wallet.Api.Server.LiftHandler Cardano.Wallet.Api.Server.ErrCrea
 instance Cardano.Wallet.Api.Server.LiftHandler Cardano.Wallet.Api.Server.ErrUnexpectedPoolIdPlaceholder
 instance Cardano.Wallet.Api.Server.LiftHandler Cardano.Wallet.ErrSelectForMigration
 instance Cardano.Wallet.Api.Server.LiftHandler Cardano.Wallet.DB.ErrNoSuchWallet
+instance Cardano.Wallet.Api.Server.LiftHandler Cardano.Wallet.ErrWalletNotResponding
 instance Cardano.Wallet.Api.Server.LiftHandler Cardano.Wallet.DB.ErrWalletAlreadyExists
 instance Cardano.Wallet.Api.Server.LiftHandler Cardano.Wallet.ErrWithRootKey
 instance Formatting.Buildable.Buildable e => Cardano.Wallet.Api.Server.LiftHandler (Cardano.Wallet.ErrSelectCoinsExternal e)
