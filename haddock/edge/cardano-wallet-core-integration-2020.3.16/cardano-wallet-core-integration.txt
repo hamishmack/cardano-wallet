@@ -234,6 +234,7 @@ emptyWallet :: Context t -> IO ApiWallet
 
 -- | Create an empty wallet
 emptyWalletWith :: Context t -> (Text, Text, Int) -> IO ApiWallet
+emptyByronWalletFromXPrvWith :: forall t. () => Context t -> String -> (Text, Text, Text) -> IO ApiByronWallet
 getFromResponse :: Lens' s a -> (Status, Either RequestException s) -> a
 getFromResponseList :: Int -> Lens' s a -> (Status, Either RequestException [s]) -> a
 json :: QuasiQuoter
@@ -313,6 +314,9 @@ eventuallyUsingDelay :: Int -> String -> IO a -> IO a
 
 -- | Default passphrase used for fixture wallets
 fixturePassphrase :: Text
+
+-- | fixturePassphrase encrypted by Scrypt function
+fixturePassphraseEncrypted :: Text
 waitForNextEpoch :: Context t -> IO ()
 waitAllTxsInLedger :: forall n t. DecodeAddress n => Context t -> ApiWallet -> IO ()
 toQueryString :: [(Text, Text)] -> Text

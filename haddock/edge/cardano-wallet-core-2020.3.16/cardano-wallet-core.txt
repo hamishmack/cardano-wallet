@@ -5048,9 +5048,8 @@ ByronWalletFromXPrvPostData :: !ApiT WalletName -> !ApiT XPrv -> !ApiT (Hash "en
 --   key
 [$sel:encryptedRootPrivateKey:ByronWalletFromXPrvPostData] :: ByronWalletFromXPrvPostData -> !ApiT XPrv
 
--- | A hash of master passphrase. The hash should be a 64-byte output of a
---   Scrypt function with the following parameters: - logN = 14 - r = 8 - p
---   = 1
+-- | A hash of master passphrase. The hash should be an output of a Scrypt
+--   function with the following parameters: - logN = 14 - r = 8 - p = 1
 [$sel:passphraseHash:ByronWalletFromXPrvPostData] :: ByronWalletFromXPrvPostData -> !ApiT (Hash "encryption")
 data AccountPostData
 AccountPostData :: !ApiT WalletName -> !ApiAccountPublicKey -> !Maybe (ApiT AddressPoolGap) -> AccountPostData
