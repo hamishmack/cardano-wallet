@@ -128,7 +128,7 @@ module Cardano.Wallet.Byron
 -- | Encapsulate a network discriminant and the necessary constraints it
 --   should satisfy.
 data SomeNetworkDiscriminant
-[SomeNetworkDiscriminant] :: forall (n :: NetworkDiscriminant). (NetworkDiscriminantVal n, PaymentAddress n IcarusKey, DecodeAddress n, EncodeAddress n, MaxSizeOf Address n IcarusKey, MaxSizeOf Address n ByronKey) => Proxy n -> SomeNetworkDiscriminant
+[SomeNetworkDiscriminant] :: forall (n :: NetworkDiscriminant). (NetworkDiscriminantVal n, PaymentAddress n IcarusKey, PaymentAddress n ByronKey, DecodeAddress n, EncodeAddress n, MaxSizeOf Address n IcarusKey, MaxSizeOf Address n ByronKey) => Proxy n -> SomeNetworkDiscriminant
 
 -- | The <tt>cardano-wallet-shelley</tt> main function. It takes the
 --   configuration which was passed from the CLI and environment and starts
