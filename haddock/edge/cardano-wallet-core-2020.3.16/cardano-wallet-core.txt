@@ -3852,7 +3852,7 @@ data family Cursor target
 --   known list of headers, re-initializing the cursor.
 --   
 --   Exits with <a>Nothing</a> in case of error.
-follow :: forall target block e. Show e => NetworkLayer IO target block -> Tracer IO FollowLog -> [BlockHeader] -> (NonEmpty block -> BlockHeader -> IO (FollowAction e)) -> (block -> BlockHeader) -> IO (Maybe SlotId)
+follow :: forall target block e. Show e => NetworkLayer IO target block -> Tracer IO FollowLog -> [BlockHeader] -> (NonEmpty block -> BlockHeader -> IO (FollowAction e)) -> (block -> BlockHeader) -> IO FollowExit
 
 -- | <tt>FollowAction</tt> enables the callback of <tt>follow</tt> to
 --   signal if the chain-following should <tt>ExitWith</tt>,
@@ -3885,6 +3885,13 @@ RetryImmediately :: FollowAction err
 -- | Like <a>RetryImmediately</a> but only retries after a short delay
 RetryLater :: FollowAction err
 
+-- | Possibly scenarios that would cause <a>follow</a> to exit so that
+--   client code can decide what to do.
+data FollowExit
+FollowInterrupted :: FollowExit
+FollowRollback :: SlotId -> FollowExit
+FollowFailure :: FollowExit
+
 -- | Network is unavailable
 data ErrNetworkUnavailable
 
@@ -3914,7 +3921,6 @@ ErrGetAccountBalanceNetworkUnreachable :: ErrNetworkUnavailable -> ErrGetAccount
 ErrGetAccountBalanceAccountNotFound :: ChimericAccount -> ErrGetAccountBalance
 data FollowLog
 MsgFollowAction :: FollowAction String -> FollowLog
-MsgFatalUnhandledException :: Text -> FollowLog
 MsgUnhandledException :: Text -> FollowLog
 MsgNextBlockFailed :: ErrGetBlock -> FollowLog
 MsgSynced :: FollowLog
@@ -3929,6 +3935,8 @@ defaultRetryPolicy :: Monad m => RetryPolicyM m
 waitForNetwork :: ExceptT ErrNetworkUnavailable IO () -> RetryPolicyM IO -> IO ()
 instance GHC.Classes.Eq Cardano.Wallet.Network.FollowLog
 instance GHC.Show.Show Cardano.Wallet.Network.FollowLog
+instance GHC.Show.Show Cardano.Wallet.Network.FollowExit
+instance GHC.Classes.Eq Cardano.Wallet.Network.FollowExit
 instance GHC.Base.Functor Cardano.Wallet.Network.FollowAction
 instance GHC.Show.Show err => GHC.Show.Show (Cardano.Wallet.Network.FollowAction err)
 instance GHC.Classes.Eq err => GHC.Classes.Eq (Cardano.Wallet.Network.FollowAction err)
