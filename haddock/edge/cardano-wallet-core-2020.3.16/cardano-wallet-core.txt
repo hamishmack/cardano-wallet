@@ -6247,7 +6247,7 @@ type QuitStakePool n = "stake-pools" :> "*" :> "wallets" :> Capture "walletId" (
 -- | 
 --   <a>https://input-output-hk.github.io/cardano-wallet/api/#operation/getDelegationFee</a>
 type DelegationFee = "wallets" :> Capture "walletId" (ApiT WalletId) :> "delegation-fees" :> Get '[JSON] ApiFee
-type ByronWallets = PostByronWallet :<|> DeleteByronWallet :<|> GetByronWallet :<|> ListByronWallets :<|> ForceResyncByronWallet
+type ByronWallets = PostByronWallet :<|> DeleteByronWallet :<|> GetByronWallet :<|> ListByronWallets :<|> ForceResyncByronWallet :<|> PutByronWallet :<|> GetByronUTxOsStatistics
 
 -- | 
 --   <a>https://input-output-hk.github.io/cardano-wallet/api/#operation/deleteByronWallet</a>
@@ -6268,6 +6268,14 @@ type PostByronWallet = "byron-wallets" :> ReqBody '[JSON] SomeByronWalletPostDat
 -- | 
 --   <a>https://input-output-hk.github.io/cardano-wallet/api/#operation/forceResyncByron</a>
 type ForceResyncByronWallet = "byron-wallets" :> Capture "walletId" (ApiT WalletId) :> "tip" :> ReqBody '[JSON] ApiNetworkTip :> PutNoContent
+
+-- | 
+--   <a>https://input-output-hk.github.io/cardano-wallet/api/#operation/putByronWallet</a>
+type PutByronWallet = "byron-wallets" :> Capture "walletId" (ApiT WalletId) :> ReqBody '[JSON] WalletPutData :> Put '[JSON] ApiByronWallet
+
+-- | 
+--   <a>https://input-output-hk.github.io/cardano-wallet/api/#operation/getByronUTxOsStatistics</a>
+type GetByronUTxOsStatistics = "byron-wallets" :> Capture "walletId" (ApiT WalletId) :> "statistics" :> "utxos" :> Get '[JSON] ApiUtxoStatistics
 type ByronTransactions n = CreateByronTransaction n :<|> ListByronTransactions n :<|> PostByronTransactionFee n :<|> DeleteByronTransaction
 
 -- | 
@@ -6347,9 +6355,9 @@ deleteWallet :: forall (style :: WalletStyle) w. (Discriminate style, HasType (A
 getWallet :: forall (style :: WalletStyle) w. (Discriminate style, HasType (ApiT WalletId) w) => w -> (Method, Text)
 listWallets :: forall (style :: WalletStyle). Discriminate style => (Method, Text)
 postWallet :: PostWallet style => (Method, Text)
-putWallet :: forall w. HasType (ApiT WalletId) w => w -> (Method, Text)
+putWallet :: forall (style :: WalletStyle) w. (Discriminate style, HasType (ApiT WalletId) w) => w -> (Method, Text)
 putWalletPassphrase :: forall w. HasType (ApiT WalletId) w => w -> (Method, Text)
-getUTxOsStatistics :: forall w. HasType (ApiT WalletId) w => w -> (Method, Text)
+getUTxOsStatistics :: forall (style :: WalletStyle) w. (Discriminate style, HasType (ApiT WalletId) w) => w -> (Method, Text)
 getMigrationInfo :: forall w. HasType (ApiT WalletId) w => w -> (Method, Text)
 migrateWallet :: forall from to. (HasType (ApiT WalletId) from, HasType (ApiT WalletId) to) => from -> to -> (Method, Text)
 forceResyncWallet :: forall style w. (HasType (ApiT WalletId) w, Discriminate style) => w -> (Method, Text)
