@@ -226,6 +226,7 @@ infixl 9 !!
 
 -- | Create an empty wallet
 emptyRandomWallet :: Context t -> IO ApiByronWallet
+emptyRandomWalletWithPasswd :: Context t -> Text -> IO ApiByronWallet
 emptyIcarusWallet :: Context t -> IO ApiByronWallet
 emptyByronWalletWith :: forall t. () => Context t -> String -> (Text, [Text], Text) -> IO ApiByronWallet
 
@@ -430,6 +431,7 @@ payloadWith :: Text -> [Text] -> Payload
 simplePayload :: Payload
 updateNamePayload :: Text -> Payload
 updatePassPayload :: Text -> Text -> Payload
+updateEmptyPassPayload :: Text -> Payload
 errMsg400WalletIdEncoding :: String
 errMsg400StartTimeLaterThanEndTime :: String -> String -> String
 errMsg403Fee :: String

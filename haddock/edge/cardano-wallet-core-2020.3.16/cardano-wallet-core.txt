@@ -2032,8 +2032,10 @@ instance (GHC.TypeNats.KnownNat n, Cardano.Wallet.Primitive.AddressDerivation.Na
 instance (n Data.Type.Equality.~ Crypto.Encoding.BIP39.EntropySize mw, csz Data.Type.Equality.~ Crypto.Encoding.BIP39.CheckSumBits n, Crypto.Encoding.BIP39.ConsistentEntropy n mw csz) => Cardano.Wallet.Primitive.AddressDerivation.FromMnemonic '[mw]
 instance GHC.Classes.Eq Cardano.Wallet.Primitive.AddressDerivation.SomeMnemonic
 instance Cardano.Wallet.Primitive.AddressDerivation.PassphraseMaxLength "raw"
+instance Cardano.Wallet.Primitive.AddressDerivation.PassphraseMaxLength "byron-raw"
 instance (Cardano.Wallet.Primitive.AddressDerivation.PassphraseMaxLength purpose, Cardano.Wallet.Primitive.AddressDerivation.PassphraseMinLength purpose) => Data.Text.Class.FromText (Cardano.Wallet.Primitive.AddressDerivation.Passphrase purpose)
 instance Cardano.Wallet.Primitive.AddressDerivation.PassphraseMinLength "raw"
+instance Cardano.Wallet.Primitive.AddressDerivation.PassphraseMinLength "byron-raw"
 instance Data.Text.Class.ToText (Cardano.Wallet.Primitive.AddressDerivation.Passphrase purpose)
 instance Crypto.Random.Types.MonadRandom ((->) (Cardano.Wallet.Primitive.AddressDerivation.Passphrase "salt"))
 instance Control.DeepSeq.NFData (Cardano.Wallet.Primitive.AddressDerivation.Index derivationType level)
@@ -5061,6 +5063,10 @@ ByronWalletFromXPrvPostData :: !ApiT WalletName -> !ApiT XPrv -> !ApiT (Hash "en
 -- | A hash of master passphrase. The hash should be an output of a Scrypt
 --   function with the following parameters: - logN = 14 - r = 8 - p = 1
 [$sel:passphraseHash:ByronWalletFromXPrvPostData] :: ByronWalletFromXPrvPostData -> !ApiT (Hash "encryption")
+data ByronWalletPutPassphraseData
+ByronWalletPutPassphraseData :: !Maybe (ApiT (Passphrase "byron-raw")) -> !ApiT (Passphrase "raw") -> ByronWalletPutPassphraseData
+[$sel:oldPassphrase:ByronWalletPutPassphraseData] :: ByronWalletPutPassphraseData -> !Maybe (ApiT (Passphrase "byron-raw"))
+[$sel:newPassphrase:ByronWalletPutPassphraseData] :: ByronWalletPutPassphraseData -> !ApiT (Passphrase "raw")
 data AccountPostData
 AccountPostData :: !ApiT WalletName -> !ApiAccountPublicKey -> !Maybe (ApiT AddressPoolGap) -> AccountPostData
 [$sel:name:AccountPostData] :: AccountPostData -> !ApiT WalletName
@@ -5195,6 +5201,9 @@ instance GHC.Classes.Eq Cardano.Wallet.Api.Types.WalletPutData
 instance GHC.Show.Show Cardano.Wallet.Api.Types.WalletPutPassphraseData
 instance GHC.Generics.Generic Cardano.Wallet.Api.Types.WalletPutPassphraseData
 instance GHC.Classes.Eq Cardano.Wallet.Api.Types.WalletPutPassphraseData
+instance GHC.Show.Show Cardano.Wallet.Api.Types.ByronWalletPutPassphraseData
+instance GHC.Generics.Generic Cardano.Wallet.Api.Types.ByronWalletPutPassphraseData
+instance GHC.Classes.Eq Cardano.Wallet.Api.Types.ByronWalletPutPassphraseData
 instance GHC.Show.Show (Cardano.Wallet.Api.Types.PostTransactionData n)
 instance GHC.Generics.Generic (Cardano.Wallet.Api.Types.PostTransactionData n)
 instance GHC.Classes.Eq (Cardano.Wallet.Api.Types.PostTransactionData n)
@@ -5222,6 +5231,7 @@ instance GHC.Classes.Eq Cardano.Wallet.Api.Types.ApiBlockReference
 instance GHC.Show.Show Cardano.Wallet.Api.Types.ApiNetworkTip
 instance GHC.Generics.Generic Cardano.Wallet.Api.Types.ApiNetworkTip
 instance GHC.Classes.Eq Cardano.Wallet.Api.Types.ApiNetworkTip
+instance GHC.Base.Functor Cardano.Wallet.Api.Types.ApiT
 instance GHC.Classes.Eq a => GHC.Classes.Eq (Cardano.Wallet.Api.Types.ApiT a)
 instance GHC.Show.Show a => GHC.Show.Show (Cardano.Wallet.Api.Types.ApiT a)
 instance GHC.Generics.Generic (Cardano.Wallet.Api.Types.ApiT a)
@@ -5335,6 +5345,8 @@ instance Data.Aeson.Types.FromJSON.FromJSON Cardano.Wallet.Api.Types.WalletPutDa
 instance Data.Aeson.Types.ToJSON.ToJSON Cardano.Wallet.Api.Types.WalletPutData
 instance Data.Aeson.Types.FromJSON.FromJSON Cardano.Wallet.Api.Types.WalletPutPassphraseData
 instance Data.Aeson.Types.ToJSON.ToJSON Cardano.Wallet.Api.Types.WalletPutPassphraseData
+instance Data.Aeson.Types.FromJSON.FromJSON Cardano.Wallet.Api.Types.ByronWalletPutPassphraseData
+instance Data.Aeson.Types.ToJSON.ToJSON Cardano.Wallet.Api.Types.ByronWalletPutPassphraseData
 instance Data.Aeson.Types.FromJSON.FromJSON Cardano.Wallet.Api.Types.ApiNetworkParameters
 instance Data.Aeson.Types.ToJSON.ToJSON Cardano.Wallet.Api.Types.ApiNetworkParameters
 instance Data.Aeson.Types.FromJSON.FromJSON Cardano.Wallet.Api.Types.ApiTxId
@@ -6263,7 +6275,7 @@ type QuitStakePool n = "stake-pools" :> "*" :> "wallets" :> Capture "walletId" (
 -- | 
 --   <a>https://input-output-hk.github.io/cardano-wallet/api/#operation/getDelegationFee</a>
 type DelegationFee = "wallets" :> Capture "walletId" (ApiT WalletId) :> "delegation-fees" :> Get '[JSON] ApiFee
-type ByronWallets = PostByronWallet :<|> DeleteByronWallet :<|> GetByronWallet :<|> ListByronWallets :<|> ForceResyncByronWallet :<|> PutByronWallet :<|> GetByronUTxOsStatistics
+type ByronWallets = PostByronWallet :<|> DeleteByronWallet :<|> GetByronWallet :<|> ListByronWallets :<|> ForceResyncByronWallet :<|> PutByronWallet :<|> GetByronUTxOsStatistics :<|> PutByronWalletPassphrase
 
 -- | 
 --   <a>https://input-output-hk.github.io/cardano-wallet/api/#operation/deleteByronWallet</a>
@@ -6292,6 +6304,10 @@ type PutByronWallet = "byron-wallets" :> Capture "walletId" (ApiT WalletId) :> R
 -- | 
 --   <a>https://input-output-hk.github.io/cardano-wallet/api/#operation/getByronUTxOsStatistics</a>
 type GetByronUTxOsStatistics = "byron-wallets" :> Capture "walletId" (ApiT WalletId) :> "statistics" :> "utxos" :> Get '[JSON] ApiUtxoStatistics
+
+-- | 
+--   <a>https://input-output-hk.github.io/cardano-wallet/api/#operation/putByronWalletPassphrase</a>
+type PutByronWalletPassphrase = "byron-wallets" :> Capture "walletId" (ApiT WalletId) :> "passphrase" :> ReqBody '[JSON] ByronWalletPutPassphraseData :> PutNoContent
 type ByronTransactions n = CreateByronTransaction n :<|> ListByronTransactions n :<|> PostByronTransactionFee n :<|> DeleteByronTransaction
 
 -- | 
@@ -6372,7 +6388,7 @@ getWallet :: forall (style :: WalletStyle) w. (Discriminate style, HasType (ApiT
 listWallets :: forall (style :: WalletStyle). Discriminate style => (Method, Text)
 postWallet :: PostWallet style => (Method, Text)
 putWallet :: forall (style :: WalletStyle) w. (Discriminate style, HasType (ApiT WalletId) w) => w -> (Method, Text)
-putWalletPassphrase :: forall w. HasType (ApiT WalletId) w => w -> (Method, Text)
+putWalletPassphrase :: forall (style :: WalletStyle) w. (Discriminate style, HasType (ApiT WalletId) w) => w -> (Method, Text)
 getUTxOsStatistics :: forall (style :: WalletStyle) w. (Discriminate style, HasType (ApiT WalletId) w) => w -> (Method, Text)
 getMigrationInfo :: forall w. HasType (ApiT WalletId) w => w -> (Method, Text)
 migrateWallet :: forall from to. (HasType (ApiT WalletId) from, HasType (ApiT WalletId) to) => from -> to -> (Method, Text)
