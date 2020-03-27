@@ -526,6 +526,7 @@ instance GHC.Classes.Eq a => GHC.Classes.Eq (Data.Quantity.Quantity unit a)
 instance GHC.Show.Show a => GHC.Show.Show (Data.Quantity.Quantity unit a)
 instance GHC.Generics.Generic (Data.Quantity.Quantity unit a)
 instance Control.DeepSeq.NFData Data.Quantity.Percentage
+instance Formatting.Buildable.Buildable Data.Quantity.Percentage
 instance Data.Aeson.Types.ToJSON.ToJSON Data.Quantity.Percentage
 instance Data.Aeson.Types.FromJSON.FromJSON Data.Quantity.Percentage
 instance GHC.Enum.Bounded Data.Quantity.Percentage
@@ -1445,6 +1446,7 @@ instance Data.Text.Class.ToText Cardano.Wallet.Primitive.Types.EpochNo
 instance Formatting.Buildable.Buildable Cardano.Wallet.Primitive.Types.EpochNo
 instance Control.DeepSeq.NFData Cardano.Wallet.Primitive.Types.EpochNo
 instance Control.DeepSeq.NFData Cardano.Wallet.Primitive.Types.ActiveSlotCoefficient
+instance Formatting.Buildable.Buildable Cardano.Wallet.Primitive.Types.UTxOStatistics
 instance GHC.Classes.Eq Cardano.Wallet.Primitive.Types.UTxOStatistics
 instance Formatting.Buildable.Buildable Cardano.Wallet.Primitive.Types.HistogramBar
 instance Control.DeepSeq.NFData Cardano.Wallet.Primitive.Types.TxOut
