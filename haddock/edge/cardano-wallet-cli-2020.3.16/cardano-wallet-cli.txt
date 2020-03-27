@@ -22,13 +22,15 @@ cli :: Mod CommandFields a -> ParserInfo a
 -- | Runs a specific command parser using appropriate preferences
 runCli :: ParserInfo (IO ()) -> IO ()
 cmdMnemonic :: Mod CommandFields (IO ())
-cmdWallet :: forall t. (DecodeAddress t, EncodeAddress t) => Mod CommandFields (IO ())
+cmdWallet :: ToJSON wallet => CmdWalletCreate wallet -> WalletClient wallet -> Mod CommandFields (IO ())
+cmdWalletCreate :: WalletClient ApiWallet -> Mod CommandFields (IO ())
+cmdByronWalletCreate :: WalletClient ApiByronWallet -> Mod CommandFields (IO ())
 
 -- | cardano-wallet transaction
-cmdTransaction :: forall t. (DecodeAddress t, EncodeAddress t) => Mod CommandFields (IO ())
-cmdAddress :: forall t. (DecodeAddress t, EncodeAddress t) => Mod CommandFields (IO ())
-cmdStakePool :: forall t. (DecodeAddress t, EncodeAddress t) => Mod CommandFields (IO ())
-cmdNetwork :: Mod CommandFields (IO ())
+cmdTransaction :: ToJSON wallet => TransactionClient -> WalletClient wallet -> Mod CommandFields (IO ())
+cmdAddress :: AddressClient -> Mod CommandFields (IO ())
+cmdStakePool :: StakePoolClient -> Mod CommandFields (IO ())
+cmdNetwork :: NetworkClient -> Mod CommandFields (IO ())
 cmdVersion :: Mod CommandFields (IO ())
 cmdKey :: Mod CommandFields (IO ())
 
@@ -132,16 +134,12 @@ CliKeyScheme :: [Int] -> ([Text] -> m key) -> (key -> DerivationIndex -> m key) 
 [$sel:allowedWordLengths:CliKeyScheme] :: CliKeyScheme key m -> [Int]
 [$sel:mnemonicToRootKey:CliKeyScheme] :: CliKeyScheme key m -> [Text] -> m key
 [$sel:deriveChildKey:CliKeyScheme] :: CliKeyScheme key m -> key -> DerivationIndex -> m key
-data CliWalletStyle
-Icarus :: CliWalletStyle
-Ledger :: CliWalletStyle
-Trezor :: CliWalletStyle
 newtype DerivationIndex
 DerivationIndex :: Word32 -> DerivationIndex
 [$sel:unDerivationIndex:DerivationIndex] :: DerivationIndex -> Word32
 newtype DerivationPath
 DerivationPath :: [DerivationIndex] -> DerivationPath
-newCliKeyScheme :: CliWalletStyle -> CliKeyScheme XPrv (Either String)
+newCliKeyScheme :: ByronWalletStyle -> CliKeyScheme XPrv (Either String)
 
 -- | Pair of functions representing the bidirectional transformation
 --   between a <tt>XPrv</tt> and its 96-byte hex-encoded form.
@@ -242,11 +240,6 @@ instance GHC.Enum.Enum Cardano.CLI.DerivationIndex
 instance GHC.Enum.Bounded Cardano.CLI.DerivationIndex
 instance GHC.Classes.Eq Cardano.CLI.DerivationIndex
 instance GHC.Show.Show Cardano.CLI.DerivationIndex
-instance GHC.Enum.Enum Cardano.CLI.CliWalletStyle
-instance GHC.Enum.Bounded Cardano.CLI.CliWalletStyle
-instance GHC.Generics.Generic Cardano.CLI.CliWalletStyle
-instance GHC.Classes.Eq Cardano.CLI.CliWalletStyle
-instance GHC.Show.Show Cardano.CLI.CliWalletStyle
 instance Data.Text.Class.ToText Cardano.CLI.WaitForServiceLog
 instance Cardano.BM.Data.Tracer.DefinePrivacyAnnotation Cardano.CLI.WaitForServiceLog
 instance Cardano.BM.Data.Tracer.DefineSeverity Cardano.CLI.WaitForServiceLog
@@ -260,5 +253,3 @@ instance Data.Text.Class.FromText Cardano.CLI.DerivationPath
 instance Data.Text.Class.ToText Cardano.CLI.DerivationPath
 instance Data.Text.Class.FromText Cardano.CLI.DerivationIndex
 instance Data.Text.Class.ToText Cardano.CLI.DerivationIndex
-instance Data.Text.Class.FromText Cardano.CLI.CliWalletStyle
-instance Data.Text.Class.ToText Cardano.CLI.CliWalletStyle

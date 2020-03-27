@@ -4442,6 +4442,7 @@ decodeDerivationPathAttr :: Passphrase "addr-derivation-payload" -> [(Word8, Byt
 decodeSignedTx :: Decoder s (([TxIn], [TxOut]), [ByteString])
 decodeTx :: Decoder s ([TxIn], [TxOut])
 decodeTxWitness :: Decoder s ByteString
+decodeProtocolMagicAttr :: Decoder s (Maybe ProtocolMagic)
 
 -- | Encode a public key to a corresponding Cardano Address. The encoding
 --   of the attributes part of an address is left out to the caller; This
@@ -4521,6 +4522,67 @@ decodeList :: forall s a. Decoder s a -> Decoder s [a]
 decodeListIndef :: forall s a. Decoder s a -> Decoder s [a]
 
 
+-- | Implementation of address derivation for <tt>Icarus</tt> keys. This
+--   uses the Byron derivation for addresses, but on top of the derivation
+--   scheme V2.
+module Cardano.Wallet.Primitive.AddressDerivation.Icarus
+
+-- | A cryptographic key for sequential-scheme address derivation, with
+--   phantom-types to disambiguate key types.
+--   
+--   <pre>
+--   let rootPrivateKey = IcarusKey 'RootK XPrv
+--   let accountPubKey = IcarusKey 'AccountK XPub
+--   let addressPubKey = IcarusKey 'AddressK XPub
+--   </pre>
+newtype IcarusKey (depth :: Depth) key
+IcarusKey :: key -> IcarusKey key
+[getKey] :: IcarusKey key -> key
+
+-- | Generate a root key from a corresponding seed. The seed should be at
+--   least 16 bytes.
+generateKeyFromSeed :: SomeMnemonic -> Passphrase "encryption" -> IcarusKey  'RootK XPrv
+
+-- | Hardware Ledger devices generates keys from mnemonic using a different
+--   approach (different from the rest of Cardano).
+--   
+--   It is a combination of:
+--   
+--   <ul>
+--   <li><a>SLIP 0010</a></li>
+--   <li><a>BIP 0032</a></li>
+--   <li><a>BIP 0039</a></li>
+--   <li><a>RFC 8032</a></li>
+--   <li>What seems to be arbitrary changes from Ledger regarding the
+--   calculation of the initial chain code and generation of the root
+--   private key.</li>
+--   </ul>
+generateKeyFromHardwareLedger :: SomeMnemonic -> Passphrase "encryption" -> IcarusKey  'RootK XPrv
+
+-- | Generate a new key from seed. Note that the <tt>depth</tt> is left
+--   open so that the caller gets to decide what type of key this is. This
+--   is mostly for testing, in practice, seeds are used to represent root
+--   keys, and one should use <a>generateKeyFromSeed</a>.
+unsafeGenerateKeyFromSeed :: SomeMnemonic -> Passphrase "encryption" -> IcarusKey depth XPrv
+
+-- | The minimum seed length for <a>generateKeyFromSeed</a> and
+--   <a>unsafeGenerateKeyFromSeed</a>.
+minSeedLengthBytes :: Int
+instance GHC.Classes.Eq key => GHC.Classes.Eq (Cardano.Wallet.Primitive.AddressDerivation.Icarus.IcarusKey depth key)
+instance GHC.Show.Show key => GHC.Show.Show (Cardano.Wallet.Primitive.AddressDerivation.Icarus.IcarusKey depth key)
+instance GHC.Generics.Generic (Cardano.Wallet.Primitive.AddressDerivation.Icarus.IcarusKey depth key)
+instance Control.DeepSeq.NFData key => Control.DeepSeq.NFData (Cardano.Wallet.Primitive.AddressDerivation.Icarus.IcarusKey depth key)
+instance Cardano.Wallet.Primitive.AddressDerivation.HardDerivation Cardano.Wallet.Primitive.AddressDerivation.Icarus.IcarusKey
+instance Cardano.Wallet.Primitive.AddressDerivation.SoftDerivation Cardano.Wallet.Primitive.AddressDerivation.Icarus.IcarusKey
+instance Cardano.Wallet.Primitive.AddressDerivation.WalletKey Cardano.Wallet.Primitive.AddressDerivation.Icarus.IcarusKey
+instance Cardano.Wallet.Primitive.AddressDerivation.PaymentAddress 'Cardano.Wallet.Primitive.AddressDerivation.Mainnet Cardano.Wallet.Primitive.AddressDerivation.Icarus.IcarusKey
+instance GHC.TypeNats.KnownNat pm => Cardano.Wallet.Primitive.AddressDerivation.PaymentAddress ('Cardano.Wallet.Primitive.AddressDerivation.Testnet pm) Cardano.Wallet.Primitive.AddressDerivation.Icarus.IcarusKey
+instance Cardano.Wallet.Primitive.AddressDerivation.MkKeyFingerprint Cardano.Wallet.Primitive.AddressDerivation.Icarus.IcarusKey Cardano.Wallet.Primitive.Types.Address
+instance Cardano.Wallet.Primitive.AddressDerivation.MkKeyFingerprint Cardano.Wallet.Primitive.AddressDerivation.Icarus.IcarusKey (Cardano.Wallet.Primitive.AddressDerivation.Icarus.IcarusKey 'Cardano.Wallet.Primitive.AddressDerivation.AddressK Cardano.Crypto.Wallet.XPub)
+instance Cardano.Wallet.Primitive.AddressDerivation.PersistPrivateKey (Cardano.Wallet.Primitive.AddressDerivation.Icarus.IcarusKey 'Cardano.Wallet.Primitive.AddressDerivation.RootK)
+instance Cardano.Wallet.Primitive.AddressDerivation.PersistPublicKey (Cardano.Wallet.Primitive.AddressDerivation.Icarus.IcarusKey depth)
+
+
 -- | Implementation of address derivation for the random scheme, as
 --   implemented by the legacy Cardano wallets.
 --   
@@ -4580,7 +4642,7 @@ deriveAddressPrivateKey :: Passphrase "encryption" -> ByronKey  'AccountK XPrv -
 -- | Attempt decoding a <a>ByteString</a> into an <a>Address</a>. This
 --   merely checks that the underlying bytestring has a "valid" structure /
 --   format without doing much more.
-decodeLegacyAddress :: ByteString -> Maybe Address
+decodeLegacyAddress :: Maybe ProtocolMagic -> ByteString -> Maybe Address
 instance GHC.Generics.Generic (Cardano.Wallet.Primitive.AddressDerivation.Byron.ByronKey depth key)
 instance (GHC.Show.Show key, GHC.Show.Show (Cardano.Wallet.Primitive.AddressDerivation.Byron.DerivationPath depth)) => GHC.Show.Show (Cardano.Wallet.Primitive.AddressDerivation.Byron.ByronKey depth key)
 instance (GHC.Classes.Eq key, GHC.Classes.Eq (Cardano.Wallet.Primitive.AddressDerivation.Byron.DerivationPath depth)) => GHC.Classes.Eq (Cardano.Wallet.Primitive.AddressDerivation.Byron.ByronKey depth key)
@@ -4687,67 +4749,6 @@ instance Cardano.Wallet.DB.Sqlite.PersistState (Cardano.Wallet.Primitive.Address
 instance GHC.Exception.Type.Exception Cardano.Wallet.DB.Sqlite.ErrRollbackTo
 
 
--- | Implementation of address derivation for <tt>Icarus</tt> keys. This
---   uses the Byron derivation for addresses, but on top of the derivation
---   scheme V2.
-module Cardano.Wallet.Primitive.AddressDerivation.Icarus
-
--- | A cryptographic key for sequential-scheme address derivation, with
---   phantom-types to disambiguate key types.
---   
---   <pre>
---   let rootPrivateKey = IcarusKey 'RootK XPrv
---   let accountPubKey = IcarusKey 'AccountK XPub
---   let addressPubKey = IcarusKey 'AddressK XPub
---   </pre>
-newtype IcarusKey (depth :: Depth) key
-IcarusKey :: key -> IcarusKey key
-[getKey] :: IcarusKey key -> key
-
--- | Generate a root key from a corresponding seed. The seed should be at
---   least 16 bytes.
-generateKeyFromSeed :: SomeMnemonic -> Passphrase "encryption" -> IcarusKey  'RootK XPrv
-
--- | Hardware Ledger devices generates keys from mnemonic using a different
---   approach (different from the rest of Cardano).
---   
---   It is a combination of:
---   
---   <ul>
---   <li><a>SLIP 0010</a></li>
---   <li><a>BIP 0032</a></li>
---   <li><a>BIP 0039</a></li>
---   <li><a>RFC 8032</a></li>
---   <li>What seems to be arbitrary changes from Ledger regarding the
---   calculation of the initial chain code and generation of the root
---   private key.</li>
---   </ul>
-generateKeyFromHardwareLedger :: SomeMnemonic -> Passphrase "encryption" -> IcarusKey  'RootK XPrv
-
--- | Generate a new key from seed. Note that the <tt>depth</tt> is left
---   open so that the caller gets to decide what type of key this is. This
---   is mostly for testing, in practice, seeds are used to represent root
---   keys, and one should use <a>generateKeyFromSeed</a>.
-unsafeGenerateKeyFromSeed :: SomeMnemonic -> Passphrase "encryption" -> IcarusKey depth XPrv
-
--- | The minimum seed length for <a>generateKeyFromSeed</a> and
---   <a>unsafeGenerateKeyFromSeed</a>.
-minSeedLengthBytes :: Int
-instance GHC.Classes.Eq key => GHC.Classes.Eq (Cardano.Wallet.Primitive.AddressDerivation.Icarus.IcarusKey depth key)
-instance GHC.Show.Show key => GHC.Show.Show (Cardano.Wallet.Primitive.AddressDerivation.Icarus.IcarusKey depth key)
-instance GHC.Generics.Generic (Cardano.Wallet.Primitive.AddressDerivation.Icarus.IcarusKey depth key)
-instance Control.DeepSeq.NFData key => Control.DeepSeq.NFData (Cardano.Wallet.Primitive.AddressDerivation.Icarus.IcarusKey depth key)
-instance Cardano.Wallet.Primitive.AddressDerivation.HardDerivation Cardano.Wallet.Primitive.AddressDerivation.Icarus.IcarusKey
-instance Cardano.Wallet.Primitive.AddressDerivation.SoftDerivation Cardano.Wallet.Primitive.AddressDerivation.Icarus.IcarusKey
-instance Cardano.Wallet.Primitive.AddressDerivation.WalletKey Cardano.Wallet.Primitive.AddressDerivation.Icarus.IcarusKey
-instance Cardano.Wallet.Primitive.AddressDerivation.PaymentAddress 'Cardano.Wallet.Primitive.AddressDerivation.Mainnet Cardano.Wallet.Primitive.AddressDerivation.Icarus.IcarusKey
-instance GHC.TypeNats.KnownNat pm => Cardano.Wallet.Primitive.AddressDerivation.PaymentAddress ('Cardano.Wallet.Primitive.AddressDerivation.Testnet pm) Cardano.Wallet.Primitive.AddressDerivation.Icarus.IcarusKey
-instance Cardano.Wallet.Primitive.AddressDerivation.MkKeyFingerprint Cardano.Wallet.Primitive.AddressDerivation.Icarus.IcarusKey Cardano.Wallet.Primitive.Types.Address
-instance Cardano.Wallet.Primitive.AddressDerivation.MkKeyFingerprint Cardano.Wallet.Primitive.AddressDerivation.Icarus.IcarusKey (Cardano.Wallet.Primitive.AddressDerivation.Icarus.IcarusKey 'Cardano.Wallet.Primitive.AddressDerivation.AddressK Cardano.Crypto.Wallet.XPub)
-instance Cardano.Wallet.Primitive.AddressDerivation.PersistPrivateKey (Cardano.Wallet.Primitive.AddressDerivation.Icarus.IcarusKey 'Cardano.Wallet.Primitive.AddressDerivation.RootK)
-instance Cardano.Wallet.Primitive.AddressDerivation.PersistPublicKey (Cardano.Wallet.Primitive.AddressDerivation.Icarus.IcarusKey depth)
-
-
 -- | Utility functions for converting time values to and from text.
 module Data.Time.Text
 
@@ -4808,6 +4809,7 @@ Trezor :: ByronWalletStyle
 Ledger :: ByronWalletStyle
 type family StyleSymbol (style :: ByronWalletStyle) :: Symbol
 type family AllowedMnemonics (style :: k) :: [Nat]
+fmtAllowedWords :: ByronWalletStyle -> String
 data ApiAddress (n :: NetworkDiscriminant)
 ApiAddress :: !(ApiT Address, Proxy n) -> !ApiT AddressState -> ApiAddress
 [$sel:id:ApiAddress] :: ApiAddress -> !(ApiT Address, Proxy n)
@@ -4817,12 +4819,12 @@ ApiEpochInfo :: !ApiT EpochNo -> !UTCTime -> ApiEpochInfo
 [$sel:epochNumber:ApiEpochInfo] :: ApiEpochInfo -> !ApiT EpochNo
 [$sel:epochStartTime:ApiEpochInfo] :: ApiEpochInfo -> !UTCTime
 newtype ApiSelectCoinsData (n :: NetworkDiscriminant)
-ApiSelectCoinsData :: NonEmpty (AddressAmount n) -> ApiSelectCoinsData
-[$sel:payments:ApiSelectCoinsData] :: ApiSelectCoinsData -> NonEmpty (AddressAmount n)
+ApiSelectCoinsData :: NonEmpty (AddressAmount (ApiT Address, Proxy n)) -> ApiSelectCoinsData
+[$sel:payments:ApiSelectCoinsData] :: ApiSelectCoinsData -> NonEmpty (AddressAmount (ApiT Address, Proxy n))
 data ApiCoinSelection (n :: NetworkDiscriminant)
-ApiCoinSelection :: !NonEmpty (ApiCoinSelectionInput n) -> !NonEmpty (AddressAmount n) -> ApiCoinSelection
+ApiCoinSelection :: !NonEmpty (ApiCoinSelectionInput n) -> !NonEmpty (AddressAmount (ApiT Address, Proxy n)) -> ApiCoinSelection
 [$sel:inputs:ApiCoinSelection] :: ApiCoinSelection -> !NonEmpty (ApiCoinSelectionInput n)
-[$sel:outputs:ApiCoinSelection] :: ApiCoinSelection -> !NonEmpty (AddressAmount n)
+[$sel:outputs:ApiCoinSelection] :: ApiCoinSelection -> !NonEmpty (AddressAmount (ApiT Address, Proxy n))
 data ApiCoinSelectionInput (n :: NetworkDiscriminant)
 ApiCoinSelectionInput :: !ApiT (Hash "Tx") -> !Word32 -> !(ApiT Address, Proxy n) -> !Quantity "lovelace" Natural -> ApiCoinSelectionInput
 [$sel:id:ApiCoinSelectionInput] :: ApiCoinSelectionInput -> !ApiT (Hash "Tx")
@@ -4883,13 +4885,13 @@ data WalletPutPassphraseData
 WalletPutPassphraseData :: !ApiT (Passphrase "raw") -> !ApiT (Passphrase "raw") -> WalletPutPassphraseData
 [$sel:oldPassphrase:WalletPutPassphraseData] :: WalletPutPassphraseData -> !ApiT (Passphrase "raw")
 [$sel:newPassphrase:WalletPutPassphraseData] :: WalletPutPassphraseData -> !ApiT (Passphrase "raw")
-data PostTransactionData n
-PostTransactionData :: !NonEmpty (AddressAmount n) -> !ApiT (Passphrase "raw") -> PostTransactionData n
-[$sel:payments:PostTransactionData] :: PostTransactionData n -> !NonEmpty (AddressAmount n)
-[$sel:passphrase:PostTransactionData] :: PostTransactionData n -> !ApiT (Passphrase "raw")
-newtype PostTransactionFeeData n
-PostTransactionFeeData :: NonEmpty (AddressAmount n) -> PostTransactionFeeData n
-[$sel:payments:PostTransactionFeeData] :: PostTransactionFeeData n -> NonEmpty (AddressAmount n)
+data PostTransactionData (n :: NetworkDiscriminant)
+PostTransactionData :: !NonEmpty (AddressAmount (ApiT Address, Proxy n)) -> !ApiT (Passphrase "raw") -> PostTransactionData
+[$sel:payments:PostTransactionData] :: PostTransactionData -> !NonEmpty (AddressAmount (ApiT Address, Proxy n))
+[$sel:passphrase:PostTransactionData] :: PostTransactionData -> !ApiT (Passphrase "raw")
+newtype PostTransactionFeeData (n :: NetworkDiscriminant)
+PostTransactionFeeData :: NonEmpty (AddressAmount (ApiT Address, Proxy n)) -> PostTransactionFeeData
+[$sel:payments:PostTransactionFeeData] :: PostTransactionFeeData -> NonEmpty (AddressAmount (ApiT Address, Proxy n))
 newtype PostExternalTransactionData
 PostExternalTransactionData :: ByteString -> PostExternalTransactionData
 [$sel:payload:PostExternalTransactionData] :: PostExternalTransactionData -> ByteString
@@ -4897,31 +4899,31 @@ data ApiTimeReference
 ApiTimeReference :: !UTCTime -> !ApiBlockReference -> ApiTimeReference
 [$sel:time:ApiTimeReference] :: ApiTimeReference -> !UTCTime
 [$sel:block:ApiTimeReference] :: ApiTimeReference -> !ApiBlockReference
-data ApiTransaction n
-ApiTransaction :: !ApiT (Hash "Tx") -> !Quantity "lovelace" Natural -> !Maybe ApiTimeReference -> !Maybe ApiTimeReference -> !Quantity "block" Natural -> !ApiT Direction -> ![ApiTxInput n] -> ![AddressAmount n] -> !ApiT TxStatus -> ApiTransaction n
-[$sel:id:ApiTransaction] :: ApiTransaction n -> !ApiT (Hash "Tx")
-[$sel:amount:ApiTransaction] :: ApiTransaction n -> !Quantity "lovelace" Natural
-[$sel:insertedAt:ApiTransaction] :: ApiTransaction n -> !Maybe ApiTimeReference
-[$sel:pendingSince:ApiTransaction] :: ApiTransaction n -> !Maybe ApiTimeReference
-[$sel:depth:ApiTransaction] :: ApiTransaction n -> !Quantity "block" Natural
-[$sel:direction:ApiTransaction] :: ApiTransaction n -> !ApiT Direction
-[$sel:inputs:ApiTransaction] :: ApiTransaction n -> ![ApiTxInput n]
-[$sel:outputs:ApiTransaction] :: ApiTransaction n -> ![AddressAmount n]
-[$sel:status:ApiTransaction] :: ApiTransaction n -> !ApiT TxStatus
+data ApiTransaction (n :: NetworkDiscriminant)
+ApiTransaction :: !ApiT (Hash "Tx") -> !Quantity "lovelace" Natural -> !Maybe ApiTimeReference -> !Maybe ApiTimeReference -> !Quantity "block" Natural -> !ApiT Direction -> ![ApiTxInput n] -> ![AddressAmount (ApiT Address, Proxy n)] -> !ApiT TxStatus -> ApiTransaction
+[$sel:id:ApiTransaction] :: ApiTransaction -> !ApiT (Hash "Tx")
+[$sel:amount:ApiTransaction] :: ApiTransaction -> !Quantity "lovelace" Natural
+[$sel:insertedAt:ApiTransaction] :: ApiTransaction -> !Maybe ApiTimeReference
+[$sel:pendingSince:ApiTransaction] :: ApiTransaction -> !Maybe ApiTimeReference
+[$sel:depth:ApiTransaction] :: ApiTransaction -> !Quantity "block" Natural
+[$sel:direction:ApiTransaction] :: ApiTransaction -> !ApiT Direction
+[$sel:inputs:ApiTransaction] :: ApiTransaction -> ![ApiTxInput n]
+[$sel:outputs:ApiTransaction] :: ApiTransaction -> ![AddressAmount (ApiT Address, Proxy n)]
+[$sel:status:ApiTransaction] :: ApiTransaction -> !ApiT TxStatus
 newtype ApiFee
 ApiFee :: Quantity "lovelace" Natural -> ApiFee
 [$sel:amount:ApiFee] :: ApiFee -> Quantity "lovelace" Natural
 newtype ApiTxId
 ApiTxId :: ApiT (Hash "Tx") -> ApiTxId
 [$sel:id:ApiTxId] :: ApiTxId -> ApiT (Hash "Tx")
-data ApiTxInput n
-ApiTxInput :: !Maybe (AddressAmount n) -> !ApiT TxIn -> ApiTxInput n
-[$sel:source:ApiTxInput] :: ApiTxInput n -> !Maybe (AddressAmount n)
-[$sel:input:ApiTxInput] :: ApiTxInput n -> !ApiT TxIn
-data AddressAmount (n :: NetworkDiscriminant)
-AddressAmount :: !(ApiT Address, Proxy n) -> !Quantity "lovelace" Natural -> AddressAmount
-[$sel:address:AddressAmount] :: AddressAmount -> !(ApiT Address, Proxy n)
-[$sel:amount:AddressAmount] :: AddressAmount -> !Quantity "lovelace" Natural
+data ApiTxInput (n :: NetworkDiscriminant)
+ApiTxInput :: !Maybe (AddressAmount (ApiT Address, Proxy n)) -> !ApiT TxIn -> ApiTxInput
+[$sel:source:ApiTxInput] :: ApiTxInput -> !Maybe (AddressAmount (ApiT Address, Proxy n))
+[$sel:input:ApiTxInput] :: ApiTxInput -> !ApiT TxIn
+data AddressAmount addr
+AddressAmount :: !addr -> !Quantity "lovelace" Natural -> AddressAmount addr
+[$sel:address:AddressAmount] :: AddressAmount addr -> !addr
+[$sel:amount:AddressAmount] :: AddressAmount addr -> !Quantity "lovelace" Natural
 
 -- | Error codes returned by the API, in the form of snake_cased strings
 data ApiErrorCode
@@ -5115,6 +5117,12 @@ ApiT :: a -> ApiT a
 newtype ApiMnemonicT (sizes :: [Nat])
 ApiMnemonicT :: SomeMnemonic -> ApiMnemonicT
 [$sel:getApiMnemonicT:ApiMnemonicT] :: ApiMnemonicT -> SomeMnemonic
+type family ApiAddressT (n :: k) :: *
+type family ApiCoinSelectionT (n :: k) :: *
+type family ApiSelectCoinsDataT (n :: k) :: *
+type family ApiTransactionT (n :: k) :: *
+type family PostTransactionDataT (n :: k) :: *
+type family PostTransactionFeeDataT (n :: k) :: *
 instance GHC.Show.Show Cardano.Wallet.Api.Types.ApiByronWallet
 instance GHC.Generics.Generic Cardano.Wallet.Api.Types.ApiByronWallet
 instance GHC.Classes.Eq Cardano.Wallet.Api.Types.ApiByronWallet
@@ -5154,6 +5162,9 @@ instance GHC.Classes.Eq Cardano.Wallet.Api.Types.ApiNetworkInformation
 instance GHC.Show.Show Cardano.Wallet.Api.Types.ApiEpochInfo
 instance GHC.Generics.Generic Cardano.Wallet.Api.Types.ApiEpochInfo
 instance GHC.Classes.Eq Cardano.Wallet.Api.Types.ApiEpochInfo
+instance GHC.Show.Show (Cardano.Wallet.Api.Types.ApiSelectCoinsData n)
+instance GHC.Generics.Generic (Cardano.Wallet.Api.Types.ApiSelectCoinsData n)
+instance GHC.Classes.Eq (Cardano.Wallet.Api.Types.ApiSelectCoinsData n)
 instance GHC.Show.Show (Cardano.Wallet.Api.Types.ApiCoinSelection n)
 instance GHC.Generics.Generic (Cardano.Wallet.Api.Types.ApiCoinSelection n)
 instance GHC.Classes.Eq (Cardano.Wallet.Api.Types.ApiCoinSelection n)
@@ -5187,6 +5198,9 @@ instance GHC.Classes.Eq Cardano.Wallet.Api.Types.WalletPutPassphraseData
 instance GHC.Show.Show (Cardano.Wallet.Api.Types.PostTransactionData n)
 instance GHC.Generics.Generic (Cardano.Wallet.Api.Types.PostTransactionData n)
 instance GHC.Classes.Eq (Cardano.Wallet.Api.Types.PostTransactionData n)
+instance GHC.Show.Show (Cardano.Wallet.Api.Types.PostTransactionFeeData n)
+instance GHC.Generics.Generic (Cardano.Wallet.Api.Types.PostTransactionFeeData n)
+instance GHC.Classes.Eq (Cardano.Wallet.Api.Types.PostTransactionFeeData n)
 instance GHC.Show.Show Cardano.Wallet.Api.Types.ApiNetworkParameters
 instance GHC.Generics.Generic Cardano.Wallet.Api.Types.ApiNetworkParameters
 instance GHC.Classes.Eq Cardano.Wallet.Api.Types.ApiNetworkParameters
@@ -5199,15 +5213,6 @@ instance GHC.Classes.Eq (Cardano.Wallet.Api.Types.ApiTransaction n)
 instance GHC.Show.Show (Cardano.Wallet.Api.Types.ApiTxInput n)
 instance GHC.Generics.Generic (Cardano.Wallet.Api.Types.ApiTxInput n)
 instance GHC.Classes.Eq (Cardano.Wallet.Api.Types.ApiTxInput n)
-instance GHC.Show.Show (Cardano.Wallet.Api.Types.ApiSelectCoinsData n)
-instance GHC.Generics.Generic (Cardano.Wallet.Api.Types.ApiSelectCoinsData n)
-instance GHC.Classes.Eq (Cardano.Wallet.Api.Types.ApiSelectCoinsData n)
-instance GHC.Show.Show (Cardano.Wallet.Api.Types.PostTransactionFeeData n)
-instance GHC.Generics.Generic (Cardano.Wallet.Api.Types.PostTransactionFeeData n)
-instance GHC.Classes.Eq (Cardano.Wallet.Api.Types.PostTransactionFeeData n)
-instance GHC.Show.Show (Cardano.Wallet.Api.Types.AddressAmount n)
-instance GHC.Generics.Generic (Cardano.Wallet.Api.Types.AddressAmount n)
-instance GHC.Classes.Eq (Cardano.Wallet.Api.Types.AddressAmount n)
 instance GHC.Show.Show Cardano.Wallet.Api.Types.ApiTimeReference
 instance GHC.Generics.Generic Cardano.Wallet.Api.Types.ApiTimeReference
 instance GHC.Classes.Eq Cardano.Wallet.Api.Types.ApiTimeReference
@@ -5241,6 +5246,9 @@ instance GHC.Classes.Eq Cardano.Wallet.Api.Types.ApiNtpStatus
 instance GHC.Show.Show Cardano.Wallet.Api.Types.NtpSyncingStatus
 instance GHC.Generics.Generic Cardano.Wallet.Api.Types.NtpSyncingStatus
 instance GHC.Classes.Eq Cardano.Wallet.Api.Types.NtpSyncingStatus
+instance GHC.Show.Show addr => GHC.Show.Show (Cardano.Wallet.Api.Types.AddressAmount addr)
+instance GHC.Generics.Generic (Cardano.Wallet.Api.Types.AddressAmount addr)
+instance GHC.Classes.Eq addr => GHC.Classes.Eq (Cardano.Wallet.Api.Types.AddressAmount addr)
 instance GHC.Show.Show Cardano.Wallet.Api.Types.ApiEpochNumber
 instance GHC.Generics.Generic Cardano.Wallet.Api.Types.ApiEpochNumber
 instance GHC.Classes.Eq Cardano.Wallet.Api.Types.ApiEpochNumber
@@ -5271,10 +5279,8 @@ instance Cardano.Wallet.Api.Types.DecodeAddress n => Data.Aeson.Types.FromJSON.F
 instance Cardano.Wallet.Api.Types.DecodeAddress n => Data.Aeson.Types.FromJSON.FromJSON (Cardano.Wallet.Api.Types.ApiT Cardano.Wallet.Primitive.Types.Address, Data.Proxy.Proxy n)
 instance Cardano.Wallet.Api.Types.DecodeAddress t => Data.Aeson.Types.FromJSON.FromJSON (Cardano.Wallet.Api.Types.PostTransactionData t)
 instance Cardano.Wallet.Api.Types.DecodeAddress t => Data.Aeson.Types.FromJSON.FromJSON (Cardano.Wallet.Api.Types.PostTransactionFeeData t)
-instance Cardano.Wallet.Api.Types.DecodeAddress n => Data.Aeson.Types.FromJSON.FromJSON (Cardano.Wallet.Api.Types.AddressAmount n)
 instance Cardano.Wallet.Api.Types.DecodeAddress n => Data.Aeson.Types.FromJSON.FromJSON (Cardano.Wallet.Api.Types.ApiTransaction n)
 instance Cardano.Wallet.Api.Types.DecodeAddress n => Data.Aeson.Types.FromJSON.FromJSON (Cardano.Wallet.Api.Types.ApiTxInput n)
-instance Cardano.Wallet.Api.Types.DecodeAddress n => Data.Text.Class.FromText (Cardano.Wallet.Api.Types.AddressAmount n)
 instance Cardano.Wallet.Api.Types.DecodeAddress 'Cardano.Wallet.Primitive.AddressDerivation.Mainnet
 instance GHC.TypeNats.KnownNat pm => Cardano.Wallet.Api.Types.DecodeAddress ('Cardano.Wallet.Primitive.AddressDerivation.Testnet pm)
 instance Cardano.Wallet.Api.Types.EncodeAddress n => Data.Aeson.Types.ToJSON.ToJSON (Cardano.Wallet.Api.Types.ApiAddress n)
@@ -5284,10 +5290,8 @@ instance Cardano.Wallet.Api.Types.EncodeAddress n => Data.Aeson.Types.ToJSON.ToJ
 instance Cardano.Wallet.Api.Types.EncodeAddress n => Data.Aeson.Types.ToJSON.ToJSON (Cardano.Wallet.Api.Types.ApiT Cardano.Wallet.Primitive.Types.Address, Data.Proxy.Proxy n)
 instance Cardano.Wallet.Api.Types.EncodeAddress t => Data.Aeson.Types.ToJSON.ToJSON (Cardano.Wallet.Api.Types.PostTransactionData t)
 instance Cardano.Wallet.Api.Types.EncodeAddress t => Data.Aeson.Types.ToJSON.ToJSON (Cardano.Wallet.Api.Types.PostTransactionFeeData t)
-instance Cardano.Wallet.Api.Types.EncodeAddress n => Data.Aeson.Types.ToJSON.ToJSON (Cardano.Wallet.Api.Types.AddressAmount n)
 instance Cardano.Wallet.Api.Types.EncodeAddress n => Data.Aeson.Types.ToJSON.ToJSON (Cardano.Wallet.Api.Types.ApiTransaction n)
 instance Cardano.Wallet.Api.Types.EncodeAddress n => Data.Aeson.Types.ToJSON.ToJSON (Cardano.Wallet.Api.Types.ApiTxInput n)
-instance Cardano.Wallet.Api.Types.EncodeAddress n => Data.Text.Class.ToText (Cardano.Wallet.Api.Types.AddressAmount n)
 instance Cardano.Wallet.Api.Types.EncodeAddress 'Cardano.Wallet.Primitive.AddressDerivation.Mainnet
 instance Cardano.Wallet.Api.Types.EncodeAddress ('Cardano.Wallet.Primitive.AddressDerivation.Testnet pm)
 instance Data.Aeson.Types.FromJSON.FromJSON Cardano.Wallet.Api.Types.ApiByronWallet
@@ -5411,6 +5415,9 @@ instance Data.Text.Class.ToText Cardano.Wallet.Api.Types.NtpSyncingStatus
 instance Data.Text.Class.FromText Cardano.Wallet.Api.Types.NtpSyncingStatus
 instance Data.Aeson.Types.FromJSON.FromJSON Cardano.Wallet.Api.Types.NtpSyncingStatus
 instance Data.Aeson.Types.ToJSON.ToJSON Cardano.Wallet.Api.Types.NtpSyncingStatus
+instance Data.Aeson.Types.FromJSON.FromJSON a => Data.Aeson.Types.FromJSON.FromJSON (Cardano.Wallet.Api.Types.AddressAmount a)
+instance Data.Aeson.Types.ToJSON.ToJSON a => Data.Aeson.Types.ToJSON.ToJSON (Cardano.Wallet.Api.Types.AddressAmount a)
+instance Data.Text.Class.FromText (Cardano.Wallet.Api.Types.AddressAmount Data.Text.Internal.Text)
 instance Data.Text.Class.ToText Cardano.Wallet.Api.Types.ApiEpochNumber
 instance Data.Text.Class.FromText Cardano.Wallet.Api.Types.ApiEpochNumber
 instance Web.Internal.HttpApiData.ToHttpApiData Cardano.Wallet.Api.Types.ApiEpochNumber
@@ -6178,6 +6185,7 @@ instance Cardano.BM.Data.Tracer.DefineSeverity msg => Cardano.BM.Data.Tracer.Def
 module Cardano.Wallet.Api
 type Api n = Wallets :<|> Addresses n :<|> CoinSelections n :<|> Transactions n :<|> StakePools n :<|> ByronWallets :<|> ByronTransactions n :<|> ByronMigrations n :<|> Network :<|> Proxy_
 type ApiV2 n = "v2" :> Api n
+type family PostData wallet :: *
 type Wallets = DeleteWallet :<|> GetWallet :<|> ListWallets :<|> PostWallet :<|> PutWallet :<|> PutWalletPassphrase :<|> GetUTxOsStatistics :<|> ForceResyncWallet
 
 -- | 
@@ -6194,7 +6202,7 @@ type ListWallets = "wallets" :> Get '[JSON] [ApiWallet]
 
 -- | 
 --   <a>https://input-output-hk.github.io/cardano-wallet/api/#operation/postWallet</a>
-type PostWallet = "wallets" :> ReqBody '[JSON] WalletOrAccountPostData :> PostCreated '[JSON] ApiWallet
+type PostWallet = "wallets" :> ReqBody '[JSON] (PostData ApiWallet) :> PostCreated '[JSON] ApiWallet
 
 -- | 
 --   <a>https://input-output-hk.github.io/cardano-wallet/api/#operation/putWallet</a>
@@ -6215,25 +6223,25 @@ type Addresses n = ListAddresses n
 
 -- | 
 --   <a>https://input-output-hk.github.io/cardano-wallet/api/#operation/listAddresses</a>
-type ListAddresses n = "wallets" :> Capture "walletId" (ApiT WalletId) :> "addresses" :> QueryParam "state" (ApiT AddressState) :> Get '[JSON] [ApiAddress n]
+type ListAddresses n = "wallets" :> Capture "walletId" (ApiT WalletId) :> "addresses" :> QueryParam "state" (ApiT AddressState) :> Get '[JSON] [ApiAddressT n]
 type CoinSelections n = SelectCoins n
 
 -- | 
 --   <a>https://input-output-hk.github.io/cardano-wallet/api/#operation/selectCoins</a>
-type SelectCoins n = "wallets" :> Capture "walletId" (ApiT WalletId) :> "coin-selections" :> "random" :> ReqBody '[JSON] (ApiSelectCoinsData n) :> Post '[JSON] (ApiCoinSelection n)
+type SelectCoins n = "wallets" :> Capture "walletId" (ApiT WalletId) :> "coin-selections" :> "random" :> ReqBody '[JSON] (ApiSelectCoinsDataT n) :> Post '[JSON] (ApiCoinSelectionT n)
 type Transactions n = CreateTransaction n :<|> ListTransactions n :<|> PostTransactionFee n :<|> DeleteTransaction
 
 -- | 
 --   <a>https://input-output-hk.github.io/cardano-wallet/api/#operation/postTransaction</a>
-type CreateTransaction n = "wallets" :> Capture "walletId" (ApiT WalletId) :> "transactions" :> ReqBody '[JSON] (PostTransactionData n) :> PostAccepted '[JSON] (ApiTransaction n)
+type CreateTransaction n = "wallets" :> Capture "walletId" (ApiT WalletId) :> "transactions" :> ReqBody '[JSON] (PostTransactionDataT n) :> PostAccepted '[JSON] (ApiTransactionT n)
 
 -- | 
 --   <a>https://input-output-hk.github.io/cardano-wallet/api/#operation/postTransactionFee</a>
-type PostTransactionFee n = "wallets" :> Capture "walletId" (ApiT WalletId) :> "payment-fees" :> ReqBody '[JSON] (PostTransactionFeeData n) :> PostAccepted '[JSON] ApiFee
+type PostTransactionFee n = "wallets" :> Capture "walletId" (ApiT WalletId) :> "payment-fees" :> ReqBody '[JSON] (PostTransactionFeeDataT n) :> PostAccepted '[JSON] ApiFee
 
 -- | 
 --   <a>https://input-output-hk.github.io/cardano-wallet/api/#operation/listTransaction</a>
-type ListTransactions n = "wallets" :> Capture "walletId" (ApiT WalletId) :> "transactions" :> QueryParam "start" Iso8601Time :> QueryParam "end" Iso8601Time :> QueryParam "order" (ApiT SortOrder) :> Get '[JSON] [ApiTransaction n]
+type ListTransactions n = "wallets" :> Capture "walletId" (ApiT WalletId) :> "transactions" :> QueryParam "start" Iso8601Time :> QueryParam "end" Iso8601Time :> QueryParam "order" (ApiT SortOrder) :> Get '[JSON] [ApiTransactionT n]
 
 -- | 
 --   <a>https://input-output-hk.github.io/cardano-wallet/api/#operation/deleteTransaction</a>
@@ -6246,11 +6254,11 @@ type ListStakePools = "stake-pools" :> Get '[JSON] [ApiStakePool]
 
 -- | 
 --   <a>https://input-output-hk.github.io/cardano-wallet/api/#operation/joinStakePool</a>
-type JoinStakePool n = "stake-pools" :> Capture "stakePoolId" ApiPoolId :> "wallets" :> Capture "walletId" (ApiT WalletId) :> ReqBody '[JSON] ApiWalletPassphrase :> PutAccepted '[JSON] (ApiTransaction n)
+type JoinStakePool n = "stake-pools" :> Capture "stakePoolId" ApiPoolId :> "wallets" :> Capture "walletId" (ApiT WalletId) :> ReqBody '[JSON] ApiWalletPassphrase :> PutAccepted '[JSON] (ApiTransactionT n)
 
 -- | 
 --   <a>https://input-output-hk.github.io/cardano-wallet/api/#operation/quitStakePool</a>
-type QuitStakePool n = "stake-pools" :> "*" :> "wallets" :> Capture "walletId" (ApiT WalletId) :> ReqBody '[JSON] ApiWalletPassphrase :> DeleteAccepted '[JSON] (ApiTransaction n)
+type QuitStakePool n = "stake-pools" :> "*" :> "wallets" :> Capture "walletId" (ApiT WalletId) :> ReqBody '[JSON] ApiWalletPassphrase :> DeleteAccepted '[JSON] (ApiTransactionT n)
 
 -- | 
 --   <a>https://input-output-hk.github.io/cardano-wallet/api/#operation/getDelegationFee</a>
@@ -6271,7 +6279,7 @@ type ListByronWallets = "byron-wallets" :> Get '[JSON] [ApiByronWallet]
 
 -- | 
 --   <a>https://input-output-hk.github.io/cardano-wallet/api/#operation/postByronWallet</a>
-type PostByronWallet = "byron-wallets" :> ReqBody '[JSON] SomeByronWalletPostData :> PostCreated '[JSON] ApiByronWallet
+type PostByronWallet = "byron-wallets" :> ReqBody '[JSON] (PostData ApiByronWallet) :> PostCreated '[JSON] ApiByronWallet
 
 -- | 
 --   <a>https://input-output-hk.github.io/cardano-wallet/api/#operation/forceResyncByron</a>
@@ -6288,15 +6296,15 @@ type ByronTransactions n = CreateByronTransaction n :<|> ListByronTransactions n
 
 -- | 
 --   <a>https://input-output-hk.github.io/cardano-wallet/api/#operation/postByronTransaction</a>
-type CreateByronTransaction n = "byron-wallets" :> Capture "walletId" (ApiT WalletId) :> "transactions" :> ReqBody '[JSON] (PostTransactionData n) :> PostAccepted '[JSON] (ApiTransaction n)
+type CreateByronTransaction n = "byron-wallets" :> Capture "walletId" (ApiT WalletId) :> "transactions" :> ReqBody '[JSON] (PostTransactionDataT n) :> PostAccepted '[JSON] (ApiTransactionT n)
 
 -- | 
 --   <a>https://input-output-hk.github.io/cardano-wallet/api/#operation/listByronTransactions</a>
-type ListByronTransactions n = "byron-wallets" :> Capture "walletId" (ApiT WalletId) :> "transactions" :> QueryParam "start" Iso8601Time :> QueryParam "end" Iso8601Time :> QueryParam "order" (ApiT SortOrder) :> Get '[JSON] [ApiTransaction n]
+type ListByronTransactions n = "byron-wallets" :> Capture "walletId" (ApiT WalletId) :> "transactions" :> QueryParam "start" Iso8601Time :> QueryParam "end" Iso8601Time :> QueryParam "order" (ApiT SortOrder) :> Get '[JSON] [ApiTransactionT n]
 
 -- | 
 --   <a>https://input-output-hk.github.io/cardano-wallet/api/#operation/postByronTransactionFee</a>
-type PostByronTransactionFee n = "byron-wallets" :> Capture "walletId" (ApiT WalletId) :> "payment-fees" :> ReqBody '[JSON] (PostTransactionFeeData n) :> PostAccepted '[JSON] ApiFee
+type PostByronTransactionFee n = "byron-wallets" :> Capture "walletId" (ApiT WalletId) :> "payment-fees" :> ReqBody '[JSON] (PostTransactionFeeDataT n) :> PostAccepted '[JSON] ApiFee
 
 -- | 
 --   <a>https://input-output-hk.github.io/cardano-wallet/api/#operation/deleteByronTransaction</a>
@@ -6305,7 +6313,7 @@ type ByronMigrations n = GetByronWalletMigrationInfo :<|> MigrateByronWallet n
 
 -- | 
 --   <a>https://input-output-hk.github.io/cardano-wallet/api/#operation/migrateByronWallet</a>
-type MigrateByronWallet n = "byron-wallets" :> Capture "sourceWalletId" (ApiT WalletId) :> "migrations" :> Capture "targetWalletId" (ApiT WalletId) :> ReqBody '[JSON] ApiWalletPassphrase :> PostAccepted '[JSON] [ApiTransaction n]
+type MigrateByronWallet n = "byron-wallets" :> Capture "sourceWalletId" (ApiT WalletId) :> "migrations" :> Capture "targetWalletId" (ApiT WalletId) :> ReqBody '[JSON] ApiWalletPassphrase :> PostAccepted '[JSON] [ApiTransactionT n]
 
 -- | 
 --   <a>https://input-output-hk.github.io/cardano-wallet/api/#operation/getByronWalletMigrationInfo</a>
@@ -6400,7 +6408,8 @@ instance Cardano.Wallet.Api.Link.PostWallet 'Cardano.Wallet.Api.Types.Shelley
 instance Cardano.Wallet.Api.Link.PostWallet 'Cardano.Wallet.Api.Types.Byron
 
 
--- | This module provides a Servant client for the cardano-wallet V2 API.
+-- | This module provides a half-typed Servant client for the
+--   cardano-wallet V2 API.
 --   
 --   The functions in this module can be run with
 --   "Servant.Client.runClientM".
@@ -6408,42 +6417,58 @@ module Cardano.Wallet.Api.Client
 
 -- | This data type encapsulates the client functions for all endpoints of
 --   the cardano-wallet V2 API.
-data WalletClient t
-WalletClient :: (ApiT WalletId -> Maybe (ApiT AddressState) -> ClientM [ApiAddress t]) -> (ApiT WalletId -> ClientM ()) -> (ApiT WalletId -> ClientM ApiWallet) -> (ApiT WalletId -> ClientM ApiUtxoStatistics) -> ClientM [ApiWallet] -> (WalletOrAccountPostData -> ClientM ApiWallet) -> (ApiT WalletId -> WalletPutData -> ClientM ApiWallet) -> (ApiT WalletId -> WalletPutPassphraseData -> ClientM NoContent) -> (ApiT WalletId -> ApiNetworkTip -> ClientM NoContent) -> (ApiT WalletId -> Maybe Iso8601Time -> Maybe Iso8601Time -> Maybe (ApiT SortOrder) -> ClientM [ApiTransaction t]) -> (ApiT WalletId -> PostTransactionData t -> ClientM (ApiTransaction t)) -> (ApiT WalletId -> PostTransactionFeeData t -> ClientM ApiFee) -> (PostExternalTransactionData -> ClientM ApiTxId) -> (ApiT WalletId -> ApiTxId -> ClientM NoContent) -> ClientM [ApiStakePool] -> (ApiPoolId -> ApiT WalletId -> ApiWalletPassphrase -> ClientM (ApiTransaction t)) -> (ApiT WalletId -> ApiWalletPassphrase -> ClientM (ApiTransaction t)) -> ClientM ApiNetworkInformation -> (ApiEpochNumber -> ClientM ApiNetworkParameters) -> ClientM ApiNetworkClock -> WalletClient t
-[$sel:listAddresses:WalletClient] :: WalletClient t -> ApiT WalletId -> Maybe (ApiT AddressState) -> ClientM [ApiAddress t]
-[$sel:deleteWallet:WalletClient] :: WalletClient t -> ApiT WalletId -> ClientM ()
-[$sel:getWallet:WalletClient] :: WalletClient t -> ApiT WalletId -> ClientM ApiWallet
-[$sel:getWalletUtxoStatistics:WalletClient] :: WalletClient t -> ApiT WalletId -> ClientM ApiUtxoStatistics
-[$sel:listWallets:WalletClient] :: WalletClient t -> ClientM [ApiWallet]
-[$sel:postWallet:WalletClient] :: WalletClient t -> WalletOrAccountPostData -> ClientM ApiWallet
-[$sel:putWallet:WalletClient] :: WalletClient t -> ApiT WalletId -> WalletPutData -> ClientM ApiWallet
-[$sel:putWalletPassphrase:WalletClient] :: WalletClient t -> ApiT WalletId -> WalletPutPassphraseData -> ClientM NoContent
-[$sel:forceResyncWallet:WalletClient] :: WalletClient t -> ApiT WalletId -> ApiNetworkTip -> ClientM NoContent
-[$sel:listTransactions:WalletClient] :: WalletClient t -> ApiT WalletId -> Maybe Iso8601Time -> Maybe Iso8601Time -> Maybe (ApiT SortOrder) -> ClientM [ApiTransaction t]
-[$sel:postTransaction:WalletClient] :: WalletClient t -> ApiT WalletId -> PostTransactionData t -> ClientM (ApiTransaction t)
-[$sel:postTransactionFee:WalletClient] :: WalletClient t -> ApiT WalletId -> PostTransactionFeeData t -> ClientM ApiFee
-[$sel:postExternalTransaction:WalletClient] :: WalletClient t -> PostExternalTransactionData -> ClientM ApiTxId
-[$sel:deleteTransaction:WalletClient] :: WalletClient t -> ApiT WalletId -> ApiTxId -> ClientM NoContent
-[$sel:listPools:WalletClient] :: WalletClient t -> ClientM [ApiStakePool]
-[$sel:joinStakePool:WalletClient] :: WalletClient t -> ApiPoolId -> ApiT WalletId -> ApiWalletPassphrase -> ClientM (ApiTransaction t)
-[$sel:quitStakePool:WalletClient] :: WalletClient t -> ApiT WalletId -> ApiWalletPassphrase -> ClientM (ApiTransaction t)
-[$sel:networkInformation:WalletClient] :: WalletClient t -> ClientM ApiNetworkInformation
-[$sel:networkParameters:WalletClient] :: WalletClient t -> ApiEpochNumber -> ClientM ApiNetworkParameters
-[$sel:networkClock:WalletClient] :: WalletClient t -> ClientM ApiNetworkClock
+data WalletClient wallet
+WalletClient :: (ApiT WalletId -> ClientM ()) -> (ApiT WalletId -> ClientM wallet) -> (ApiT WalletId -> ClientM ApiUtxoStatistics) -> ClientM [wallet] -> (PostData wallet -> ClientM wallet) -> (ApiT WalletId -> WalletPutData -> ClientM wallet) -> (ApiT WalletId -> WalletPutPassphraseData -> ClientM NoContent) -> (ApiT WalletId -> ApiNetworkTip -> ClientM NoContent) -> WalletClient wallet
+[$sel:deleteWallet:WalletClient] :: WalletClient wallet -> ApiT WalletId -> ClientM ()
+[$sel:getWallet:WalletClient] :: WalletClient wallet -> ApiT WalletId -> ClientM wallet
+[$sel:getWalletUtxoStatistics:WalletClient] :: WalletClient wallet -> ApiT WalletId -> ClientM ApiUtxoStatistics
+[$sel:listWallets:WalletClient] :: WalletClient wallet -> ClientM [wallet]
+[$sel:postWallet:WalletClient] :: WalletClient wallet -> PostData wallet -> ClientM wallet
+[$sel:putWallet:WalletClient] :: WalletClient wallet -> ApiT WalletId -> WalletPutData -> ClientM wallet
+[$sel:putWalletPassphrase:WalletClient] :: WalletClient wallet -> ApiT WalletId -> WalletPutPassphraseData -> ClientM NoContent
+[$sel:forceResyncWallet:WalletClient] :: WalletClient wallet -> ApiT WalletId -> ApiNetworkTip -> ClientM NoContent
 
--- | Produces a <a>WalletClient</a> for the cardano-wallet V2 API.
---   
---   You should apply a
---   <a>Cardano.Wallet.Primitive.AddressDerivation.NetworkDiscriminant</a>
---   type parameter to this to get a concrete client.
-walletClient :: forall t. (DecodeAddress t, EncodeAddress t) => WalletClient t
+-- | Produces a <a>WalletClient</a> working against the /wallets API.
+walletClient :: WalletClient ApiWallet
 
--- | Poll the wallet server until it reports that it has synced with the
---   network.
-waitForSync :: WalletClient t -> ClientM ()
+-- | Produces a <a>WalletClient</a> working against the /wallets API.
+byronWalletClient :: WalletClient ApiByronWallet
+data TransactionClient
+TransactionClient :: (ApiT WalletId -> Maybe Iso8601Time -> Maybe Iso8601Time -> Maybe (ApiT SortOrder) -> ClientM [ApiTransactionT Value]) -> (ApiT WalletId -> PostTransactionDataT Value -> ClientM (ApiTransactionT Value)) -> (ApiT WalletId -> PostTransactionFeeDataT Value -> ClientM ApiFee) -> (PostExternalTransactionData -> ClientM ApiTxId) -> (ApiT WalletId -> ApiTxId -> ClientM NoContent) -> TransactionClient
+[$sel:listTransactions:TransactionClient] :: TransactionClient -> ApiT WalletId -> Maybe Iso8601Time -> Maybe Iso8601Time -> Maybe (ApiT SortOrder) -> ClientM [ApiTransactionT Value]
+[$sel:postTransaction:TransactionClient] :: TransactionClient -> ApiT WalletId -> PostTransactionDataT Value -> ClientM (ApiTransactionT Value)
+[$sel:postTransactionFee:TransactionClient] :: TransactionClient -> ApiT WalletId -> PostTransactionFeeDataT Value -> ClientM ApiFee
+[$sel:postExternalTransaction:TransactionClient] :: TransactionClient -> PostExternalTransactionData -> ClientM ApiTxId
+[$sel:deleteTransaction:TransactionClient] :: TransactionClient -> ApiT WalletId -> ApiTxId -> ClientM NoContent
 
--- | Poll a wallet by ID until it has restored.
-waitForRestore :: WalletClient t -> ApiT WalletId -> ClientM ApiWallet
+-- | Produces a 'TransactionClient t' working against the /wallets API.
+transactionClient :: TransactionClient
+
+-- | Produces a 'TransactionClient n' working against the /byron-wallets
+--   API.
+byronTransactionClient :: TransactionClient
+newtype AddressClient
+AddressClient :: (ApiT WalletId -> Maybe (ApiT AddressState) -> ClientM [Value]) -> AddressClient
+[$sel:listAddresses:AddressClient] :: AddressClient -> ApiT WalletId -> Maybe (ApiT AddressState) -> ClientM [Value]
+
+-- | Produces an 'AddressClient n' working against the /wallets API
+addressClient :: AddressClient
+data StakePoolClient
+StakePoolClient :: ClientM [ApiStakePool] -> (ApiPoolId -> ApiT WalletId -> ApiWalletPassphrase -> ClientM (ApiTransactionT Value)) -> (ApiT WalletId -> ApiWalletPassphrase -> ClientM (ApiTransactionT Value)) -> StakePoolClient
+[$sel:listPools:StakePoolClient] :: StakePoolClient -> ClientM [ApiStakePool]
+[$sel:joinStakePool:StakePoolClient] :: StakePoolClient -> ApiPoolId -> ApiT WalletId -> ApiWalletPassphrase -> ClientM (ApiTransactionT Value)
+[$sel:quitStakePool:StakePoolClient] :: StakePoolClient -> ApiT WalletId -> ApiWalletPassphrase -> ClientM (ApiTransactionT Value)
+
+-- | Produces an 'StakePoolsClient n' working against the /stake-pools API
+stakePoolClient :: StakePoolClient
+data NetworkClient
+NetworkClient :: ClientM ApiNetworkInformation -> (ApiEpochNumber -> ClientM ApiNetworkParameters) -> ClientM ApiNetworkClock -> NetworkClient
+[$sel:networkInformation:NetworkClient] :: NetworkClient -> ClientM ApiNetworkInformation
+[$sel:networkParameters:NetworkClient] :: NetworkClient -> ApiEpochNumber -> ClientM ApiNetworkParameters
+[$sel:networkClock:NetworkClient] :: NetworkClient -> ClientM ApiNetworkClock
+
+-- | Produces a <a>NetworkClient</a>
+networkClient :: NetworkClient
 
 
 -- | This module can fold over a blockchain to collect metrics about Stake

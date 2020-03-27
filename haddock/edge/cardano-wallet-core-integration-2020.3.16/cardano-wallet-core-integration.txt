@@ -241,10 +241,10 @@ json :: QuasiQuoter
 joinStakePool :: forall n t w. (HasType (ApiT WalletId) w, DecodeAddress n) => Context t -> ApiT PoolId -> (w, Text) -> IO (Status, Either RequestException (ApiTransaction n))
 delegationFee :: forall t w. HasType (ApiT WalletId) w => Context t -> w -> IO (Status, Either RequestException ApiFee)
 quitStakePool :: forall n t w. (HasType (ApiT WalletId) w, DecodeAddress n) => Context t -> (w, Text) -> IO (Status, Either RequestException (ApiTransaction n))
-selectCoins :: forall n t w. (HasType (ApiT WalletId) w, DecodeAddress n, EncodeAddress n) => Context t -> w -> NonEmpty (AddressAmount n) -> IO (Status, Either RequestException (ApiCoinSelection n))
+selectCoins :: forall n t w. (HasType (ApiT WalletId) w, DecodeAddress n, EncodeAddress n) => Context t -> w -> NonEmpty (AddressAmount (ApiT Address, Proxy n)) -> IO (Status, Either RequestException (ApiCoinSelection n))
 listAddresses :: forall n t. DecodeAddress n => Context t -> ApiWallet -> IO [ApiAddress n]
-listTransactions :: forall n t. DecodeAddress n => Context t -> ApiWallet -> Maybe UTCTime -> Maybe UTCTime -> Maybe SortOrder -> IO [ApiTransaction n]
-listAllTransactions :: forall n t. DecodeAddress n => Context t -> ApiWallet -> IO [ApiTransaction n]
+listTransactions :: forall n t w. (DecodeAddress n, HasType (ApiT WalletId) w) => Context t -> w -> Maybe UTCTime -> Maybe UTCTime -> Maybe SortOrder -> IO [ApiTransaction n]
+listAllTransactions :: forall n t w. (DecodeAddress n, HasType (ApiT WalletId) w) => Context t -> w -> IO [ApiTransaction n]
 
 -- | teardown after each test (currently only deleting all wallets)
 tearDown :: Context t -> IO ()
@@ -365,6 +365,8 @@ icarusAddresses :: forall (n :: NetworkDiscriminant). PaymentAddress n IcarusKey
 --   </pre>
 randomAddresses :: forall (n :: NetworkDiscriminant). PaymentAddress n ByronKey => Mnemonic 12 -> [Address]
 pubKeyFromMnemonics :: [Text] -> Text
+unsafeGetTransactionTime :: [ApiTransaction n] -> UTCTime
+getTxId :: ApiTransaction n -> String
 
 -- | Handy constructor for ApiEpochInfo
 mkEpochInfo :: EpochNo -> SlotParameters -> ApiEpochInfo
@@ -390,7 +392,7 @@ listWalletsViaCLI :: forall t r s. (CmdResult r, KnownCommand t, HasType (Port "
 updateWalletNameViaCLI :: forall t r s. (CmdResult r, KnownCommand t, HasType (Port "wallet") s) => s -> [String] -> IO r
 updateWalletPassphraseViaCLI :: forall t s. (KnownCommand t, HasType (Port "wallet") s) => s -> String -> String -> String -> String -> IO (ExitCode, Text, Text)
 postTransactionViaCLI :: forall t s. (HasType (Port "wallet") s, KnownCommand t) => s -> String -> [String] -> IO (ExitCode, String, Text)
-postTransactionFeeViaCLI :: forall t s. (HasType (Port "wallet") s, KnownCommand t) => s -> [String] -> IO (ExitCode, String, Text)
+postTransactionFeeViaCLI :: forall t r s. (CmdResult r, HasType (Port "wallet") s, KnownCommand t) => s -> [String] -> IO r
 listTransactionsViaCLI :: forall t r s. (CmdResult r, HasType (Port "wallet") s, KnownCommand t) => s -> [String] -> IO r
 postExternalTransactionViaCLI :: forall t r s. (CmdResult r, HasType (Port "wallet") s, KnownCommand t) => s -> [String] -> IO r
 deleteTransactionViaCLI :: forall t r s. (CmdResult r, KnownCommand t, HasType (Port "wallet") s) => s -> String -> String -> IO r
