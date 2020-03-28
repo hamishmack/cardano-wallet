@@ -2048,6 +2048,7 @@ instance GHC.Enum.Enum (Cardano.Wallet.Primitive.AddressDerivation.Index 'Cardan
 instance GHC.Enum.Enum (Cardano.Wallet.Primitive.AddressDerivation.Index 'Cardano.Wallet.Primitive.AddressDerivation.Soft level)
 instance GHC.Enum.Enum (Cardano.Wallet.Primitive.AddressDerivation.Index 'Cardano.Wallet.Primitive.AddressDerivation.WholeDomain level)
 instance Formatting.Buildable.Buildable (Cardano.Wallet.Primitive.AddressDerivation.Index derivationType level)
+instance (GHC.Enum.Enum (Cardano.Wallet.Primitive.AddressDerivation.Index derivation level), GHC.Enum.Bounded (Cardano.Wallet.Primitive.AddressDerivation.Index derivation level)) => Data.Text.Class.FromText (Cardano.Wallet.Primitive.AddressDerivation.Index derivation level)
 instance Control.DeepSeq.NFData Cardano.Wallet.Primitive.AddressDerivation.AccountingStyle
 instance GHC.Enum.Enum Cardano.Wallet.Primitive.AddressDerivation.AccountingStyle
 instance Data.Text.Class.ToText Cardano.Wallet.Primitive.AddressDerivation.AccountingStyle
@@ -2386,7 +2387,7 @@ instance Cardano.Wallet.Primitive.AddressDerivation.WalletKey k => Cardano.Walle
 instance Cardano.Wallet.Primitive.AddressDerivation.SoftDerivation k => Cardano.Wallet.Primitive.AddressDiscovery.GenChange (Cardano.Wallet.Primitive.AddressDiscovery.Sequential.SeqState n k)
 instance (Cardano.Wallet.Primitive.AddressDerivation.SoftDerivation k, Cardano.Wallet.Primitive.AddressDerivation.MkKeyFingerprint k (k 'Cardano.Wallet.Primitive.AddressDerivation.AddressK Cardano.Crypto.Wallet.XPub), Cardano.Wallet.Primitive.AddressDerivation.MkKeyFingerprint k Cardano.Wallet.Primitive.Types.Address, Cardano.Wallet.Primitive.AddressDerivation.AddressIndexDerivationType k Data.Type.Equality.~ 'Cardano.Wallet.Primitive.AddressDerivation.Soft) => Cardano.Wallet.Primitive.AddressDiscovery.IsOwned (Cardano.Wallet.Primitive.AddressDiscovery.Sequential.SeqState n k) k
 instance (Cardano.Wallet.Primitive.AddressDerivation.MkKeyFingerprint k (k 'Cardano.Wallet.Primitive.AddressDerivation.AddressK Cardano.Crypto.Wallet.XPub), Cardano.Wallet.Primitive.AddressDerivation.MkKeyFingerprint k Cardano.Wallet.Primitive.Types.Address, Cardano.Wallet.Primitive.AddressDerivation.SoftDerivation k) => Cardano.Wallet.Primitive.AddressDiscovery.CompareDiscovery (Cardano.Wallet.Primitive.AddressDiscovery.Sequential.SeqState n k)
-instance Cardano.Wallet.Primitive.AddressDerivation.DelegationAddress n k => Cardano.Wallet.Primitive.AddressDiscovery.KnownAddresses (Cardano.Wallet.Primitive.AddressDiscovery.Sequential.SeqState n k)
+instance Cardano.Wallet.Primitive.AddressDerivation.PaymentAddress n k => Cardano.Wallet.Primitive.AddressDiscovery.KnownAddresses (Cardano.Wallet.Primitive.AddressDiscovery.Sequential.SeqState n k)
 instance Cardano.Wallet.Primitive.AddressDiscovery.HasRewardAccount (Cardano.Wallet.Primitive.AddressDiscovery.Sequential.SeqState n k)
 instance Control.DeepSeq.NFData Cardano.Wallet.Primitive.AddressDiscovery.Sequential.PendingIxs
 instance Control.DeepSeq.NFData (key 'Cardano.Wallet.Primitive.AddressDerivation.AccountK Cardano.Crypto.Wallet.XPub) => Control.DeepSeq.NFData (Cardano.Wallet.Primitive.AddressDiscovery.Sequential.AddressPool chain key)
@@ -4689,6 +4690,28 @@ RndState :: Passphrase "addr-derivation-payload" -> Index  'WholeDomain  'Accoun
 -- | Initialize the HD random address discovery state from a root key and
 --   RNG seed.
 mkRndState :: ByronKey  'RootK XPrv -> Int -> RndState n
+
+-- | Updates a <a>RndState</a> by adding an address and its derivation path
+--   to the set of discovered addresses. If the address was in the
+--   <a>pendingAddresses</a> set (i.e. it was a newly generated change
+--   address), then it is removed from there.
+addDiscoveredAddress :: Address -> DerivationPath -> RndState n -> RndState n
+
+-- | Use the key material in <a>RndState</a> to derive a change address.
+deriveRndStateAddress :: forall n. PaymentAddress n ByronKey => ByronKey  'RootK XPrv -> Passphrase "encryption" -> DerivationPath -> Address
+
+-- | Randomly generates an address derivation path for a given account. If
+--   the path is already in the "blacklist", it will try generating
+--   another.
+--   
+--   Note that performance of this function will degrade poorly as more of
+--   the account's address space is used up. We may have to improve it
+--   later.
+findUnusedPath :: StdGen -> Index  'WholeDomain  'AccountK -> Set DerivationPath -> (DerivationPath, StdGen)
+
+-- | Returns the set of derivation paths that should not be used for new
+--   address generation because they are already in use.
+unavailablePaths :: RndState n -> Set DerivationPath
 instance GHC.Generics.Generic (Cardano.Wallet.Primitive.AddressDiscovery.Random.RndState network)
 instance Control.DeepSeq.NFData (Cardano.Wallet.Primitive.AddressDiscovery.Random.RndState network)
 instance GHC.Show.Show (Cardano.Wallet.Primitive.AddressDiscovery.Random.RndState network)
@@ -4968,6 +4991,7 @@ NoSuchEpochNo :: ApiErrorCode
 InvalidDelegationDiscovery :: ApiErrorCode
 NotImplemented :: ApiErrorCode
 WalletNotResponding :: ApiErrorCode
+AddressAlreadyExists :: ApiErrorCode
 data ApiNetworkInformation
 ApiNetworkInformation :: !ApiT SyncProgress -> !ApiEpochInfo -> !ApiBlockReference -> !ApiNetworkTip -> ApiNetworkInformation
 [$sel:syncProgress:ApiNetworkInformation] :: ApiNetworkInformation -> !ApiT SyncProgress
@@ -5069,6 +5093,10 @@ data ByronWalletPutPassphraseData
 ByronWalletPutPassphraseData :: !Maybe (ApiT (Passphrase "byron-raw")) -> !ApiT (Passphrase "raw") -> ByronWalletPutPassphraseData
 [$sel:oldPassphrase:ByronWalletPutPassphraseData] :: ByronWalletPutPassphraseData -> !Maybe (ApiT (Passphrase "byron-raw"))
 [$sel:newPassphrase:ByronWalletPutPassphraseData] :: ByronWalletPutPassphraseData -> !ApiT (Passphrase "raw")
+data ApiPostRandomAddressData
+ApiPostRandomAddressData :: !ApiT (Passphrase "raw") -> !Maybe (ApiT (Index  'WholeDomain  'AddressK)) -> ApiPostRandomAddressData
+[$sel:passphrase:ApiPostRandomAddressData] :: ApiPostRandomAddressData -> !ApiT (Passphrase "raw")
+[$sel:addressIndex:ApiPostRandomAddressData] :: ApiPostRandomAddressData -> !Maybe (ApiT (Index  'WholeDomain  'AddressK))
 data AccountPostData
 AccountPostData :: !ApiT WalletName -> !ApiAccountPublicKey -> !Maybe (ApiT AddressPoolGap) -> AccountPostData
 [$sel:name:AccountPostData] :: AccountPostData -> !ApiT WalletName
@@ -5233,6 +5261,9 @@ instance GHC.Classes.Eq Cardano.Wallet.Api.Types.ApiBlockReference
 instance GHC.Show.Show Cardano.Wallet.Api.Types.ApiNetworkTip
 instance GHC.Generics.Generic Cardano.Wallet.Api.Types.ApiNetworkTip
 instance GHC.Classes.Eq Cardano.Wallet.Api.Types.ApiNetworkTip
+instance GHC.Show.Show Cardano.Wallet.Api.Types.ApiPostRandomAddressData
+instance GHC.Generics.Generic Cardano.Wallet.Api.Types.ApiPostRandomAddressData
+instance GHC.Classes.Eq Cardano.Wallet.Api.Types.ApiPostRandomAddressData
 instance GHC.Base.Functor Cardano.Wallet.Api.Types.ApiT
 instance GHC.Classes.Eq a => GHC.Classes.Eq (Cardano.Wallet.Api.Types.ApiT a)
 instance GHC.Show.Show a => GHC.Show.Show (Cardano.Wallet.Api.Types.ApiT a)
@@ -5361,6 +5392,8 @@ instance Data.Aeson.Types.FromJSON.FromJSON Cardano.Wallet.Api.Types.ApiBlockRef
 instance Data.Aeson.Types.ToJSON.ToJSON Cardano.Wallet.Api.Types.ApiBlockReference
 instance Data.Aeson.Types.FromJSON.FromJSON Cardano.Wallet.Api.Types.ApiNetworkTip
 instance Data.Aeson.Types.ToJSON.ToJSON Cardano.Wallet.Api.Types.ApiNetworkTip
+instance Data.Aeson.Types.FromJSON.FromJSON Cardano.Wallet.Api.Types.ApiPostRandomAddressData
+instance Data.Aeson.Types.ToJSON.ToJSON Cardano.Wallet.Api.Types.ApiPostRandomAddressData
 instance Data.Text.Class.FromText (Cardano.Wallet.Api.Types.ApiT Cardano.Crypto.Wallet.XPrv)
 instance GHC.Show.Show (Cardano.Wallet.Api.Types.ApiT Cardano.Crypto.Wallet.XPrv)
 instance GHC.Classes.Eq (Cardano.Wallet.Api.Types.ApiT Cardano.Crypto.Wallet.XPrv)
@@ -5410,6 +5443,8 @@ instance Data.Aeson.Types.FromJSON.FromJSON (Cardano.Wallet.Api.Types.ApiT Carda
 instance Data.Aeson.Types.ToJSON.ToJSON (Cardano.Wallet.Api.Types.ApiT Cardano.Wallet.Primitive.Types.ActiveSlotCoefficient)
 instance Data.Aeson.Types.FromJSON.FromJSON (Cardano.Wallet.Api.Types.ApiT (Cardano.Wallet.Primitive.Types.Hash "Genesis"))
 instance Data.Aeson.Types.ToJSON.ToJSON (Cardano.Wallet.Api.Types.ApiT (Cardano.Wallet.Primitive.Types.Hash "Genesis"))
+instance (GHC.Enum.Enum (Cardano.Wallet.Primitive.AddressDerivation.Index derivation level), GHC.Enum.Bounded (Cardano.Wallet.Primitive.AddressDerivation.Index derivation level)) => Data.Aeson.Types.FromJSON.FromJSON (Cardano.Wallet.Api.Types.ApiT (Cardano.Wallet.Primitive.AddressDerivation.Index derivation level))
+instance GHC.Enum.Enum (Cardano.Wallet.Primitive.AddressDerivation.Index derivation level) => Data.Aeson.Types.ToJSON.ToJSON (Cardano.Wallet.Api.Types.ApiT (Cardano.Wallet.Primitive.AddressDerivation.Index derivation level))
 instance Data.Text.Class.FromText a => Web.Internal.HttpApiData.FromHttpApiData (Cardano.Wallet.Api.Types.ApiT a)
 instance Data.Text.Class.ToText a => Web.Internal.HttpApiData.ToHttpApiData (Cardano.Wallet.Api.Types.ApiT a)
 instance Data.Aeson.Types.FromJSON.FromJSON Cardano.Wallet.Api.Types.ApiByronWalletMigrationInfo
@@ -5814,10 +5849,16 @@ ErrCheckIntegrityDifferentGenesis :: Hash "Genesis" -> Hash "Genesis" -> ErrChec
 -- | Can't perform given operation because the wallet died.
 newtype ErrWalletNotResponding
 ErrWalletNotResponding :: WalletId -> ErrWalletNotResponding
+createRandomAddress :: forall ctx s k n. (HasDBLayer s k ctx, PaymentAddress n ByronKey, s ~ RndState n, k ~ ByronKey) => ctx -> WalletId -> Passphrase "raw" -> Maybe (Index  'WholeDomain  'AddressK) -> ExceptT ErrCreateRandomAddress IO Address
 
 -- | List all addresses of a wallet with their metadata. Addresses are
 --   ordered from the most-recently-discovered to the oldest known.
-listAddresses :: forall ctx s k n. (HasDBLayer s k ctx, IsOurs s Address, CompareDiscovery s, KnownAddresses s, MkKeyFingerprint k Address, DelegationAddress n k, HasRewardAccount s, k ~ RewardAccountKey s) => ctx -> WalletId -> ExceptT ErrNoSuchWallet IO [(Address, AddressState)]
+listAddresses :: forall ctx s k. (HasDBLayer s k ctx, IsOurs s Address, CompareDiscovery s, KnownAddresses s) => ctx -> WalletId -> (s -> Address -> Maybe Address) -> ExceptT ErrNoSuchWallet IO [(Address, AddressState)]
+normalizeDelegationAddress :: forall s k n. (MkKeyFingerprint k Address, DelegationAddress n k, HasRewardAccount s, k ~ RewardAccountKey s) => s -> Address -> Maybe Address
+data ErrCreateRandomAddress
+ErrIndexAlreadyExists :: Index  'WholeDomain  'AddressK -> ErrCreateRandomAddress
+ErrCreateAddrNoSuchWallet :: ErrNoSuchWallet -> ErrCreateRandomAddress
+ErrCreateAddrWithRootKey :: ErrWithRootKey -> ErrCreateRandomAddress
 
 -- | Makes a fully-resolved coin selection for the given set of payments.
 selectCoinsExternal :: forall ctx s t k e. (GenChange s, HasDBLayer s k ctx, HasLogger WalletLog ctx, HasTransactionLayer t k ctx, IsOwned s k, NFData s, Show s, e ~ ErrValidateSelection t) => ctx -> WalletId -> ArgGenChange s -> NonEmpty TxOut -> ExceptT (ErrSelectCoinsExternal e) IO UnsignedTx
@@ -6075,6 +6116,9 @@ MsgPaymentCoinSelectionAdjusted :: CoinSelection -> WalletLog
 instance GHC.Generics.Generic (Cardano.Wallet.WalletLayer s t k)
 instance GHC.Classes.Eq Cardano.Wallet.WalletLog
 instance GHC.Show.Show Cardano.Wallet.WalletLog
+instance GHC.Show.Show Cardano.Wallet.ErrCreateRandomAddress
+instance GHC.Classes.Eq Cardano.Wallet.ErrCreateRandomAddress
+instance GHC.Generics.Generic Cardano.Wallet.ErrCreateRandomAddress
 instance GHC.Show.Show Cardano.Wallet.ErrWalletNotResponding
 instance GHC.Classes.Eq Cardano.Wallet.ErrWalletNotResponding
 instance GHC.Show.Show Cardano.Wallet.ErrQuitStakePool
@@ -6197,7 +6241,7 @@ instance Cardano.BM.Data.Tracer.DefinePrivacyAnnotation (Cardano.Wallet.Registry
 instance Cardano.BM.Data.Tracer.DefineSeverity msg => Cardano.BM.Data.Tracer.DefineSeverity (Cardano.Wallet.Registry.WorkerLog key msg)
 
 module Cardano.Wallet.Api
-type Api n = Wallets :<|> Addresses n :<|> CoinSelections n :<|> Transactions n :<|> StakePools n :<|> ByronWallets :<|> ByronTransactions n :<|> ByronMigrations n :<|> Network :<|> Proxy_
+type Api n = Wallets :<|> Addresses n :<|> CoinSelections n :<|> Transactions n :<|> StakePools n :<|> ByronWallets :<|> ByronAddresses n :<|> ByronTransactions n :<|> ByronMigrations n :<|> Network :<|> Proxy_
 type ApiV2 n = "v2" :> Api n
 type family PostData wallet :: *
 type Wallets = DeleteWallet :<|> GetWallet :<|> ListWallets :<|> PostWallet :<|> PutWallet :<|> PutWalletPassphrase :<|> GetUTxOsStatistics :<|> ForceResyncWallet
@@ -6310,6 +6354,15 @@ type GetByronUTxOsStatistics = "byron-wallets" :> Capture "walletId" (ApiT Walle
 -- | 
 --   <a>https://input-output-hk.github.io/cardano-wallet/api/#operation/putByronWalletPassphrase</a>
 type PutByronWalletPassphrase = "byron-wallets" :> Capture "walletId" (ApiT WalletId) :> "passphrase" :> ReqBody '[JSON] ByronWalletPutPassphraseData :> PutNoContent
+type ByronAddresses n = PostByronAddress n :<|> ListByronAddresses n
+
+-- | 
+--   <a>https://input-output-hk.github.io/cardano-wallet/api/#operation/postByronAddress</a>
+type PostByronAddress n = "byron-wallets" :> Capture "walletId" (ApiT WalletId) :> "addresses" :> ReqBody '[JSON] ApiPostRandomAddressData :> PostCreated '[JSON] (ApiAddressT n)
+
+-- | 
+--   <a>https://input-output-hk.github.io/cardano-wallet/api/#operation/listByronAddresses</a>
+type ListByronAddresses n = "byron-wallets" :> Capture "walletId" (ApiT WalletId) :> "addresses" :> QueryParam "state" (ApiT AddressState) :> Get '[JSON] [ApiAddressT n]
 type ByronTransactions n = CreateByronTransaction n :<|> ListByronTransactions n :<|> PostByronTransactionFee n :<|> DeleteByronTransaction
 
 -- | 
@@ -6395,8 +6448,9 @@ getUTxOsStatistics :: forall (style :: WalletStyle) w. (Discriminate style, HasT
 getMigrationInfo :: forall w. HasType (ApiT WalletId) w => w -> (Method, Text)
 migrateWallet :: forall from to. (HasType (ApiT WalletId) from, HasType (ApiT WalletId) to) => from -> to -> (Method, Text)
 forceResyncWallet :: forall style w. (HasType (ApiT WalletId) w, Discriminate style) => w -> (Method, Text)
-listAddresses :: forall w. HasType (ApiT WalletId) w => w -> (Method, Text)
-listAddresses' :: forall w. HasType (ApiT WalletId) w => w -> Maybe AddressState -> (Method, Text)
+postRandomAddress :: forall w. HasType (ApiT WalletId) w => w -> (Method, Text)
+listAddresses :: forall style w. (HasType (ApiT WalletId) w, Discriminate style) => w -> (Method, Text)
+listAddresses' :: forall style w. (HasType (ApiT WalletId) w, Discriminate style) => w -> Maybe AddressState -> (Method, Text)
 selectCoins :: forall w. HasType (ApiT WalletId) w => w -> (Method, Text)
 createTransaction :: forall style w. (HasType (ApiT WalletId) w, Discriminate style) => w -> (Method, Text)
 listTransactions :: forall (style :: WalletStyle) w. (Discriminate style, HasType (ApiT WalletId) w) => w -> (Method, Text)
@@ -6465,12 +6519,16 @@ transactionClient :: TransactionClient
 -- | Produces a 'TransactionClient n' working against the /byron-wallets
 --   API.
 byronTransactionClient :: TransactionClient
-newtype AddressClient
-AddressClient :: (ApiT WalletId -> Maybe (ApiT AddressState) -> ClientM [Value]) -> AddressClient
+data AddressClient
+AddressClient :: (ApiT WalletId -> Maybe (ApiT AddressState) -> ClientM [Value]) -> (ApiT WalletId -> ApiPostRandomAddressData -> ClientM (ApiAddressT Value)) -> AddressClient
 [$sel:listAddresses:AddressClient] :: AddressClient -> ApiT WalletId -> Maybe (ApiT AddressState) -> ClientM [Value]
+[$sel:postRandomAddress:AddressClient] :: AddressClient -> ApiT WalletId -> ApiPostRandomAddressData -> ClientM (ApiAddressT Value)
 
 -- | Produces an 'AddressClient n' working against the /wallets API
 addressClient :: AddressClient
+
+-- | Produces an 'AddressClient n' working against the /wallets API
+byronAddressClient :: AddressClient
 data StakePoolClient
 StakePoolClient :: ClientM [ApiStakePool] -> (ApiPoolId -> ApiT WalletId -> ApiWalletPassphrase -> ClientM (ApiTransactionT Value)) -> (ApiT WalletId -> ApiWalletPassphrase -> ClientM (ApiTransactionT Value)) -> StakePoolClient
 [$sel:listPools:StakePoolClient] :: StakePoolClient -> ClientM [ApiStakePool]
@@ -6813,6 +6871,7 @@ instance Cardano.Wallet.Api.Server.LiftHandler Cardano.Wallet.ErrJoinStakePool
 instance Cardano.Wallet.Api.Server.LiftHandler Cardano.Wallet.ErrFetchRewards
 instance Cardano.Wallet.Api.Server.LiftHandler Cardano.Wallet.ErrQuitStakePool
 instance Cardano.Wallet.Api.Server.LiftHandler Cardano.Wallet.Api.Server.ErrNoSuchEpoch
+instance Cardano.Wallet.Api.Server.LiftHandler Cardano.Wallet.ErrCreateRandomAddress
 instance Cardano.Wallet.Api.Server.LiftHandler (Network.Wai.Internal.Request, Servant.Server.Internal.ServerError.ServerError)
 
 
