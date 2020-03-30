@@ -133,7 +133,7 @@ data SomeNetworkDiscriminant
 -- | The <tt>cardano-wallet-shelley</tt> main function. It takes the
 --   configuration which was passed from the CLI and environment and starts
 --   all components of the wallet.
-serveWallet :: forall t. t ~ IO Byron => SomeNetworkDiscriminant -> Tracers IO -> SyncTolerance -> Maybe FilePath -> HostPreference -> Listen -> FilePath -> Block -> (BlockchainParameters, (NodeToClientVersionData, CodecCBORTerm Text NodeToClientVersionData)) -> (SockAddr -> IO ()) -> IO ExitCode
+serveWallet :: forall t. t ~ IO Byron => SomeNetworkDiscriminant -> Tracers IO -> SyncTolerance -> Maybe FilePath -> HostPreference -> Listen -> Maybe TlsConfiguration -> FilePath -> Block -> (BlockchainParameters, (NodeToClientVersionData, CodecCBORTerm Text NodeToClientVersionData)) -> (SockAddr -> IO ()) -> IO ExitCode
 
 -- | The types of trace events produced by the Byron API server.
 data Tracers' f

@@ -202,6 +202,20 @@ instance Cardano.DB.Sqlite.MatchMigrationError Database.Sqlite.SqliteException
 instance GHC.Exception.Type.Exception Cardano.DB.Sqlite.MigrationError
 
 
+-- | Optional TLS support for mutual client-server authentication on top of
+--   a Wai application.
+module Cardano.Wallet.Api.Server.Tls
+
+-- | Path to a x.509 PKI for mutual client-server authentication.
+data TlsConfiguration
+TlsConfiguration :: !FilePath -> !FilePath -> !FilePath -> TlsConfiguration
+[tlsCaCert] :: TlsConfiguration -> !FilePath
+[tlsSvCert] :: TlsConfiguration -> !FilePath
+[tlsSvKey] :: TlsConfiguration -> !FilePath
+requireClientAuth :: TlsConfiguration -> TLSSettings
+instance GHC.Show.Show Cardano.Wallet.Api.Server.Tls.TlsConfiguration
+
+
 -- | This module contains utility functions for logging and mapping trace
 --   data.
 module Cardano.Wallet.Logging
@@ -6803,9 +6817,16 @@ ListenErrorHostDoesNotExist :: HostPreference -> ListenError
 ListenErrorInvalidAddress :: HostPreference -> ListenError
 data HostPreference
 
+-- | Path to a x.509 PKI for mutual client-server authentication.
+data TlsConfiguration
+TlsConfiguration :: !FilePath -> !FilePath -> !FilePath -> TlsConfiguration
+[tlsCaCert] :: TlsConfiguration -> !FilePath
+[tlsSvCert] :: TlsConfiguration -> !FilePath
+[tlsSvKey] :: TlsConfiguration -> !FilePath
+
 -- | Start the application server, using the given settings and a bound
 --   socket.
-start :: Settings -> Tracer IO ApiLog -> Socket -> Application -> IO ()
+start :: Settings -> Tracer IO ApiLog -> Maybe TlsConfiguration -> Socket -> Application -> IO ()
 serve :: HasServer api ([] :: [Type]) => Proxy api -> Server api -> Application
 
 -- | A Servant server for our wallet API

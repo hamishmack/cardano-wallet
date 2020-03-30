@@ -82,6 +82,7 @@ stateDirOption :: FilePath -> Parser (Maybe FilePath)
 --   <li>-sync-tolerance=DURATION, default: 300s</li>
 --   </ul>
 syncToleranceOption :: Parser SyncTolerance
+tlsOption :: Parser TlsConfiguration
 data LoggingOptions tracers
 LoggingOptions :: Severity -> tracers -> Maybe Void -> LoggingOptions tracers
 [$sel:loggingMinSeverity:LoggingOptions] :: LoggingOptions tracers -> Severity
