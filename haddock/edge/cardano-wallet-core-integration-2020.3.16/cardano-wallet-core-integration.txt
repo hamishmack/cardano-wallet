@@ -366,6 +366,7 @@ icarusAddresses :: forall (n :: NetworkDiscriminant). PaymentAddress n IcarusKey
 --   </pre>
 randomAddresses :: forall (n :: NetworkDiscriminant). PaymentAddress n ByronKey => Mnemonic 12 -> [Address]
 pubKeyFromMnemonics :: [Text] -> Text
+rootPrvKeyFromMnemonics :: [Text] -> Text -> Text
 unsafeGetTransactionTime :: [ApiTransaction n] -> UTCTime
 getTxId :: ApiTransaction n -> String
 
