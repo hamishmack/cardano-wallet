@@ -731,8 +731,8 @@ instance GHC.Show.Show Cardano.Wallet.Jormungandr.Network.JormungandrConfig
 instance GHC.Classes.Eq Cardano.Wallet.Jormungandr.Network.JormungandrConnParams
 instance GHC.Show.Show Cardano.Wallet.Jormungandr.Network.JormungandrConnParams
 instance Data.Text.Class.ToText Cardano.Wallet.Jormungandr.Network.NetworkLayerLog
-instance Cardano.BM.Data.Tracer.DefinePrivacyAnnotation Cardano.Wallet.Jormungandr.Network.NetworkLayerLog
-instance Cardano.BM.Data.Tracer.DefineSeverity Cardano.Wallet.Jormungandr.Network.NetworkLayerLog
+instance Cardano.BM.Data.Tracer.HasPrivacyAnnotation Cardano.Wallet.Jormungandr.Network.NetworkLayerLog
+instance Cardano.BM.Data.Tracer.HasSeverityAnnotation Cardano.Wallet.Jormungandr.Network.NetworkLayerLog
 instance GHC.Exception.Type.Exception Cardano.Wallet.Jormungandr.Network.ErrStartup
 instance Data.Text.Class.ToText Cardano.Wallet.Jormungandr.Network.JormungandrBackend
 
@@ -824,5 +824,5 @@ instance GHC.Generics.Generic Cardano.Wallet.Jormungandr.ApplicationLog
 instance GHC.Show.Show (Cardano.Wallet.Jormungandr.Tracers' (Data.Functor.Const.Const (GHC.Maybe.Maybe Cardano.BM.Data.Severity.Severity)))
 instance GHC.Classes.Eq (Cardano.Wallet.Jormungandr.Tracers' (Data.Functor.Const.Const (GHC.Maybe.Maybe Cardano.BM.Data.Severity.Severity)))
 instance Data.Text.Class.ToText Cardano.Wallet.Jormungandr.ApplicationLog
-instance Cardano.BM.Data.Tracer.DefinePrivacyAnnotation Cardano.Wallet.Jormungandr.ApplicationLog
-instance Cardano.BM.Data.Tracer.DefineSeverity Cardano.Wallet.Jormungandr.ApplicationLog
+instance Cardano.BM.Data.Tracer.HasPrivacyAnnotation Cardano.Wallet.Jormungandr.ApplicationLog
+instance Cardano.BM.Data.Tracer.HasSeverityAnnotation Cardano.Wallet.Jormungandr.ApplicationLog

@@ -92,11 +92,11 @@ instance GHC.Show.Show Cardano.Launcher.LaunchedProcessLog
 instance GHC.Classes.Eq Cardano.Launcher.ProcessHasExited
 instance GHC.Show.Show Cardano.Launcher.ProcessHasExited
 instance GHC.Generics.Generic Cardano.Launcher.Command
-instance Cardano.BM.Data.Tracer.DefinePrivacyAnnotation Cardano.Launcher.LauncherLog
-instance Cardano.BM.Data.Tracer.DefineSeverity Cardano.Launcher.LauncherLog
+instance Cardano.BM.Data.Tracer.HasPrivacyAnnotation Cardano.Launcher.LauncherLog
+instance Cardano.BM.Data.Tracer.HasSeverityAnnotation Cardano.Launcher.LauncherLog
 instance Data.Text.Class.ToText Cardano.Launcher.LauncherLog
-instance Cardano.BM.Data.Tracer.DefinePrivacyAnnotation Cardano.Launcher.LaunchedProcessLog
-instance Cardano.BM.Data.Tracer.DefineSeverity Cardano.Launcher.LaunchedProcessLog
+instance Cardano.BM.Data.Tracer.HasPrivacyAnnotation Cardano.Launcher.LaunchedProcessLog
+instance Cardano.BM.Data.Tracer.HasSeverityAnnotation Cardano.Launcher.LaunchedProcessLog
 instance GHC.Exception.Type.Exception Cardano.Launcher.ProcessHasExited
 instance Data.Aeson.Types.ToJSON.ToJSON Cardano.Launcher.ProcessHasExited
 instance GHC.Show.Show Cardano.Launcher.Command
@@ -146,5 +146,5 @@ MsgShutdownError :: IOException -> ShutdownHandlerLog
 instance GHC.Classes.Eq Cardano.Startup.ShutdownHandlerLog
 instance GHC.Show.Show Cardano.Startup.ShutdownHandlerLog
 instance Data.Text.Class.ToText Cardano.Startup.ShutdownHandlerLog
-instance Cardano.BM.Data.Tracer.DefinePrivacyAnnotation Cardano.Startup.ShutdownHandlerLog
-instance Cardano.BM.Data.Tracer.DefineSeverity Cardano.Startup.ShutdownHandlerLog
+instance Cardano.BM.Data.Tracer.HasPrivacyAnnotation Cardano.Startup.ShutdownHandlerLog
+instance Cardano.BM.Data.Tracer.HasSeverityAnnotation Cardano.Startup.ShutdownHandlerLog

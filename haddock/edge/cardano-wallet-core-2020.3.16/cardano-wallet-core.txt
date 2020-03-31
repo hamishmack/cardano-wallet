@@ -85,8 +85,8 @@ instance GHC.Classes.Eq Cardano.DB.Sqlite.Delete.DeleteSqliteDatabaseLog
 instance GHC.Show.Show Cardano.DB.Sqlite.Delete.DeleteSqliteDatabaseLog
 instance GHC.Generics.Generic Cardano.DB.Sqlite.Delete.DeleteSqliteDatabaseLog
 instance Data.Text.Class.ToText Cardano.DB.Sqlite.Delete.DeleteSqliteDatabaseLog
-instance Cardano.BM.Data.Tracer.DefinePrivacyAnnotation Cardano.DB.Sqlite.Delete.DeleteSqliteDatabaseLog
-instance Cardano.BM.Data.Tracer.DefineSeverity Cardano.DB.Sqlite.Delete.DeleteSqliteDatabaseLog
+instance Cardano.BM.Data.Tracer.HasPrivacyAnnotation Cardano.DB.Sqlite.Delete.DeleteSqliteDatabaseLog
+instance Cardano.BM.Data.Tracer.HasSeverityAnnotation Cardano.DB.Sqlite.Delete.DeleteSqliteDatabaseLog
 
 
 -- | An implementation of the DBLayer which uses Persistent and SQLite.
@@ -191,8 +191,8 @@ instance Data.Aeson.Types.ToJSON.ToJSON Cardano.DB.Sqlite.MigrationError
 instance GHC.Generics.Generic Cardano.DB.Sqlite.MigrationError
 instance GHC.Classes.Eq Cardano.DB.Sqlite.MigrationError
 instance GHC.Show.Show Cardano.DB.Sqlite.MigrationError
-instance Cardano.BM.Data.Tracer.DefinePrivacyAnnotation Cardano.DB.Sqlite.DBLog
-instance Cardano.BM.Data.Tracer.DefineSeverity Cardano.DB.Sqlite.DBLog
+instance Cardano.BM.Data.Tracer.HasPrivacyAnnotation Cardano.DB.Sqlite.DBLog
+instance Cardano.BM.Data.Tracer.HasSeverityAnnotation Cardano.DB.Sqlite.DBLog
 instance Data.Text.Class.ToText Cardano.DB.Sqlite.DBLog
 instance GHC.Show.Show Cardano.DB.Sqlite.DBField
 instance GHC.Classes.Eq Cardano.DB.Sqlite.DBField
@@ -225,7 +225,7 @@ module Cardano.Wallet.Logging
 transformTextTrace :: ToText a => Trace IO Text -> Trace IO a
 
 -- | Traces some data.
-logTrace :: (MonadIO m, DefinePrivacyAnnotation a, DefineSeverity a) => Trace m a -> a -> m ()
+logTrace :: (MonadIO m, HasPrivacyAnnotation a, HasSeverityAnnotation a) => Trace m a -> a -> m ()
 
 -- | Strips out the data that <a>trMessage</a> (or
 --   "Cardano.BM.Data.Tracer.toLogObject") adds.
@@ -233,13 +233,13 @@ fromLogObject :: Show a => Tracer IO a -> Tracer IO (LogObject a)
 
 -- | Tracer transformer which converts 'Trace m a' to 'Tracer m a' by
 --   wrapping typed log messages into a <a>LogObject</a>.
-trMessage :: (MonadIO m, DefinePrivacyAnnotation a, DefineSeverity a) => Tracer m (LoggerName, LogObject a) -> Tracer m a
+trMessage :: (MonadIO m, HasPrivacyAnnotation a, HasSeverityAnnotation a) => Tracer m (LoggerName, LogObject a) -> Tracer m a
 
 -- | Tracer transformer which transforms traced items to their
 --   <a>ToText</a> representation and further traces them as a
 --   <a>LogObject</a>. If the <a>ToText</a> representation is empty, then
 --   no tracing happens.
-trMessageText :: (MonadIO m, ToText a, DefinePrivacyAnnotation a, DefineSeverity a) => Tracer m (LoggerName, LogObject Text) -> Tracer m a
+trMessageText :: (MonadIO m, ToText a, HasPrivacyAnnotation a, HasSeverityAnnotation a) => Tracer m (LoggerName, LogObject Text) -> Tracer m a
 
 -- | Tracer transformer which removes tracing below the qgiven severity
 --   limit.
@@ -249,7 +249,7 @@ filterTraceSeverity :: forall m a. Monad m => Severity -> Trace m a -> Trace m a
 --   useful for debugging functions in the REPL, when you need a
 --   <a>Tracer</a> object.
 stdoutTextTracer :: (MonadIO m, ToText a) => Tracer m a
-instance (Control.Monad.IO.Class.MonadIO m, Data.Text.Class.ToText a, Cardano.BM.Data.Tracer.DefinePrivacyAnnotation a, Cardano.BM.Data.Tracer.DefineSeverity a) => Cardano.BM.Data.Tracer.Transformable Data.Text.Internal.Text m a
+instance (Control.Monad.IO.Class.MonadIO m, Data.Text.Class.ToText a, Cardano.BM.Data.Tracer.HasPrivacyAnnotation a, Cardano.BM.Data.Tracer.HasSeverityAnnotation a) => Cardano.BM.Data.Tracer.Transformable Data.Text.Internal.Text m a
 
 
 -- | Provides functions for checking if TCP ports can be connected to, or
@@ -459,8 +459,8 @@ instance GHC.Classes.Eq Cardano.Wallet.DaedalusIPC.MsgIn
 instance GHC.Show.Show Cardano.Wallet.DaedalusIPC.MsgIn
 instance Data.Text.Class.ToText Cardano.Wallet.DaedalusIPC.DaedalusIPCLog
 instance Cardano.BM.Data.Tracer.ToObject Cardano.Wallet.DaedalusIPC.DaedalusIPCLog
-instance Cardano.BM.Data.Tracer.DefinePrivacyAnnotation Cardano.Wallet.DaedalusIPC.DaedalusIPCLog
-instance Cardano.BM.Data.Tracer.DefineSeverity Cardano.Wallet.DaedalusIPC.DaedalusIPCLog
+instance Cardano.BM.Data.Tracer.HasPrivacyAnnotation Cardano.Wallet.DaedalusIPC.DaedalusIPCLog
+instance Cardano.BM.Data.Tracer.HasSeverityAnnotation Cardano.Wallet.DaedalusIPC.DaedalusIPCLog
 instance Data.Aeson.Types.ToJSON.ToJSON Cardano.Wallet.DaedalusIPC.MsgOut
 instance Data.Aeson.Types.FromJSON.FromJSON Cardano.Wallet.DaedalusIPC.MsgIn
 instance Data.Aeson.Types.ToJSON.ToJSON Cardano.Wallet.DaedalusIPC.MsgIn
@@ -3142,11 +3142,11 @@ instance Data.Text.Class.ToText Cardano.Pool.Metadata.StakePoolTicker
 instance GHC.Classes.Eq Cardano.Pool.Metadata.StakePoolTicker
 instance GHC.Show.Show Cardano.Pool.Metadata.StakePoolTicker
 instance GHC.Generics.Generic Cardano.Pool.Metadata.StakePoolTicker
-instance Cardano.BM.Data.Tracer.DefinePrivacyAnnotation Cardano.Pool.Metadata.RegistryLog
-instance Cardano.BM.Data.Tracer.DefineSeverity Cardano.Pool.Metadata.RegistryLog
+instance Cardano.BM.Data.Tracer.HasPrivacyAnnotation Cardano.Pool.Metadata.RegistryLog
+instance Cardano.BM.Data.Tracer.HasSeverityAnnotation Cardano.Pool.Metadata.RegistryLog
 instance Data.Text.Class.ToText Cardano.Pool.Metadata.RegistryLog
-instance Cardano.BM.Data.Tracer.DefinePrivacyAnnotation Cardano.Pool.Metadata.RegistryLogMsg
-instance Cardano.BM.Data.Tracer.DefineSeverity Cardano.Pool.Metadata.RegistryLogMsg
+instance Cardano.BM.Data.Tracer.HasPrivacyAnnotation Cardano.Pool.Metadata.RegistryLogMsg
+instance Cardano.BM.Data.Tracer.HasSeverityAnnotation Cardano.Pool.Metadata.RegistryLogMsg
 instance Data.Text.Class.ToText Cardano.Pool.Metadata.RegistryLogMsg
 instance Data.Text.Class.ToText Cardano.Pool.Metadata.FetchError
 instance Data.Aeson.Types.FromJSON.FromJSON Cardano.Pool.Metadata.StakePoolMetadata
@@ -3971,8 +3971,8 @@ instance GHC.Classes.Eq Cardano.Wallet.Network.ErrNetworkUnavailable
 instance GHC.Show.Show Cardano.Wallet.Network.ErrNetworkUnavailable
 instance GHC.Generics.Generic Cardano.Wallet.Network.ErrNetworkUnavailable
 instance Data.Text.Class.ToText Cardano.Wallet.Network.FollowLog
-instance Cardano.BM.Data.Tracer.DefinePrivacyAnnotation Cardano.Wallet.Network.FollowLog
-instance Cardano.BM.Data.Tracer.DefineSeverity Cardano.Wallet.Network.FollowLog
+instance Cardano.BM.Data.Tracer.HasPrivacyAnnotation Cardano.Wallet.Network.FollowLog
+instance Cardano.BM.Data.Tracer.HasSeverityAnnotation Cardano.Wallet.Network.FollowLog
 instance GHC.Base.Functor m => GHC.Base.Functor (Cardano.Wallet.Network.NetworkLayer m target)
 instance GHC.Base.Functor (Cardano.Wallet.Network.NextBlocksResult cursor)
 instance GHC.Exception.Type.Exception Cardano.Wallet.Network.ErrPostTx
@@ -6172,8 +6172,8 @@ instance GHC.Classes.Eq e => GHC.Classes.Eq (Cardano.Wallet.ErrSelectCoinsExtern
 instance GHC.Classes.Eq e => GHC.Classes.Eq (Cardano.Wallet.ErrSelectForPayment e)
 instance GHC.Show.Show e => GHC.Show.Show (Cardano.Wallet.ErrSelectForPayment e)
 instance Data.Text.Class.ToText Cardano.Wallet.WalletLog
-instance Cardano.BM.Data.Tracer.DefinePrivacyAnnotation Cardano.Wallet.WalletLog
-instance Cardano.BM.Data.Tracer.DefineSeverity Cardano.Wallet.WalletLog
+instance Cardano.BM.Data.Tracer.HasPrivacyAnnotation Cardano.Wallet.WalletLog
+instance Cardano.BM.Data.Tracer.HasSeverityAnnotation Cardano.Wallet.WalletLog
 instance GHC.Exception.Type.Exception Cardano.Wallet.ErrCheckWalletIntegrity
 
 module Cardano.Wallet.Registry
@@ -6247,8 +6247,8 @@ instance (GHC.Classes.Eq key, GHC.Classes.Eq msg) => GHC.Classes.Eq (Cardano.Wal
 instance (GHC.Show.Show key, GHC.Show.Show msg) => GHC.Show.Show (Cardano.Wallet.Registry.WorkerLog key msg)
 instance GHC.Generics.Generic (Cardano.Wallet.Registry.Worker key resource)
 instance (Data.Text.Class.ToText key, Data.Text.Class.ToText msg) => Data.Text.Class.ToText (Cardano.Wallet.Registry.WorkerLog key msg)
-instance Cardano.BM.Data.Tracer.DefinePrivacyAnnotation (Cardano.Wallet.Registry.WorkerLog key msg)
-instance Cardano.BM.Data.Tracer.DefineSeverity msg => Cardano.BM.Data.Tracer.DefineSeverity (Cardano.Wallet.Registry.WorkerLog key msg)
+instance Cardano.BM.Data.Tracer.HasPrivacyAnnotation (Cardano.Wallet.Registry.WorkerLog key msg)
+instance Cardano.BM.Data.Tracer.HasSeverityAnnotation msg => Cardano.BM.Data.Tracer.HasSeverityAnnotation (Cardano.Wallet.Registry.WorkerLog key msg)
 
 module Cardano.Wallet.Api
 type Api n = Wallets :<|> Addresses n :<|> CoinSelections n :<|> Transactions n :<|> StakePools n :<|> ByronWallets :<|> ByronAddresses n :<|> ByronTransactions n :<|> ByronMigrations n :<|> Network :<|> Proxy_
@@ -6667,8 +6667,8 @@ instance GHC.Show.Show Cardano.Pool.Metrics.StakePool
 instance GHC.Generics.Generic Cardano.Pool.Metrics.Block
 instance GHC.Show.Show Cardano.Pool.Metrics.Block
 instance GHC.Classes.Eq Cardano.Pool.Metrics.Block
-instance Cardano.BM.Data.Tracer.DefinePrivacyAnnotation Cardano.Pool.Metrics.StakePoolLog
-instance Cardano.BM.Data.Tracer.DefineSeverity Cardano.Pool.Metrics.StakePoolLog
+instance Cardano.BM.Data.Tracer.HasPrivacyAnnotation Cardano.Pool.Metrics.StakePoolLog
+instance Cardano.BM.Data.Tracer.HasSeverityAnnotation Cardano.Pool.Metrics.StakePoolLog
 instance Data.Text.Class.ToText Cardano.Pool.Metrics.StakePoolLog
 
 
@@ -6702,8 +6702,8 @@ NtpClient :: STM NtpStatus -> IO NtpStatus -> Async Void -> NtpClient
 [ntpThread] :: NtpClient -> Async Void
 instance Data.Text.Class.ToText Network.NTP.Client.Query.IPVersion
 instance Data.Text.Class.ToText Network.NTP.Client.Query.NtpTrace
-instance Cardano.BM.Data.Tracer.DefinePrivacyAnnotation Network.NTP.Client.Query.NtpTrace
-instance Cardano.BM.Data.Tracer.DefineSeverity Network.NTP.Client.Query.NtpTrace
+instance Cardano.BM.Data.Tracer.HasPrivacyAnnotation Network.NTP.Client.Query.NtpTrace
+instance Cardano.BM.Data.Tracer.HasSeverityAnnotation Network.NTP.Client.Query.NtpTrace
 
 module Network.Wai.Middleware.Logging
 
@@ -6755,12 +6755,12 @@ instance GHC.Generics.Generic Network.Wai.Middleware.Logging.HandlerLog
 instance GHC.Classes.Eq Network.Wai.Middleware.Logging.RequestId
 instance GHC.Show.Show Network.Wai.Middleware.Logging.RequestId
 instance GHC.Generics.Generic Network.Wai.Middleware.Logging.RequestId
-instance Cardano.BM.Data.Tracer.DefinePrivacyAnnotation Network.Wai.Middleware.Logging.ApiLog
-instance Cardano.BM.Data.Tracer.DefineSeverity Network.Wai.Middleware.Logging.ApiLog
+instance Cardano.BM.Data.Tracer.HasPrivacyAnnotation Network.Wai.Middleware.Logging.ApiLog
+instance Cardano.BM.Data.Tracer.HasSeverityAnnotation Network.Wai.Middleware.Logging.ApiLog
 instance Data.Text.Class.ToText Network.Wai.Middleware.Logging.ApiLog
 instance Data.Text.Class.ToText Network.Wai.Middleware.Logging.HandlerLog
-instance Cardano.BM.Data.Tracer.DefinePrivacyAnnotation Network.Wai.Middleware.Logging.HandlerLog
-instance Cardano.BM.Data.Tracer.DefineSeverity Network.Wai.Middleware.Logging.HandlerLog
+instance Cardano.BM.Data.Tracer.HasPrivacyAnnotation Network.Wai.Middleware.Logging.HandlerLog
+instance Cardano.BM.Data.Tracer.HasSeverityAnnotation Network.Wai.Middleware.Logging.HandlerLog
 
 
 -- | Middleware between Wai <a>-</a> Servant to accommodate raw error

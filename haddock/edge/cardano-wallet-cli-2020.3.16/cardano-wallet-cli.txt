@@ -242,8 +242,8 @@ instance GHC.Enum.Bounded Cardano.CLI.DerivationIndex
 instance GHC.Classes.Eq Cardano.CLI.DerivationIndex
 instance GHC.Show.Show Cardano.CLI.DerivationIndex
 instance Data.Text.Class.ToText Cardano.CLI.WaitForServiceLog
-instance Cardano.BM.Data.Tracer.DefinePrivacyAnnotation Cardano.CLI.WaitForServiceLog
-instance Cardano.BM.Data.Tracer.DefineSeverity Cardano.CLI.WaitForServiceLog
+instance Cardano.BM.Data.Tracer.HasPrivacyAnnotation Cardano.CLI.WaitForServiceLog
+instance Cardano.BM.Data.Tracer.HasSeverityAnnotation Cardano.CLI.WaitForServiceLog
 instance Data.Text.Class.FromText Cardano.CLI.TxId
 instance GHC.Enum.Bounded (Cardano.CLI.Port tag)
 instance Data.Text.Class.FromText (Cardano.CLI.Port tag)

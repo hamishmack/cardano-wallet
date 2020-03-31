@@ -70,8 +70,8 @@ pattern Cursor :: () => Point ByronBlock -> TQueue m (ChainSyncCmd m) -> Cursor 
 withNetworkLayer :: Tracer IO NetworkLayerLog -> BlockchainParameters -> FilePath -> (NodeToClientVersionData, CodecCBORTerm Text NodeToClientVersionData) -> (NetworkLayer IO (IO Byron) ByronBlock -> IO a) -> IO a
 data NetworkLayerLog
 instance Data.Text.Class.ToText Cardano.Wallet.Byron.Network.NetworkLayerLog
-instance Cardano.BM.Data.Tracer.DefinePrivacyAnnotation Cardano.Wallet.Byron.Network.NetworkLayerLog
-instance Cardano.BM.Data.Tracer.DefineSeverity Cardano.Wallet.Byron.Network.NetworkLayerLog
+instance Cardano.BM.Data.Tracer.HasPrivacyAnnotation Cardano.Wallet.Byron.Network.NetworkLayerLog
+instance Cardano.BM.Data.Tracer.HasSeverityAnnotation Cardano.Wallet.Byron.Network.NetworkLayerLog
 
 
 -- | Size estimation of cbor-encoded transactions in Byron
@@ -177,5 +177,5 @@ instance GHC.Show.Show Cardano.Wallet.Byron.SomeNetworkDiscriminant
 instance GHC.Show.Show (Cardano.Wallet.Byron.Tracers' (Data.Functor.Const.Const (GHC.Maybe.Maybe Cardano.BM.Data.Severity.Severity)))
 instance GHC.Classes.Eq (Cardano.Wallet.Byron.Tracers' (Data.Functor.Const.Const (GHC.Maybe.Maybe Cardano.BM.Data.Severity.Severity)))
 instance Data.Text.Class.ToText Cardano.Wallet.Byron.ApplicationLog
-instance Cardano.BM.Data.Tracer.DefinePrivacyAnnotation Cardano.Wallet.Byron.ApplicationLog
-instance Cardano.BM.Data.Tracer.DefineSeverity Cardano.Wallet.Byron.ApplicationLog
+instance Cardano.BM.Data.Tracer.HasPrivacyAnnotation Cardano.Wallet.Byron.ApplicationLog
+instance Cardano.BM.Data.Tracer.HasSeverityAnnotation Cardano.Wallet.Byron.ApplicationLog
