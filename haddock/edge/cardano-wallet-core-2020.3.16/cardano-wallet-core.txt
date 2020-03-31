@@ -6679,41 +6679,35 @@ instance Data.Text.Class.ToText Cardano.Pool.Metrics.StakePoolLog
 -- | This module provides the Ntp client related settings, types and
 --   re-exports used in a number of places throught codebase.
 module Network.Ntp
-ntpSettings :: NtpSettings
+
+-- | Set up a <a>NtpClient</a> and pass it to the given action. The
+--   <a>NtpClient</a> is terminated when the callback returns.
+withWalletNtpClient :: IOManager -> Tracer IO NtpTrace -> (NtpClient -> IO a) -> IO a
 getNtpStatus :: NtpClient -> IO ApiNetworkClock
-withNtpClient :: () => Tracer IO NtpTrace -> NtpSettings -> (NtpClient -> IO a) -> IO a
 data NtpTrace
 NtpTraceStartNtpClient :: NtpTrace
-NtpTraceTriggerUpdate :: NtpTrace
 NtpTraceRestartDelay :: !Int -> NtpTrace
 NtpTraceRestartingClient :: NtpTrace
-NtpTraceClientSleeping :: NtpTrace
 NtpTraceIOError :: !IOError -> NtpTrace
-NtpTraceLookupServerFailed :: !String -> NtpTrace
+NtpTraceLookupsFails :: NtpTrace
 NtpTraceClientStartQuery :: NtpTrace
 NtpTraceNoLocalAddr :: NtpTrace
-NtpTraceIPv4IPv6NoReplies :: NtpTrace
-NtpTraceReportPolicyQueryFailed :: NtpTrace
-NtpTraceQueryResult :: !Microsecond -> NtpTrace
-NtpTraceRunProtocolError :: !IPVersion -> !IOError -> NtpTrace
-NtpTraceRunProtocolNoResult :: !IPVersion -> NtpTrace
-NtpTraceRunProtocolSuccess :: !IPVersion -> NtpTrace
-NtpTraceSocketOpen :: !IPVersion -> NtpTrace
-NtpTraceSocketClosed :: !IPVersion -> NtpTrace
-NtpTracePacketSent :: !IPVersion -> NtpTrace
-NtpTracePacketSentError :: !IPVersion -> !IOError -> NtpTrace
-NtpTracePacketDecodeError :: !IPVersion -> !String -> NtpTrace
-NtpTracePacketReceived :: !IPVersion -> NtpTrace
+NtpTraceResult :: !NtpStatus -> NtpTrace
+NtpTraceRunProtocolResults :: !ResultOrFailure [NtpOffset] -> NtpTrace
+NtpTracePacketSent :: !SockAddr -> !NtpPacket -> NtpTrace
+NtpTracePacketSendError :: !SockAddr -> !IOException -> NtpTrace
+NtpTracePacketDecodeError :: !SockAddr -> !String -> NtpTrace
+NtpTracePacketReceived :: SockAddr -> !NtpPacket -> NtpTrace
 NtpTraceWaitingForRepliesTimeout :: !IPVersion -> NtpTrace
 data NtpClient
 NtpClient :: STM NtpStatus -> IO NtpStatus -> Async Void -> NtpClient
 [ntpGetStatus] :: NtpClient -> STM NtpStatus
 [ntpQueryBlocking] :: NtpClient -> IO NtpStatus
 [ntpThread] :: NtpClient -> Async Void
-instance Data.Text.Class.ToText Network.NTP.Client.Trace.IPVersion
-instance Data.Text.Class.ToText Network.NTP.Client.Trace.NtpTrace
-instance Cardano.BM.Data.Tracer.DefinePrivacyAnnotation Network.NTP.Client.Trace.NtpTrace
-instance Cardano.BM.Data.Tracer.DefineSeverity Network.NTP.Client.Trace.NtpTrace
+instance Data.Text.Class.ToText Network.NTP.Client.Query.IPVersion
+instance Data.Text.Class.ToText Network.NTP.Client.Query.NtpTrace
+instance Cardano.BM.Data.Tracer.DefinePrivacyAnnotation Network.NTP.Client.Query.NtpTrace
+instance Cardano.BM.Data.Tracer.DefineSeverity Network.NTP.Client.Query.NtpTrace
 
 module Network.Wai.Middleware.Logging
 
