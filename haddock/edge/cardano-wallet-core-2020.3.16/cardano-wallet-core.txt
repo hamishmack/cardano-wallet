@@ -2003,10 +2003,6 @@ encryptPassphrase :: MonadRandom m => Passphrase "encryption" -> m (Hash "encryp
 checkPassphrase :: PassphraseScheme -> Passphrase "raw" -> Hash "encryption" -> Either ErrWrongPassphrase ()
 
 -- | Manipulation done on legacy passphrases before getting encrypted.
---   
---   Yes there's CBOR. Yes it's hashed before being encrypted. You don't
---   actually pronounce the <tt>l</tt> in salmon. A lot of things in the
---   world don't make sense but we still live just fine.
 preparePassphrase :: PassphraseScheme -> Passphrase "raw" -> Passphrase "encryption"
 instance GHC.Show.Show Cardano.Wallet.Primitive.AddressDerivation.ErrXPrvFromStrippedPubXPrv
 instance GHC.Classes.Eq Cardano.Wallet.Primitive.AddressDerivation.ErrXPrvFromStrippedPubXPrv
