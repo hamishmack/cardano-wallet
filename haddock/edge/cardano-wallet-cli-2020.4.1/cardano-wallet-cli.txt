@@ -22,6 +22,7 @@ cli :: Mod CommandFields a -> ParserInfo a
 -- | Runs a specific command parser using appropriate preferences
 runCli :: ParserInfo (IO ()) -> IO ()
 cmdMnemonic :: Mod CommandFields (IO ())
+cmdMnemonicByron :: Mod CommandFields (IO ())
 cmdWallet :: ToJSON wallet => CmdWalletCreate wallet -> WalletClient wallet -> Mod CommandFields (IO ())
 cmdWalletCreate :: WalletClient ApiWallet -> Mod CommandFields (IO ())
 cmdByronWalletCreate :: WalletClient ApiByronWallet -> Mod CommandFields (IO ())
