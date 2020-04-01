@@ -777,7 +777,7 @@ toSPBlock :: Block -> Block
 
 -- | The types of trace events produced by the Jörmungandr API server.
 data Tracers' f
-Tracers :: f ApplicationLog -> f ApiLog -> f (WorkerLog WalletId WalletLog) -> f DBLog -> f (WorkerLog Text StakePoolLog) -> f DBLog -> f NetworkLayerLog -> f DaedalusIPCLog -> f NtpTrace -> Tracers' f
+Tracers :: f ApplicationLog -> f ApiLog -> f (WorkerLog WalletId WalletLog) -> f DBLog -> f (WorkerLog Text StakePoolLog) -> f DBLog -> f NetworkLayerLog -> f NtpTrace -> Tracers' f
 [applicationTracer] :: Tracers' f -> f ApplicationLog
 [apiServerTracer] :: Tracers' f -> f ApiLog
 [walletEngineTracer] :: Tracers' f -> f (WorkerLog WalletId WalletLog)
@@ -785,7 +785,6 @@ Tracers :: f ApplicationLog -> f ApiLog -> f (WorkerLog WalletId WalletLog) -> f
 [stakePoolEngineTracer] :: Tracers' f -> f (WorkerLog Text StakePoolLog)
 [stakePoolDbTracer] :: Tracers' f -> f DBLog
 [networkTracer] :: Tracers' f -> f NetworkLayerLog
-[daedalusIPCTracer] :: Tracers' f -> f DaedalusIPCLog
 [ntpClientTracer] :: Tracers' f -> f NtpTrace
 
 -- | All of the Jörmungandr <a>Tracer</a>s.
