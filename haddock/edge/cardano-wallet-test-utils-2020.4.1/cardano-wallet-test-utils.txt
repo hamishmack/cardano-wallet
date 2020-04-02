@@ -51,6 +51,10 @@ module Test.Utils.Paths
 --   directory.
 getTestData :: Q Exp
 
+-- | Infer from environment variables whether we are running within a Nix
+--   build (and not just a nix-shell).
+inNixBuild :: IO Bool
+
 
 -- | Provides a simple static files web server to be used as a fixture in
 --   tests which need a HTTP server.
@@ -105,6 +109,11 @@ captureLogging :: (Tracer IO msg -> IO a) -> IO ([msg], a)
 module Test.Utils.Windows
 skipOnWindows :: HasCallStack => String -> Expectation
 pendingOnWindows :: HasCallStack => String -> Expectation
+pendingOnWine :: HasCallStack => String -> Expectation
 whenWindows :: IO () -> IO ()
 isWindows :: Bool
 nullFileName :: FilePath
+
+-- | Use the presence of <tt>winepath.exe</tt> to detect when running tests
+--   under Wine.
+getIsWine :: IO Bool
