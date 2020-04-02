@@ -4253,9 +4253,15 @@ module Cardano.Pool.DB
 --   To use it, you will need the NamedFieldPuns extension and wrap
 --   operations with <tt>atomically</tt>:
 --   
---   Example: &gt;&gt;&gt; :set -XNamedFieldPuns &gt;&gt;&gt;
---   DBLayer{atomically,putPoolProduction} = db &gt;&gt;&gt; atomically $
---   putPoolProduction blockHeader pool
+--   Example:
+--   
+--   <pre>
+--   &gt;&gt;&gt; :set -XNamedFieldPuns
+--   
+--   &gt;&gt;&gt; DBLayer{atomically,putPoolProduction} = db
+--   
+--   &gt;&gt;&gt; atomically $ putPoolProduction blockHeader pool
+--   </pre>
 --   
 --   This gives you the power to also run <i>multiple</i> operations
 --   atomically.
