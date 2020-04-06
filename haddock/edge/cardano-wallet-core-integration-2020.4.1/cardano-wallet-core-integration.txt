@@ -472,9 +472,6 @@ spec :: forall n t. (DecodeAddress n, EncodeAddress n) => SpecWith (Context t)
 module Test.Integration.Scenario.API.ByronTransactions
 spec :: forall n t. DecodeAddress n => SpecWith (Context t)
 
-module Test.Integration.Scenario.API.ByronWallets
-spec :: forall n t. DecodeAddress n => SpecWith (Context t)
-
 module Test.Integration.Scenario.API.HWWallets
 spec :: forall n t. (DecodeAddress n, EncodeAddress n) => SpecWith (Context t)
 
@@ -486,6 +483,11 @@ spec :: forall n t. (DecodeAddress n, EncodeAddress n) => SpecWith (Context t)
 
 module Test.Integration.Scenario.API.Wallets
 spec :: forall n t. (DecodeAddress n, EncodeAddress n) => SpecWith (Context t)
+scenarioWalletResync01_happyPath :: forall style t wallet. (Discriminate style, HasType (ApiT WalletId) wallet, HasField' "state" wallet (ApiT SyncProgress), FromJSON wallet, Generic wallet, Show wallet) => Context t -> (Context t -> IO wallet) -> IO ()
+scenarioWalletResync02_notGenesis :: forall style t wallet. (Discriminate style, HasType (ApiT WalletId) wallet, HasField' "state" wallet (ApiT SyncProgress), FromJSON wallet, Generic wallet, Show wallet) => Context t -> (Context t -> IO wallet) -> IO ()
+
+module Test.Integration.Scenario.API.ByronWallets
+spec :: forall n t. DecodeAddress n => SpecWith (Context t)
 
 module Test.Integration.Scenario.CLI.Addresses
 spec :: forall n t. (KnownCommand t, DecodeAddress n, EncodeAddress n) => SpecWith (Context t)
