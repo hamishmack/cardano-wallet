@@ -1693,6 +1693,7 @@ class HardDerivation key => SoftDerivation (key :: Depth -> * -> *)
 --   This is the preferred way of deriving new sequential address public
 --   keys.
 deriveAddressPublicKey :: SoftDerivation key => key  'AccountK XPub -> AccountingStyle -> Index  'Soft  'AddressK -> key  'AddressK XPub
+liftIndex :: LiftIndex derivation => Index derivation level -> Index  'WholeDomain level
 
 -- | Also known as a staking key, chimeric account is used in group-type
 --   address for staking purposes. It is a public key of the account
@@ -2000,6 +2001,8 @@ instance Cardano.Wallet.Primitive.AddressDerivation.PassphraseMinLength "raw"
 instance Cardano.Wallet.Primitive.AddressDerivation.PassphraseMinLength "byron-raw"
 instance Data.Text.Class.ToText (Cardano.Wallet.Primitive.AddressDerivation.Passphrase purpose)
 instance Crypto.Random.Types.MonadRandom ((->) (Cardano.Wallet.Primitive.AddressDerivation.Passphrase "salt"))
+instance Cardano.Wallet.Primitive.AddressDerivation.LiftIndex 'Cardano.Wallet.Primitive.AddressDerivation.Hardened
+instance Cardano.Wallet.Primitive.AddressDerivation.LiftIndex 'Cardano.Wallet.Primitive.AddressDerivation.Soft
 instance Control.DeepSeq.NFData (Cardano.Wallet.Primitive.AddressDerivation.Index derivationType level)
 instance GHC.Enum.Bounded (Cardano.Wallet.Primitive.AddressDerivation.Index 'Cardano.Wallet.Primitive.AddressDerivation.Hardened level)
 instance GHC.Enum.Bounded (Cardano.Wallet.Primitive.AddressDerivation.Index 'Cardano.Wallet.Primitive.AddressDerivation.Soft level)
@@ -4631,7 +4634,7 @@ module Cardano.Wallet.Primitive.AddressDiscovery.Random
 
 -- | HD random address discovery state and key material for AD.
 data RndState (network :: NetworkDiscriminant)
-RndState :: Passphrase "addr-derivation-payload" -> Index  'WholeDomain  'AccountK -> Map DerivationPath Address -> Map DerivationPath Address -> StdGen -> RndState
+RndState :: Passphrase "addr-derivation-payload" -> Index  'Hardened  'AccountK -> Map DerivationPath Address -> Map DerivationPath Address -> StdGen -> RndState
 
 -- | The HD derivation passphrase
 [hdPassphrase] :: RndState -> Passphrase "addr-derivation-payload"
@@ -4639,7 +4642,7 @@ RndState :: Passphrase "addr-derivation-payload" -> Index  'WholeDomain  'Accoun
 -- | The account index used for address _generation_ in this wallet. Note
 --   that addresses will be _discovered_ from any and all account indices,
 --   regardless of this value.
-[accountIndex] :: RndState -> Index  'WholeDomain  'AccountK
+[accountIndex] :: RndState -> Index  'Hardened  'AccountK
 
 -- | The addresses which have so far been discovered, and their derivation
 --   paths.
@@ -4673,7 +4676,7 @@ deriveRndStateAddress :: forall n. PaymentAddress n ByronKey => ByronKey  'RootK
 --   Note that performance of this function will degrade poorly as more of
 --   the account's address space is used up. We may have to improve it
 --   later.
-findUnusedPath :: StdGen -> Index  'WholeDomain  'AccountK -> Set DerivationPath -> (DerivationPath, StdGen)
+findUnusedPath :: StdGen -> Index  'Hardened  'AccountK -> Set DerivationPath -> (DerivationPath, StdGen)
 
 -- | Returns the set of derivation paths that should not be used for new
 --   address generation because they are already in use.
@@ -5060,9 +5063,9 @@ ByronWalletPutPassphraseData :: !Maybe (ApiT (Passphrase "byron-raw")) -> !ApiT 
 [$sel:oldPassphrase:ByronWalletPutPassphraseData] :: ByronWalletPutPassphraseData -> !Maybe (ApiT (Passphrase "byron-raw"))
 [$sel:newPassphrase:ByronWalletPutPassphraseData] :: ByronWalletPutPassphraseData -> !ApiT (Passphrase "raw")
 data ApiPostRandomAddressData
-ApiPostRandomAddressData :: !ApiT (Passphrase "raw") -> !Maybe (ApiT (Index  'WholeDomain  'AddressK)) -> ApiPostRandomAddressData
+ApiPostRandomAddressData :: !ApiT (Passphrase "raw") -> !Maybe (ApiT (Index  'Hardened  'AddressK)) -> ApiPostRandomAddressData
 [$sel:passphrase:ApiPostRandomAddressData] :: ApiPostRandomAddressData -> !ApiT (Passphrase "raw")
-[$sel:addressIndex:ApiPostRandomAddressData] :: ApiPostRandomAddressData -> !Maybe (ApiT (Index  'WholeDomain  'AddressK))
+[$sel:addressIndex:ApiPostRandomAddressData] :: ApiPostRandomAddressData -> !Maybe (ApiT (Index  'Hardened  'AddressK))
 data AccountPostData
 AccountPostData :: !ApiT WalletName -> !ApiAccountPublicKey -> !Maybe (ApiT AddressPoolGap) -> AccountPostData
 [$sel:name:AccountPostData] :: AccountPostData -> !ApiT WalletName
@@ -5815,14 +5818,14 @@ ErrCheckIntegrityDifferentGenesis :: Hash "Genesis" -> Hash "Genesis" -> ErrChec
 -- | Can't perform given operation because the wallet died.
 newtype ErrWalletNotResponding
 ErrWalletNotResponding :: WalletId -> ErrWalletNotResponding
-createRandomAddress :: forall ctx s k n. (HasDBLayer s k ctx, PaymentAddress n ByronKey, s ~ RndState n, k ~ ByronKey) => ctx -> WalletId -> Passphrase "raw" -> Maybe (Index  'WholeDomain  'AddressK) -> ExceptT ErrCreateRandomAddress IO Address
+createRandomAddress :: forall ctx s k n. (HasDBLayer s k ctx, PaymentAddress n ByronKey, s ~ RndState n, k ~ ByronKey) => ctx -> WalletId -> Passphrase "raw" -> Maybe (Index  'Hardened  'AddressK) -> ExceptT ErrCreateRandomAddress IO Address
 
 -- | List all addresses of a wallet with their metadata. Addresses are
 --   ordered from the most-recently-discovered to the oldest known.
 listAddresses :: forall ctx s k. (HasDBLayer s k ctx, IsOurs s Address, CompareDiscovery s, KnownAddresses s) => ctx -> WalletId -> (s -> Address -> Maybe Address) -> ExceptT ErrNoSuchWallet IO [(Address, AddressState)]
 normalizeDelegationAddress :: forall s k n. (MkKeyFingerprint k Address, DelegationAddress n k, HasRewardAccount s, k ~ RewardAccountKey s) => s -> Address -> Maybe Address
 data ErrCreateRandomAddress
-ErrIndexAlreadyExists :: Index  'WholeDomain  'AddressK -> ErrCreateRandomAddress
+ErrIndexAlreadyExists :: Index  'Hardened  'AddressK -> ErrCreateRandomAddress
 ErrCreateAddrNoSuchWallet :: ErrNoSuchWallet -> ErrCreateRandomAddress
 ErrCreateAddrWithRootKey :: ErrWithRootKey -> ErrCreateRandomAddress
 
