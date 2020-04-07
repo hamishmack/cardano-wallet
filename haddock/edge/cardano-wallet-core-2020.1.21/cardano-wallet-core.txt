@@ -334,7 +334,6 @@ instance (GHC.TypeLits.KnownSymbol unit, Data.Aeson.Types.ToJSON.ToJSON a) => Da
 instance (GHC.TypeLits.KnownSymbol unit, Data.Aeson.Types.FromJSON.FromJSON a) => Data.Aeson.Types.FromJSON.FromJSON (Data.Quantity.Quantity unit a)
 instance Data.Text.Class.FromText b => Data.Text.Class.FromText (Data.Quantity.Quantity sym b)
 instance Data.Text.Class.ToText b => Data.Text.Class.ToText (Data.Quantity.Quantity sym b)
-instance (GHC.TypeLits.KnownSymbol unit, Formatting.Buildable.Buildable a) => Formatting.Buildable.Buildable (Data.Quantity.Quantity unit a)
 
 
 -- | This module contains the core primitive of a Wallet. This is roughly a
@@ -4047,7 +4046,6 @@ instance GHC.Generics.Generic (Cardano.Pool.Ranking.Positive a)
 instance GHC.Classes.Ord Cardano.Pool.Ranking.Ratio
 instance GHC.Classes.Eq Cardano.Pool.Ranking.Ratio
 instance GHC.Show.Show Cardano.Pool.Ranking.Ratio
-instance Formatting.Buildable.Buildable Cardano.Pool.Ranking.EpochConstants
 
 
 -- | An implementation of the production pool database using only pure
@@ -4936,17 +4934,6 @@ ApiNetworkTip :: !ApiT EpochNo -> !ApiT SlotNo -> ApiNetworkTip
 newtype Iso8601Time
 Iso8601Time :: UTCTime -> Iso8601Time
 [$sel:getIso8601Time:Iso8601Time] :: Iso8601Time -> UTCTime
-data ApiEpochNumber
-ApiEpochNumberLatest :: ApiEpochNumber
-ApiEpochNumber :: EpochNo -> ApiEpochNumber
-data ApiNetworkParameters
-ApiNetworkParameters :: !ApiT (Hash "Genesis") -> !ApiT StartTime -> !Quantity "second" NominalDiffTime -> !Quantity "slot" Word32 -> !Quantity "block" Word32 -> !Quantity "percent" Percentage -> ApiNetworkParameters
-[$sel:genesisBlockHash:ApiNetworkParameters] :: ApiNetworkParameters -> !ApiT (Hash "Genesis")
-[$sel:blockchainStartTime:ApiNetworkParameters] :: ApiNetworkParameters -> !ApiT StartTime
-[$sel:slotLength:ApiNetworkParameters] :: ApiNetworkParameters -> !Quantity "second" NominalDiffTime
-[$sel:epochLength:ApiNetworkParameters] :: ApiNetworkParameters -> !Quantity "slot" Word32
-[$sel:epochStability:ApiNetworkParameters] :: ApiNetworkParameters -> !Quantity "block" Word32
-[$sel:activeSlotCoefficient:ApiNetworkParameters] :: ApiNetworkParameters -> !Quantity "percent" Percentage
 data ApiByronWallet
 ApiByronWallet :: !ApiT WalletId -> !ApiByronWalletBalance -> !ApiT WalletName -> !Maybe (ApiT WalletPassphraseInfo) -> !ApiT SyncProgress -> !ApiBlockReference -> ApiByronWallet
 [$sel:id:ApiByronWallet] :: ApiByronWallet -> !ApiT WalletId
@@ -5063,9 +5050,6 @@ instance GHC.Classes.Eq Cardano.Wallet.Api.Types.WalletPutPassphraseData
 instance GHC.Show.Show (Cardano.Wallet.Api.Types.PostTransactionData n)
 instance GHC.Generics.Generic (Cardano.Wallet.Api.Types.PostTransactionData n)
 instance GHC.Classes.Eq (Cardano.Wallet.Api.Types.PostTransactionData n)
-instance GHC.Show.Show Cardano.Wallet.Api.Types.ApiNetworkParameters
-instance GHC.Generics.Generic Cardano.Wallet.Api.Types.ApiNetworkParameters
-instance GHC.Classes.Eq Cardano.Wallet.Api.Types.ApiNetworkParameters
 instance GHC.Show.Show Cardano.Wallet.Api.Types.ApiTxId
 instance GHC.Generics.Generic Cardano.Wallet.Api.Types.ApiTxId
 instance GHC.Classes.Eq Cardano.Wallet.Api.Types.ApiTxId
@@ -5105,9 +5089,6 @@ instance GHC.Classes.Eq Cardano.Wallet.Api.Types.Iso8601Time
 instance GHC.Show.Show Cardano.Wallet.Api.Types.ApiErrorCode
 instance GHC.Generics.Generic Cardano.Wallet.Api.Types.ApiErrorCode
 instance GHC.Classes.Eq Cardano.Wallet.Api.Types.ApiErrorCode
-instance GHC.Show.Show Cardano.Wallet.Api.Types.ApiEpochNumber
-instance GHC.Generics.Generic Cardano.Wallet.Api.Types.ApiEpochNumber
-instance GHC.Classes.Eq Cardano.Wallet.Api.Types.ApiEpochNumber
 instance GHC.Show.Show Cardano.Wallet.Api.Types.ApiFee
 instance GHC.Generics.Generic Cardano.Wallet.Api.Types.ApiFee
 instance GHC.Classes.Eq Cardano.Wallet.Api.Types.ApiFee
@@ -5169,8 +5150,6 @@ instance Data.Aeson.Types.FromJSON.FromJSON Cardano.Wallet.Api.Types.WalletPutDa
 instance Data.Aeson.Types.ToJSON.ToJSON Cardano.Wallet.Api.Types.WalletPutData
 instance Data.Aeson.Types.FromJSON.FromJSON Cardano.Wallet.Api.Types.WalletPutPassphraseData
 instance Data.Aeson.Types.ToJSON.ToJSON Cardano.Wallet.Api.Types.WalletPutPassphraseData
-instance Data.Aeson.Types.FromJSON.FromJSON Cardano.Wallet.Api.Types.ApiNetworkParameters
-instance Data.Aeson.Types.ToJSON.ToJSON Cardano.Wallet.Api.Types.ApiNetworkParameters
 instance Data.Aeson.Types.FromJSON.FromJSON Cardano.Wallet.Api.Types.ApiTxId
 instance Data.Aeson.Types.ToJSON.ToJSON Cardano.Wallet.Api.Types.ApiTxId
 instance Web.Internal.HttpApiData.FromHttpApiData Cardano.Wallet.Api.Types.ApiTxId
@@ -5215,16 +5194,6 @@ instance Data.Aeson.Types.FromJSON.FromJSON (Cardano.Wallet.Api.Types.ApiT Carda
 instance Data.Aeson.Types.ToJSON.ToJSON (Cardano.Wallet.Api.Types.ApiT Cardano.Wallet.Primitive.Types.Direction)
 instance Data.Aeson.Types.FromJSON.FromJSON (Cardano.Wallet.Api.Types.ApiT Cardano.Wallet.Primitive.Types.TxStatus)
 instance Data.Aeson.Types.ToJSON.ToJSON (Cardano.Wallet.Api.Types.ApiT Cardano.Wallet.Primitive.Types.TxStatus)
-instance Data.Aeson.Types.FromJSON.FromJSON (Cardano.Wallet.Api.Types.ApiT Cardano.Wallet.Primitive.Types.StartTime)
-instance Data.Aeson.Types.ToJSON.ToJSON (Cardano.Wallet.Api.Types.ApiT Cardano.Wallet.Primitive.Types.StartTime)
-instance Data.Aeson.Types.FromJSON.FromJSON (Cardano.Wallet.Api.Types.ApiT Cardano.Wallet.Primitive.Types.SlotLength)
-instance Data.Aeson.Types.ToJSON.ToJSON (Cardano.Wallet.Api.Types.ApiT Cardano.Wallet.Primitive.Types.SlotLength)
-instance Data.Aeson.Types.FromJSON.FromJSON (Cardano.Wallet.Api.Types.ApiT Cardano.Wallet.Primitive.Types.EpochLength)
-instance Data.Aeson.Types.ToJSON.ToJSON (Cardano.Wallet.Api.Types.ApiT Cardano.Wallet.Primitive.Types.EpochLength)
-instance Data.Aeson.Types.FromJSON.FromJSON (Cardano.Wallet.Api.Types.ApiT Cardano.Wallet.Primitive.Types.ActiveSlotCoefficient)
-instance Data.Aeson.Types.ToJSON.ToJSON (Cardano.Wallet.Api.Types.ApiT Cardano.Wallet.Primitive.Types.ActiveSlotCoefficient)
-instance Data.Aeson.Types.FromJSON.FromJSON (Cardano.Wallet.Api.Types.ApiT (Cardano.Wallet.Primitive.Types.Hash "Genesis"))
-instance Data.Aeson.Types.ToJSON.ToJSON (Cardano.Wallet.Api.Types.ApiT (Cardano.Wallet.Primitive.Types.Hash "Genesis"))
 instance Data.Text.Class.FromText a => Web.Internal.HttpApiData.FromHttpApiData (Cardano.Wallet.Api.Types.ApiT a)
 instance Data.Text.Class.ToText a => Web.Internal.HttpApiData.ToHttpApiData (Cardano.Wallet.Api.Types.ApiT a)
 instance Data.Aeson.Types.FromJSON.FromJSON Cardano.Wallet.Api.Types.ApiByronWalletMigrationInfo
@@ -5234,12 +5203,6 @@ instance Data.Text.Class.FromText Cardano.Wallet.Api.Types.Iso8601Time
 instance Web.Internal.HttpApiData.FromHttpApiData Cardano.Wallet.Api.Types.Iso8601Time
 instance Web.Internal.HttpApiData.ToHttpApiData Cardano.Wallet.Api.Types.Iso8601Time
 instance Data.Aeson.Types.ToJSON.ToJSON Cardano.Wallet.Api.Types.ApiErrorCode
-instance Data.Text.Class.ToText Cardano.Wallet.Api.Types.ApiEpochNumber
-instance Data.Text.Class.FromText Cardano.Wallet.Api.Types.ApiEpochNumber
-instance Web.Internal.HttpApiData.ToHttpApiData Cardano.Wallet.Api.Types.ApiEpochNumber
-instance Web.Internal.HttpApiData.FromHttpApiData Cardano.Wallet.Api.Types.ApiEpochNumber
-instance Data.Aeson.Types.ToJSON.ToJSON Cardano.Wallet.Api.Types.ApiEpochNumber
-instance Data.Aeson.Types.FromJSON.FromJSON Cardano.Wallet.Api.Types.ApiEpochNumber
 instance Data.Aeson.Types.FromJSON.FromJSON Cardano.Wallet.Api.Types.ApiFee
 instance Data.Aeson.Types.ToJSON.ToJSON Cardano.Wallet.Api.Types.ApiFee
 instance Data.Text.Class.FromText Cardano.Wallet.Api.Types.PostExternalTransactionData
@@ -5922,9 +5885,7 @@ type MigrateByronWallet n = "byron-wallets" :> Capture "sourceWalletId" (ApiT Wa
 -- | 
 --   <a>https://input-output-hk.github.io/cardano-wallet/api/#operation/getByronWalletMigrationInfo</a>
 type GetByronWalletMigrationInfo = "byron-wallets" :> Capture "walletId" (ApiT WalletId) :> "migrations" :> Get '[JSON] ApiByronWalletMigrationInfo
-type Network = GetNetworkInformation :<|> GetNetworkParameters
-type GetNetworkInformation = "network" :> "information" :> Get '[JSON] ApiNetworkInformation
-type GetNetworkParameters = "network" :> "parameters" :> Capture "epochId" ApiEpochNumber :> Get '[JSON] ApiNetworkParameters
+type Network = "network" :> "information" :> Get '[JSON] ApiNetworkInformation
 type Proxy_ = PostExternalTransaction
 
 -- | 
@@ -5997,7 +5958,6 @@ joinStakePool :: forall s w. (HasType (ApiT PoolId) s, HasType (ApiT WalletId) w
 quitStakePool :: forall s w. (HasType (ApiT PoolId) s, HasType (ApiT WalletId) w) => s -> w -> (Method, Text)
 getDelegationFee :: forall w. HasType (ApiT WalletId) w => w -> (Method, Text)
 getNetworkInfo :: (Method, Text)
-getNetworkParams :: forall e. HasType ApiEpochNumber e => e -> (Method, Text)
 postExternalTransaction :: (Method, Text)
 class PostWallet k
 class Discriminate (style :: WalletStyle)
@@ -6180,8 +6140,6 @@ MsgStakeDistribution :: EpochNo -> StakePoolLog
 MsgStakePoolRegistration :: PoolRegistrationCertificate -> StakePoolLog
 MsgRollingBackTo :: SlotId -> StakePoolLog
 MsgApplyError :: ErrMonitorStakePools -> StakePoolLog
-MsgUsingRankingEpochConstants :: EpochConstants -> StakePoolLog
-MsgUsingTotalStakeForRanking :: Quantity "lovelace" Word64 -> StakePoolLog
 instance GHC.Classes.Eq Cardano.Pool.Metrics.StakePoolLog
 instance GHC.Show.Show Cardano.Pool.Metrics.StakePoolLog
 instance GHC.Show.Show Cardano.Pool.Metrics.ErrListStakePools

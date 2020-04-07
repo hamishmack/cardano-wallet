@@ -66,13 +66,16 @@ HttpException :: HttpExceptionContent -> RequestException
 
 -- | Running Context for our integration test
 data Context t
-Context :: IO () -> (Text, Manager) -> Port "wallet" -> Faucet -> (TxDescription -> (Natural, Natural)) -> Proxy t -> Context t
+Context :: IO () -> (Text, Manager) -> Port "node" -> Port "wallet" -> Faucet -> (TxDescription -> (Natural, Natural)) -> FeePolicy -> Proxy t -> Context t
 
 -- | Cleanup action for the context
 [_cleanup] :: Context t -> IO ()
 
 -- | The underlying BaseUrl and Manager used by the Wallet Client
 [_manager] :: Context t -> (Text, Manager)
+
+-- | Node TCP port
+[_nodePort] :: Context t -> Port "node"
 
 -- | Server TCP port
 [_walletPort] :: Context t -> Port "wallet"
@@ -83,6 +86,9 @@ Context :: IO () -> (Text, Manager) -> Port "wallet" -> Faucet -> (TxDescription
 
 -- | A fee estimator for the integration tests
 [_feeEstimator] :: Context t -> TxDescription -> (Natural, Natural)
+
+-- | Fee policy
+[_feePolicy] :: Context t -> FeePolicy
 [_target] :: Context t -> Proxy t
 
 -- | Describe a transaction in terms of its inputs and outputs
@@ -106,13 +112,16 @@ module Test.Integration.Framework.DSL
 
 -- | Running Context for our integration test
 data Context t
-Context :: IO () -> (Text, Manager) -> Port "wallet" -> Faucet -> (TxDescription -> (Natural, Natural)) -> Proxy t -> Context t
+Context :: IO () -> (Text, Manager) -> Port "node" -> Port "wallet" -> Faucet -> (TxDescription -> (Natural, Natural)) -> FeePolicy -> Proxy t -> Context t
 
 -- | Cleanup action for the context
 [_cleanup] :: Context t -> IO ()
 
 -- | The underlying BaseUrl and Manager used by the Wallet Client
 [_manager] :: Context t -> (Text, Manager)
+
+-- | Node TCP port
+[_nodePort] :: Context t -> Port "node"
 
 -- | Server TCP port
 [_walletPort] :: Context t -> Port "wallet"
@@ -123,6 +132,9 @@ Context :: IO () -> (Text, Manager) -> Port "wallet" -> Faucet -> (TxDescription
 
 -- | A fee estimator for the integration tests
 [_feeEstimator] :: Context t -> TxDescription -> (Natural, Natural)
+
+-- | Fee policy
+[_feePolicy] :: Context t -> FeePolicy
 [_target] :: Context t -> Proxy t
 
 -- | A class to select the right command for a given 'Context t'
@@ -147,37 +159,56 @@ request :: forall a m s. (FromJSON a, MonadIO m, MonadCatch m, HasType (Text, Ma
 unsafeRequest :: forall a m t. (FromJSON a, MonadIO m, MonadCatch m) => Context t -> (Method, Text) -> Payload -> m (Status, a)
 
 -- | A file is eventually created on the given location
-expectPathEventuallyExist :: HasCallStack => FilePath -> IO ()
+expectPathEventuallyExist :: FilePath -> IO ()
 
 -- | Expect a successful response, without any further assumptions.
-expectSuccess :: (HasCallStack, MonadIO m, MonadFail m) => (s, Either RequestException a) -> m ()
+expectSuccess :: (MonadIO m, MonadFail m) => (s, Either RequestException a) -> m ()
 
 -- | Expect an error response, without any further assumptions.
-expectError :: (HasCallStack, MonadIO m, MonadFail m, Show a) => (s, Either RequestException a) -> m ()
+expectError :: (MonadIO m, MonadFail m, Show a) => (s, Either RequestException a) -> m ()
 
 -- | Expect an error response, without any further assumptions.
-expectErrorMessage :: (HasCallStack, MonadIO m, MonadFail m, Show a) => String -> (s, Either RequestException a) -> m ()
-expectField :: (HasCallStack, MonadIO m, MonadFail m, Show a) => Lens' s a -> (a -> Expectation) -> (Status, Either RequestException s) -> m ()
-expectListField :: (HasCallStack, MonadIO m, MonadFail m, Show a) => Int -> Lens' s a -> (a -> Expectation) -> (Status, Either RequestException [s]) -> m ()
+expectErrorMessage :: (MonadIO m, MonadFail m, Show a) => String -> (s, Either RequestException a) -> m ()
+expectFieldEqual :: (MonadIO m, MonadFail m, Show a, Eq a) => Lens' s a -> a -> (Status, Either RequestException s) -> m ()
+expectFieldNotEqual :: (MonadIO m, MonadFail m, Show a, Eq a) => Lens' s a -> a -> (Status, Either RequestException s) -> m ()
+expectFieldSatisfy :: (MonadIO m, MonadFail m, Show a) => Lens' s a -> (a -> Bool) -> (Status, Either RequestException s) -> m ()
+expectFieldBetween :: (MonadIO m, MonadFail m, Show a, Ord a) => Lens' s a -> (a, a) -> (Status, Either RequestException s) -> m ()
+expectListItemFieldBetween :: (MonadIO m, MonadFail m, Show a, Eq a, Ord a) => Int -> Lens' s a -> (a, a) -> (Status, Either RequestException [s]) -> m ()
+
+-- | Expects that returned data list's particular item field matches the
+--   expected value. e.g. expectListItemFieldEqual 0 walletName "first"
+--   response expectListItemFieldEqual 1 walletName "second" response
+expectListItemFieldEqual :: (MonadIO m, MonadFail m, Show a, Eq a) => Int -> Lens' s a -> a -> (Status, Either RequestException [s]) -> m ()
+expectListItemFieldSatisfy :: (MonadIO m, MonadFail m, Show a) => Int -> Lens' s a -> (a -> Bool) -> (Status, Either RequestException [s]) -> m ()
 
 -- | Expects data list returned by the API to be of certain length
-expectListSize :: (HasCallStack, MonadIO m, MonadFail m, Foldable xs) => Int -> (Status, Either RequestException (xs a)) -> m ()
+expectListSizeEqual :: (MonadIO m, MonadFail m, Foldable xs) => Int -> (Status, Either RequestException (xs a)) -> m ()
 
 -- | Expect a given response code on the response.
-expectResponseCode :: (HasCallStack, MonadIO m, Show a) => Status -> (Status, a) -> m ()
+expectResponseCode :: (MonadIO m, Show a) => Status -> (Status, a) -> m ()
+
+-- | Expects wallet from the request to eventually reach the given state or
+--   beyond.
+expectEventually :: forall ctx s a m. (MonadIO m, MonadCatch m, MonadFail m) => (Ord a, Show a, FromJSON s) => HasType (Text, Manager) ctx => ctx -> (s -> (Method, Text)) -> Lens' s a -> a -> (Status, Either RequestException s) -> m ()
+
+-- | Same as <a>expectEventually</a>, but works directly on
+--   <a>ApiWallet</a> rather than on a response from the API.
+expectEventually' :: forall ctx s a m. (MonadIO m, MonadCatch m, MonadFail m) => (Ord a, Show a, FromJSON s) => HasType (Text, Manager) ctx => ctx -> (s -> (Method, Text)) -> Lens' s a -> a -> s -> m ()
 
 -- | Expects a given string to be a valid JSON output corresponding to some
 --   given data-type <tt>a</tt>. Returns this type if successful.
-expectValidJSON :: forall m a. (HasCallStack, MonadFail m, FromJSON a) => Proxy a -> String -> m a
-expectCliField :: (HasCallStack, MonadIO m, MonadFail m, Show a) => Lens' s a -> (a -> Expectation) -> s -> m ()
-expectCliListField :: (HasCallStack, MonadIO m, MonadFail m, Show a) => Int -> Lens' s a -> (a -> Expectation) -> [s] -> m ()
+expectValidJSON :: forall m a. (MonadFail m, FromJSON a) => Proxy a -> String -> m a
+expectCliFieldBetween :: (MonadIO m, MonadFail m, Show a, Ord a) => Lens' s a -> (a, a) -> s -> m ()
+expectCliFieldEqual :: (MonadIO m, Show a, Eq a) => Lens' s a -> a -> s -> m ()
+expectCliFieldNotEqual :: (MonadIO m, Show a, Eq a) => Lens' s a -> a -> s -> m ()
+expectCliListItemFieldBetween :: (MonadIO m, MonadFail m, Show a, Eq a, Ord a) => Int -> Lens' s a -> (a, a) -> [s] -> m ()
+
+-- | Same as <a>expectListItemFieldEqual</a> but for CLI
+expectCliListItemFieldEqual :: (MonadIO m, MonadFail m, Show a, Eq a) => Int -> Lens' s a -> a -> [s] -> m ()
 
 -- | Expects wallet UTxO statistics from the request to be equal to
 --   pre-calculated statistics.
-expectWalletUTxO :: (HasCallStack, MonadIO m, MonadFail m) => [Word64] -> Either RequestException ApiUtxoStatistics -> m ()
-between :: (Ord a, Show a) => (a, a) -> a -> Expectation
-(.>=) :: (Ord a, Show a) => a -> a -> Expectation
-(.>) :: (Ord a, Show a) => a -> a -> Expectation
+expectWalletUTxO :: (MonadIO m, MonadFail m) => [Word64] -> Either RequestException ApiUtxoStatistics -> m ()
 
 -- | Apply <tt>a</tt> to all actions in sequence
 verify :: Monad m => a -> [a -> m ()] -> m ()
@@ -205,8 +236,24 @@ ClientError :: Value -> RequestException
 
 -- | A wild exception upon sending the request
 HttpException :: HttpExceptionContent -> RequestException
-expectedBlockchainParams :: ApiNetworkParameters
+amount :: HasType (Quantity "lovelace" Natural) s => Lens' s Natural
+apparentPerformance :: HasType Double s => Lens' s Double
+blocks :: HasField' "producedBlocks" s (Quantity "block" Natural) => Lens' s Natural
+coinSelectionInputs :: forall s n a. (s ~ ApiCoinSelection n, a ~ ApiCoinSelectionInput n, HasType (NonEmpty a) s) => Lens' s [a]
+coinSelectionOutputs :: forall s n a. (s ~ ApiCoinSelection n, a ~ AddressAmount n, HasType (NonEmpty a) s) => Lens' s [a]
+delegation :: forall s d. (d ~ WalletDelegation (ApiT PoolId), HasType (ApiT d) s) => Lens' s (WalletDelegation (ApiT PoolId))
+direction :: HasType (ApiT Direction) s => Lens' s Direction
+feeEstimator :: Lens' (Context t) (TxDescription -> (Natural, Natural))
+inputs :: HasType [ApiTxInput t] s => Lens' s [ApiTxInput t]
+metrics :: HasType ApiStakePoolMetrics s => Lens' s ApiStakePoolMetrics
+nextEpoch :: HasType ApiEpochInfo s => Lens' s ApiEpochInfo
+outputs :: forall s t a. (a ~ AddressAmount t, HasType (NonEmpty a) s) => Lens' s [a]
+passphraseLastUpdate :: forall s i. (i ~ WalletPassphraseInfo, HasType (Maybe (ApiT i)) s) => Lens' s (Maybe Text)
+stake :: HasField' "controlledStake" s (Quantity "lovelace" Natural) => Lens' s Natural
+status :: HasType (ApiT TxStatus) s => Lens' s TxStatus
+syncProgress :: HasType (ApiT SyncProgress) s => Lens' s SyncProgress
 walletId :: HasType (ApiT WalletId) s => Lens' s Text
+walletName :: HasType (ApiT WalletName) s => Lens' s Text
 (</>) :: ToHttpApiData a => Text -> a -> Text
 infixr 5 </>
 
@@ -219,7 +266,7 @@ infixl 9 !!
 -- | Create an empty wallet
 emptyRandomWallet :: Context t -> IO ApiByronWallet
 emptyIcarusWallet :: Context t -> IO ApiByronWallet
-emptyByronWalletWith :: forall t. () => Context t -> String -> (Text, [Text], Text) -> IO ApiByronWallet
+emptyByronWalletWith :: forall (style :: ByronWalletStyle) t. PostWallet style => Context t -> (Text, [Text], Text) -> IO ApiByronWallet
 
 -- | Create an empty wallet
 emptyWallet :: Context t -> IO ApiWallet
@@ -231,7 +278,7 @@ getFromResponseList :: Int -> Lens' s a -> (Status, Either RequestException [s])
 json :: QuasiQuoter
 joinStakePool :: forall t w. HasType (ApiT WalletId) w => Context t -> ApiT PoolId -> (w, Text) -> IO (Status, Either RequestException (ApiTransaction  'Testnet))
 delegationFee :: forall t w. HasType (ApiT WalletId) w => Context t -> w -> IO (Status, Either RequestException ApiFee)
-quitStakePool :: forall t w. HasType (ApiT WalletId) w => Context t -> (w, Text) -> IO (Status, Either RequestException (ApiTransaction  'Testnet))
+quitStakePool :: forall t w. HasType (ApiT WalletId) w => Context t -> ApiT PoolId -> (w, Text) -> IO (Status, Either RequestException (ApiTransaction  'Testnet))
 selectCoins :: forall t w. HasType (ApiT WalletId) w => Context t -> w -> NonEmpty (AddressAmount  'Testnet) -> IO (Status, Either RequestException (ApiCoinSelection  'Testnet))
 listAddresses :: Context t -> ApiWallet -> IO [ApiAddress  'Testnet]
 listTransactions :: Context t -> ApiWallet -> Maybe UTCTime -> Maybe UTCTime -> Maybe SortOrder -> IO [ApiTransaction  'Testnet]
@@ -258,7 +305,6 @@ fixtureWallet :: Context t -> IO ApiWallet
 --   This function makes no attempt at ensuring the request is valid, so be
 --   careful.
 fixtureWalletWith :: Context t -> [Natural] -> IO ApiWallet
-fixtureWalletWithMnemonics :: Context t -> IO (ApiWallet, [Text])
 
 -- | Total amount on each faucet wallet
 faucetAmt :: Natural
@@ -274,13 +320,14 @@ waitForServer :: forall t ctx. (HasType (Port "wallet") ctx, KnownCommand t) => 
 -- | <a>map</a> flipped.
 for :: [a] -> (a -> b) -> [b]
 utcIso8601ToText :: UTCTime -> Text
-eventually :: String -> IO a -> IO a
-eventuallyUsingDelay :: Int -> String -> IO a -> IO a
+eventually :: IO a -> IO a
+eventuallyUsingDelay :: Int -> IO a -> IO a
+eventually_ :: IO () -> IO ()
+eventuallyUsingDelay_ :: Int -> IO () -> IO ()
 
 -- | Default passphrase used for fixture wallets
 fixturePassphrase :: Text
 waitForNextEpoch :: Context t -> IO ()
-waitAllTxsInLedger :: forall t n. n ~  'Testnet => Context t -> ApiWallet -> IO ()
 toQueryString :: [(Text, Text)] -> Text
 
 -- | Override the method of a particular endpoint, mostly to exercise
@@ -306,14 +353,6 @@ withMethod :: Method -> (Method, Text) -> (Method, Text)
 --   ( "GET", "v2/stake-pools/2512a00e9653fe49a44a5886202e24d77eeb998f/wallets/patate" )
 --   </pre>
 withPathParam :: Int -> (Text -> Text) -> (Method, Text) -> (Method, Text)
-
--- | Handy constructor for ApiEpochInfo
-mkEpochInfo :: EpochNo -> SlotParameters -> ApiEpochInfo
-
--- | Wallet not delegating and not about to join any stake pool.
-notDelegating :: [(Maybe (ApiT PoolId), ApiEpochInfo)] -> ApiWalletDelegation
-delegating :: ApiT PoolId -> [(Maybe (ApiT PoolId), ApiEpochInfo)] -> ApiWalletDelegation
-getSlotParams :: Context t -> IO (EpochNo, SlotParameters)
 command :: CmdResult r => [CmdOption] -> String -> [String] -> IO r
 
 -- | Run a command using the 'cardano-wallet' executable for the target
@@ -368,7 +407,9 @@ payloadWith :: Text -> [Text] -> Payload
 simplePayload :: Payload
 updateNamePayload :: Text -> Payload
 updatePassPayload :: Text -> Text -> Payload
-errMsg400WalletIdEncoding :: String
+getHeaderCases :: forall a. Show a => Status -> [(String, Headers, [(Status, Either RequestException a) -> IO ()])]
+postHeaderCases :: Show a => [(String, Headers, [(Status, Either RequestException a) -> IO ()])]
+errMsgWalletIdEncoding :: String
 errMsg400StartTimeLaterThanEndTime :: String -> String -> String
 errMsg403Fee :: String
 errMsg403DelegationFee :: Natural -> String
@@ -378,13 +419,12 @@ errMsg403WrongPass :: String
 errMsg403NoPendingAnymore :: Text -> String
 errMsg404NoSuchPool :: Text -> String
 errMsg403PoolAlreadyJoined :: Text -> String
-errMsg403NotDelegating :: String
+errMsg403WrongPool :: Text -> String
 errMsg403NothingToMigrate :: Text -> String
 errMsg404NoEndpoint :: String
 errMsg404CannotFindTx :: Text -> String
-errMsg403NoRootKey :: Text -> String
+errMsg404NoRootKey :: Text -> String
 errMsg404NoWallet :: Text -> String
-errMsg404NoEpochNo :: String -> String
 errMsg403InputsDepleted :: String
 errMsg403TxTooBig :: Int -> String
 errMsg400MalformedTxPayload :: String
@@ -407,9 +447,6 @@ module Test.Integration.Scenario.API.ByronTransactions
 spec :: forall t n. n ~  'Testnet => SpecWith (Context t)
 
 module Test.Integration.Scenario.API.ByronWallets
-spec :: forall t n. n ~  'Testnet => SpecWith (Context t)
-
-module Test.Integration.Scenario.API.HWWallets
 spec :: forall t n. n ~  'Testnet => SpecWith (Context t)
 
 module Test.Integration.Scenario.API.Network
