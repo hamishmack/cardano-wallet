@@ -4961,6 +4961,7 @@ InvalidDelegationDiscovery :: ApiErrorCode
 NotImplemented :: ApiErrorCode
 WalletNotResponding :: ApiErrorCode
 AddressAlreadyExists :: ApiErrorCode
+InvalidWalletType :: ApiErrorCode
 data ApiNetworkInformation
 ApiNetworkInformation :: !ApiT SyncProgress -> !ApiEpochInfo -> !ApiBlockReference -> !ApiNetworkTip -> ApiNetworkInformation
 [$sel:syncProgress:ApiNetworkInformation] :: ApiNetworkInformation -> !ApiT SyncProgress
@@ -5828,6 +5829,7 @@ data ErrCreateRandomAddress
 ErrIndexAlreadyExists :: Index  'Hardened  'AddressK -> ErrCreateRandomAddress
 ErrCreateAddrNoSuchWallet :: ErrNoSuchWallet -> ErrCreateRandomAddress
 ErrCreateAddrWithRootKey :: ErrWithRootKey -> ErrCreateRandomAddress
+ErrCreateAddressNotAByronWallet :: ErrCreateRandomAddress
 
 -- | Makes a fully-resolved coin selection for the given set of payments.
 selectCoinsExternal :: forall ctx s t k e. (GenChange s, HasDBLayer s k ctx, HasLogger WalletLog ctx, HasTransactionLayer t k ctx, IsOwned s k, NFData s, Show s, e ~ ErrValidateSelection t) => ctx -> WalletId -> ArgGenChange s -> NonEmpty TxOut -> ExceptT (ErrSelectCoinsExternal e) IO UnsignedTx

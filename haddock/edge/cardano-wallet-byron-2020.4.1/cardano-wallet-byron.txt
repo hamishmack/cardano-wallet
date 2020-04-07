@@ -111,7 +111,7 @@ module Cardano.Wallet.Byron.Launch
 --   
 --   IMPORTANT: <tt>cardano-node</tt> must be available on the current
 --   path.
-withCardanoNode :: Trace IO Text -> FilePath -> (FilePath -> Block -> (BlockchainParameters, NodeVersionData) -> IO a) -> IO a
+withCardanoNode :: Trace IO Text -> FilePath -> Severity -> (FilePath -> Block -> (BlockchainParameters, NodeVersionData) -> IO a) -> IO a
 
 
 -- | This module provides the main wallet server function for the
@@ -164,6 +164,10 @@ setupTracers :: TracerSeverities -> Trace IO Text -> Tracers IO
 -- | Construct a <a>TracerSeverities</a> record with all tracers set to the
 --   given severity.
 tracerSeverities :: Maybe Severity -> TracerSeverities
+
+-- | Use a <a>nullTracer</a> for each of the <a>Tracer</a>s in
+--   <a>Tracers'</a>
+nullTracers :: Monad m => Tracers m
 
 -- | Log messages related to application startup and shutdown.
 data ApplicationLog
