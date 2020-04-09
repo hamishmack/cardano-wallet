@@ -15,16 +15,12 @@ data Byron
 data ByronBlock
 type NodeVersionData = (NodeToClientVersionData, CodecCBORTerm Text NodeToClientVersionData)
 
--- | Embed some constants into a network type.
-class KnownNetwork (n :: NetworkDiscriminant)
-blockchainParameters :: KnownNetwork n => BlockchainParameters
-versionData :: KnownNetwork n => NodeVersionData
-
 -- | Settings for configuring a MainNet network client
 mainnetVersionData :: NodeVersionData
 
 -- | Settings for configuring a TestNet network client
 testnetVersionData :: ProtocolMagic -> NodeVersionData
+mainnetBlockchainParameters :: BlockchainParameters
 emptyGenesis :: BlockchainParameters -> Block
 genesisTip :: Tip ByronBlock
 toByronHash :: Hash "BlockHeader" -> ByronHash
@@ -49,7 +45,6 @@ fromTip :: Hash "Genesis" -> EpochLength -> Tip ByronBlock -> BlockHeader
 fromTxAux :: TxAux -> Tx
 fromTxIn :: TxIn -> TxIn
 fromTxOut :: TxOut -> TxOut
-instance Cardano.Wallet.Byron.Compatibility.KnownNetwork 'Cardano.Wallet.Primitive.AddressDerivation.Mainnet
 
 
 -- | Network Layer for talking to Haskell re-written nodes.
@@ -102,16 +97,6 @@ newTransactionLayer :: forall (n :: NetworkDiscriminant) k t. (t ~ IO Byron, Wal
 -- | Construct an initial genesis block from a genesis UTxO.
 fromGenesisTxOut :: BlockchainParameters -> [TxOut] -> Block
 instance Formatting.Buildable.Buildable Cardano.Wallet.Byron.Transaction.ErrInvalidTxOutAmount
-
-
--- | Provides a function to launch cardano-node for <i>testing</i>.
-module Cardano.Wallet.Byron.Launch
-
--- | Spins up a <tt>cardano-node</tt> in another process.
---   
---   IMPORTANT: <tt>cardano-node</tt> must be available on the current
---   path.
-withCardanoNode :: Trace IO Text -> FilePath -> Severity -> (FilePath -> Block -> (BlockchainParameters, NodeVersionData) -> IO a) -> IO a
 
 
 -- | This module provides the main wallet server function for the
@@ -183,3 +168,28 @@ instance GHC.Classes.Eq (Cardano.Wallet.Byron.Tracers' (Data.Functor.Const.Const
 instance Data.Text.Class.ToText Cardano.Wallet.Byron.ApplicationLog
 instance Cardano.BM.Data.Tracer.HasPrivacyAnnotation Cardano.Wallet.Byron.ApplicationLog
 instance Cardano.BM.Data.Tracer.HasSeverityAnnotation Cardano.Wallet.Byron.ApplicationLog
+
+
+-- | Provides a function to launch cardano-node for <i>testing</i>.
+module Cardano.Wallet.Byron.Launch
+
+-- | Spins up a <tt>cardano-node</tt> in another process.
+--   
+--   IMPORTANT: <tt>cardano-node</tt> must be available on the current
+--   path.
+withCardanoNode :: Trace IO Text -> FilePath -> Severity -> (FilePath -> Block -> (BlockchainParameters, NodeVersionData) -> IO a) -> IO a
+data NetworkConfiguration
+[MainnetConfig] :: (SomeNetworkDiscriminant, NodeVersionData) -> NetworkConfiguration
+[TestnetConfig] :: FilePath -> NetworkConfiguration
+
+-- | <ul>
+--   <li>-node-socket=FILE</li>
+--   </ul>
+nodeSocketOption :: Parser FilePath
+
+-- | <ul>
+--   <li>-mainnet | (--testnet=FILE)</li>
+--   </ul>
+networkConfigurationOption :: Parser NetworkConfiguration
+parseGenesisData :: NetworkConfiguration -> ExceptT String IO (SomeNetworkDiscriminant, BlockchainParameters, NodeVersionData, Block)
+instance GHC.Show.Show Cardano.Wallet.Byron.Launch.NetworkConfiguration
