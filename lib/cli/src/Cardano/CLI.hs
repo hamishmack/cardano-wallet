@@ -52,7 +52,7 @@ module Cardano.CLI
     , listenOption
     , nodePortOption
     , nodePortMaybeOption
-    , shutdownHandlerFlag
+    , shutdownIPCOption
     , stateDirOption
     , syncToleranceOption
     , tlsOption
@@ -107,6 +107,9 @@ module Cardano.CLI
     , setupDirectory
     , waitForService
     , WaitForServiceLog (..)
+
+    -- * Re-exports
+    , Fd(Fd)
     ) where
 
 import Prelude hiding
@@ -279,7 +282,6 @@ import Options.Applicative
     , str
     , strOption
     , subparser
-    , switch
     , value
     )
 import Options.Applicative.Help.Pretty
@@ -330,6 +332,8 @@ import System.IO
     )
 import System.IO.Unsafe
     ( unsafePerformIO )
+import System.Posix.Types
+    ( Fd (Fd) )
 
 import qualified Cardano.BM.Configuration.Model as CM
 import qualified Cardano.BM.Data.BackendKind as CM
@@ -1650,11 +1654,15 @@ sizeOption = optionT $ mempty
     <> value MS_15
     <> showDefaultWith showT
 
--- | [--shutdown-handler]
-shutdownHandlerFlag :: Parser Bool
-shutdownHandlerFlag = switch
-    (  long "shutdown-handler"
-    <> help "Enable the clean shutdown handler (exits when stdin is closed)" )
+-- | [--shutdown-ipc FD]
+shutdownIPCOption :: Parser (Maybe Fd)
+shutdownIPCOption = optional $ option (Fd <$> auto) $ mempty
+      <> long "shutdown-ipc"
+      <> metavar "FD"
+      <> help (mconcat
+          [ "Enable the clean shutdown handler. "
+          , "The program exits when this inherited FD reaches EOF."
+          ])
 
 -- | --state-dir=DIR, default: ~/.cardano-wallet/$backend/$network
 stateDirOption :: FilePath -> Parser (Maybe FilePath)
