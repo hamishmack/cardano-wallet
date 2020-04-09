@@ -33,7 +33,7 @@ toEpochSlots :: EpochLength -> EpochSlots
 -- | SealedTx are the result of rightfully constructed byron transactions
 --   so, it is relatively safe to unserialize them from CBOR.
 toGenTx :: HasCallStack => SealedTx -> GenTx ByronBlock
-toPoint :: EpochLength -> BlockHeader -> Point ByronBlock
+toPoint :: Hash "Genesis" -> EpochLength -> BlockHeader -> Point ByronBlock
 toSlotNo :: EpochLength -> SlotId -> SlotNo
 fromBlockNo :: BlockNo -> Quantity "block" Word32
 fromByronBlock :: Hash "Genesis" -> EpochLength -> ByronBlock -> Block
