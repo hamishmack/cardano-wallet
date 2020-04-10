@@ -89,6 +89,7 @@ in { system, compiler, flags, pkgs, hsPkgs, pkgconfPkgs, ... }:
             (hsPkgs."iohk-monitoring" or (buildDepError "iohk-monitoring"))
             (hsPkgs."process" or (buildDepError "process"))
             (hsPkgs."retry" or (buildDepError "retry"))
+            (hsPkgs."temporary" or (buildDepError "temporary"))
             (hsPkgs."text" or (buildDepError "text"))
             (hsPkgs."text-class" or (buildDepError "text-class"))
             (hsPkgs."time" or (buildDepError "time"))
