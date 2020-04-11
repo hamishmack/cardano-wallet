@@ -341,27 +341,12 @@ blake2b256 :: ByteString -> ByteString
 maxNumberOfInputs :: Int
 maxNumberOfOutputs :: Int
 data Get a
-
--- | The simplest interface to run a <a>Get</a> decoder. If the decoder
---   runs into an error, calls <a>fail</a>, or runs out of input, it will
---   call <a>error</a>.
 runGet :: () => Get a -> ByteString -> a
 
 -- | A safe version of <tt>runGet</tt> which doesn't throw on error.
 eitherRunGet :: () => Get a -> ByteString -> Either String a
-
--- | Run a <a>Get</a> monad and return <a>Left</a> on failure and
---   <a>Right</a> on success. In both cases any unconsumed input and the
---   number of bytes consumed is returned. In the case of failure, a
---   human-readable error message is included as well.
---   
---   <i>Since: 0.6.4.0</i>
 runGetOrFail :: () => Get a -> ByteString -> Either (ByteString, ByteOffset, String) (ByteString, ByteOffset, a)
-
--- | Put merely lifts Builder into a Writer monad, applied to ().
 type Put = PutM ()
-
--- | Run the <a>PutM</a> monad with a serialiser
 runPut :: Put -> ByteString
 instance GHC.Generics.Generic Cardano.Wallet.Jormungandr.Binary.Block
 instance GHC.Classes.Eq Cardano.Wallet.Jormungandr.Binary.Block
