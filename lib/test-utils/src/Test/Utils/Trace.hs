@@ -1,3 +1,5 @@
+{-# LANGUAGE BangPatterns #-}
+
 -- |
 -- Copyright: © 2018-2020 IOHK
 -- License: Apache-2.0
@@ -31,6 +33,6 @@ withLogging action = do
 -- the result of the action.
 captureLogging :: (Tracer IO msg -> IO a) -> IO ([msg], a)
 captureLogging action = withLogging $ \(tr, getMsgs) -> do
-    res <- action tr
+    !res <- action tr
     msgs <- getMsgs
     pure (msgs, res)
