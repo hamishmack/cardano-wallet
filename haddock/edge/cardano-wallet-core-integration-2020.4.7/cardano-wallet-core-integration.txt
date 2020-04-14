@@ -388,6 +388,7 @@ createWalletFromPublicKeyViaCLI :: forall t r s. (CmdResult r, HasType (Port "wa
 deleteWalletViaCLI :: forall t r s. (CmdResult r, KnownCommand t, HasType (Port "wallet") s) => s -> String -> IO r
 getWalletUtxoStatisticsViaCLI :: forall t r s. (CmdResult r, KnownCommand t, HasType (Port "wallet") s) => s -> String -> IO r
 getWalletViaCLI :: forall t r s. (CmdResult r, KnownCommand t, HasType (Port "wallet") s) => s -> String -> IO r
+createAddressViaCLI :: forall t s. (KnownCommand t, HasType (Port "wallet") s) => s -> [String] -> String -> IO (ExitCode, Text, Text)
 listAddressesViaCLI :: forall t r s. (CmdResult r, KnownCommand t, HasType (Port "wallet") s) => s -> [String] -> IO r
 listStakePoolsViaCLI :: forall t r s. (CmdResult r, KnownCommand t, HasType (Port "wallet") s) => s -> IO r
 listWalletsViaCLI :: forall t r s. (CmdResult r, KnownCommand t, HasType (Port "wallet") s) => s -> IO r
@@ -437,6 +438,7 @@ errMsg400WalletIdEncoding :: String
 errMsg400StartTimeLaterThanEndTime :: String -> String -> String
 errMsg403Fee :: String
 errMsg403DelegationFee :: Natural -> String
+errMsg403NotAByronWallet :: String
 errMsg403NotEnoughMoney :: Int -> Int -> String
 errMsg403NotEnoughMoney_ :: String
 errMsg403UTxO :: String
@@ -451,6 +453,7 @@ errMsg404CannotFindTx :: Text -> String
 errMsg403NoRootKey :: Text -> String
 errMsg404NoWallet :: Text -> String
 errMsg404NoEpochNo :: String -> String
+errMsg409WalletExists :: String -> String
 errMsg403InputsDepleted :: String
 errMsg403TxTooBig :: Int -> String
 errMsg400MalformedTxPayload :: String
@@ -466,31 +469,28 @@ errMsg400NumberOfWords :: String
 errMsgNotInDictionary :: String
 errMsg403RejectedTip :: String
 
-module Test.Integration.Scenario.API.Addresses
-spec :: forall n t. (DecodeAddress n, EncodeAddress n) => SpecWith (Context t)
-
-module Test.Integration.Scenario.API.ByronTransactions
+module Test.Integration.Scenario.API.Byron.Transactions
 spec :: forall n t. DecodeAddress n => SpecWith (Context t)
-
-module Test.Integration.Scenario.API.HWWallets
-spec :: forall n t. (DecodeAddress n, EncodeAddress n) => SpecWith (Context t)
 
 module Test.Integration.Scenario.API.Network
 spec :: forall t. SpecWith (Context t)
 
-module Test.Integration.Scenario.API.Transactions
+module Test.Integration.Scenario.API.Shelley.Addresses
 spec :: forall n t. (DecodeAddress n, EncodeAddress n) => SpecWith (Context t)
 
-module Test.Integration.Scenario.API.Wallets
+module Test.Integration.Scenario.API.Shelley.HWWallets
+spec :: forall n t. (DecodeAddress n, EncodeAddress n) => SpecWith (Context t)
+
+module Test.Integration.Scenario.API.Shelley.Transactions
+spec :: forall n t. (DecodeAddress n, EncodeAddress n) => SpecWith (Context t)
+
+module Test.Integration.Scenario.API.Shelley.Wallets
 spec :: forall n t. (DecodeAddress n, EncodeAddress n) => SpecWith (Context t)
 scenarioWalletResync01_happyPath :: forall style t wallet. (Discriminate style, HasType (ApiT WalletId) wallet, HasField' "state" wallet (ApiT SyncProgress), FromJSON wallet, Generic wallet, Show wallet) => Context t -> (Context t -> IO wallet) -> IO ()
 scenarioWalletResync02_notGenesis :: forall style t wallet. (Discriminate style, HasType (ApiT WalletId) wallet, HasField' "state" wallet (ApiT SyncProgress), FromJSON wallet, Generic wallet, Show wallet) => Context t -> (Context t -> IO wallet) -> IO ()
 
-module Test.Integration.Scenario.API.ByronWallets
+module Test.Integration.Scenario.API.Byron.Wallets
 spec :: forall n t. DecodeAddress n => SpecWith (Context t)
-
-module Test.Integration.Scenario.CLI.Addresses
-spec :: forall n t. (KnownCommand t, DecodeAddress n, EncodeAddress n) => SpecWith (Context t)
 
 module Test.Integration.Scenario.CLI.Miscellaneous
 spec :: forall t. KnownCommand t => SpecWith ()
@@ -504,13 +504,16 @@ spec :: forall t. KnownCommand t => SpecWith (Context t)
 module Test.Integration.Scenario.CLI.Port
 spec :: forall t s. (HasType (Port "wallet") s, KnownCommand t) => SpecWith s
 
-module Test.Integration.Scenario.CLI.Transactions
+module Test.Integration.Scenario.CLI.Shelley.Addresses
 spec :: forall n t. (KnownCommand t, DecodeAddress n, EncodeAddress n) => SpecWith (Context t)
 
-module Test.Integration.Scenario.CLI.Wallets
+module Test.Integration.Scenario.CLI.Shelley.Transactions
+spec :: forall n t. (KnownCommand t, DecodeAddress n, EncodeAddress n) => SpecWith (Context t)
+
+module Test.Integration.Scenario.CLI.Shelley.Wallets
 spec :: forall n t. (KnownCommand t, DecodeAddress n, EncodeAddress n) => SpecWith (Context t)
 walletNames :: [(String, String)]
 walletNamesInvalid :: [(String, String)]
 
-module Test.Integration.Scenario.CLI.HWWallets
+module Test.Integration.Scenario.CLI.Shelley.HWWallets
 spec :: forall n t. (KnownCommand t, DecodeAddress n, EncodeAddress n) => SpecWith (Context t)
