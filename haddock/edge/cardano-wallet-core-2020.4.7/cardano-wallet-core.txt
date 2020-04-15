@@ -5022,9 +5022,10 @@ data ApiPoolId
 ApiPoolIdPlaceholder :: ApiPoolId
 ApiPoolId :: PoolId -> ApiPoolId
 data ApiByronWallet
-ApiByronWallet :: !ApiT WalletId -> !ApiByronWalletBalance -> !ApiT WalletName -> !Maybe ApiWalletPassphraseInfo -> !ApiT SyncProgress -> !ApiBlockReference -> ApiByronWallet
+ApiByronWallet :: !ApiT WalletId -> !ApiByronWalletBalance -> !ApiWalletDiscovery -> !ApiT WalletName -> !Maybe ApiWalletPassphraseInfo -> !ApiT SyncProgress -> !ApiBlockReference -> ApiByronWallet
 [$sel:id:ApiByronWallet] :: ApiByronWallet -> !ApiT WalletId
 [$sel:balance:ApiByronWallet] :: ApiByronWallet -> !ApiByronWalletBalance
+[$sel:discovery:ApiByronWallet] :: ApiByronWallet -> !ApiWalletDiscovery
 [$sel:name:ApiByronWallet] :: ApiByronWallet -> !ApiT WalletName
 [$sel:passphrase:ApiByronWallet] :: ApiByronWallet -> !Maybe ApiWalletPassphraseInfo
 [$sel:state:ApiByronWallet] :: ApiByronWallet -> !ApiT SyncProgress
@@ -5067,6 +5068,11 @@ data ApiPostRandomAddressData
 ApiPostRandomAddressData :: !ApiT (Passphrase "raw") -> !Maybe (ApiT (Index  'Hardened  'AddressK)) -> ApiPostRandomAddressData
 [$sel:passphrase:ApiPostRandomAddressData] :: ApiPostRandomAddressData -> !ApiT (Passphrase "raw")
 [$sel:addressIndex:ApiPostRandomAddressData] :: ApiPostRandomAddressData -> !Maybe (ApiT (Index  'Hardened  'AddressK))
+data ApiWalletDiscovery
+DiscoveryRandom :: ApiWalletDiscovery
+DiscoverySequential :: ApiWalletDiscovery
+class KnownDiscovery s
+knownDiscovery :: KnownDiscovery s => ApiWalletDiscovery
 data AccountPostData
 AccountPostData :: !ApiT WalletName -> !ApiAccountPublicKey -> !Maybe (ApiT AddressPoolGap) -> AccountPostData
 [$sel:name:AccountPostData] :: AccountPostData -> !ApiT WalletName
@@ -5238,6 +5244,9 @@ instance GHC.Base.Functor Cardano.Wallet.Api.Types.ApiT
 instance GHC.Classes.Eq a => GHC.Classes.Eq (Cardano.Wallet.Api.Types.ApiT a)
 instance GHC.Show.Show a => GHC.Show.Show (Cardano.Wallet.Api.Types.ApiT a)
 instance GHC.Generics.Generic (Cardano.Wallet.Api.Types.ApiT a)
+instance GHC.Show.Show Cardano.Wallet.Api.Types.ApiWalletDiscovery
+instance GHC.Generics.Generic Cardano.Wallet.Api.Types.ApiWalletDiscovery
+instance GHC.Classes.Eq Cardano.Wallet.Api.Types.ApiWalletDiscovery
 instance GHC.Show.Show Cardano.Wallet.Api.Types.ApiByronWalletMigrationInfo
 instance GHC.Generics.Generic Cardano.Wallet.Api.Types.ApiByronWalletMigrationInfo
 instance GHC.Classes.Eq Cardano.Wallet.Api.Types.ApiByronWalletMigrationInfo
@@ -5417,6 +5426,10 @@ instance (GHC.Enum.Enum (Cardano.Wallet.Primitive.AddressDerivation.Index deriva
 instance GHC.Enum.Enum (Cardano.Wallet.Primitive.AddressDerivation.Index derivation level) => Data.Aeson.Types.ToJSON.ToJSON (Cardano.Wallet.Api.Types.ApiT (Cardano.Wallet.Primitive.AddressDerivation.Index derivation level))
 instance Data.Text.Class.FromText a => Web.Internal.HttpApiData.FromHttpApiData (Cardano.Wallet.Api.Types.ApiT a)
 instance Data.Text.Class.ToText a => Web.Internal.HttpApiData.ToHttpApiData (Cardano.Wallet.Api.Types.ApiT a)
+instance Cardano.Wallet.Api.Types.KnownDiscovery (Cardano.Wallet.Primitive.AddressDiscovery.Random.RndState network)
+instance Cardano.Wallet.Api.Types.KnownDiscovery (Cardano.Wallet.Primitive.AddressDiscovery.Sequential.SeqState network key)
+instance Data.Aeson.Types.FromJSON.FromJSON Cardano.Wallet.Api.Types.ApiWalletDiscovery
+instance Data.Aeson.Types.ToJSON.ToJSON Cardano.Wallet.Api.Types.ApiWalletDiscovery
 instance Data.Aeson.Types.FromJSON.FromJSON Cardano.Wallet.Api.Types.ApiByronWalletMigrationInfo
 instance Data.Aeson.Types.ToJSON.ToJSON Cardano.Wallet.Api.Types.ApiByronWalletMigrationInfo
 instance Web.Internal.HttpApiData.FromHttpApiData Cardano.Wallet.Api.Types.ApiPoolId
