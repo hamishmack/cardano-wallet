@@ -2024,7 +2024,7 @@ instance Data.Text.Class.FromText Cardano.Wallet.Primitive.AddressDerivation.Acc
 --   flexible to various backends.
 module Cardano.Wallet.Transaction
 data TransactionLayer t k
-TransactionLayer :: ((Address -> Maybe (k  'AddressK XPrv, Passphrase "encryption")) -> [(TxIn, TxOut)] -> [TxOut] -> Either ErrMkTx (Tx, SealedTx)) -> (PoolId -> (k  'AddressK XPrv, Passphrase "encryption") -> (Address -> Maybe (k  'AddressK XPrv, Passphrase "encryption")) -> [(TxIn, TxOut)] -> [TxOut] -> Either ErrMkTx (Tx, SealedTx)) -> ((k  'AddressK XPrv, Passphrase "encryption") -> (Address -> Maybe (k  'AddressK XPrv, Passphrase "encryption")) -> [(TxIn, TxOut)] -> [TxOut] -> Either ErrMkTx (Tx, SealedTx)) -> (CoinSelection -> Quantity "byte" Int) -> (Quantity "byte" Word16 -> Word8 -> Word8) -> (CoinSelection -> Either (ErrValidateSelection t) ()) -> (ByteString -> Either ErrDecodeSignedTx (Tx, SealedTx)) -> TransactionLayer t k
+TransactionLayer :: ((Address -> Maybe (k  'AddressK XPrv, Passphrase "encryption")) -> [(TxIn, TxOut)] -> [TxOut] -> Either ErrMkTx (Tx, SealedTx)) -> (PoolId -> (k  'AddressK XPrv, Passphrase "encryption") -> (Address -> Maybe (k  'AddressK XPrv, Passphrase "encryption")) -> [(TxIn, TxOut)] -> [TxOut] -> Either ErrMkTx (Tx, SealedTx)) -> ((k  'AddressK XPrv, Passphrase "encryption") -> (Address -> Maybe (k  'AddressK XPrv, Passphrase "encryption")) -> [(TxIn, TxOut)] -> [TxOut] -> Either ErrMkTx (Tx, SealedTx)) -> (CoinSelection -> Quantity "byte" Int) -> (Quantity "byte" Word16 -> Word8 -> Word8) -> (CoinSelection -> Either (ErrValidateSelection t) ()) -> Bool -> (ByteString -> Either ErrDecodeSignedTx (Tx, SealedTx)) -> TransactionLayer t k
 
 -- | Construct a standard transaction
 --   
@@ -2081,6 +2081,9 @@ TransactionLayer :: ((Address -> Maybe (k  'AddressK XPrv, Passphrase "encryptio
 --   For example, Byron nodes do not allow null output amounts. Jörmungandr
 --   on its side doesn't support more than 255 inputs or outputs.
 [validateSelection] :: TransactionLayer t k -> CoinSelection -> Either (ErrValidateSelection t) ()
+
+-- | Whether the transaction layer accepts unbalanced transactions.
+[allowUnbalancedTx] :: TransactionLayer t k -> Bool
 
 -- | Decode an externally-signed transaction to the chain producer
 [decodeSignedTx] :: TransactionLayer t k -> ByteString -> Either ErrDecodeSignedTx (Tx, SealedTx)
@@ -3542,7 +3545,7 @@ computeCertFee :: Word64 -> FeePolicy -> Quantity "byte" Int -> Fee
 --   It returns the a list of pairs (fee, output).
 divvyFee :: Fee -> [Coin] -> [(Fee, Coin)]
 data FeeOptions
-FeeOptions :: (CoinSelection -> Fee) -> Coin -> FeeOptions
+FeeOptions :: (CoinSelection -> Fee) -> Coin -> OnDanglingChange -> FeeOptions
 
 -- | Estimate fees based on number of inputs and values of the outputs Some
 --   pointers / order of magnitude from the current configuration: a:
@@ -3554,11 +3557,28 @@ FeeOptions :: (CoinSelection -> Fee) -> Coin -> FeeOptions
 --   created transaction. Setting <a>dustThreshold</a> to 0 removes output
 --   equal to 0
 [dustThreshold] :: FeeOptions -> Coin
+
+-- | What do to when we encouter a dangling change output. See
+--   <a>OnDanglingChange</a>
+[onDanglingChange] :: FeeOptions -> OnDanglingChange
 newtype ErrAdjustForFee
 
 -- | UTxO exhausted during fee covering We record what amount missed to
 --   cover the fee
 ErrCannotCoverFee :: Word64 -> ErrAdjustForFee
+
+-- | We call <tt>dangling</tt> a change output that would be too expensive
+--   to add. This can happen when a change output is small, but adding it
+--   generate more fees than not having it.
+--   
+--   In case where nodes accept slightly unbalanced transactions, we may
+--   choose to save money and keep the transaction slightly unbalanced. In
+--   case where node demands exactly balanced transaction, we have no
+--   choice but to add the extra dangling change output and pay for the
+--   extra cost induced.
+data OnDanglingChange
+PayAndBalance :: OnDanglingChange
+SaveMoney :: OnDanglingChange
 
 -- | Given the coin selection result from a policy run, adjust the outputs
 --   for fees, potentially returning additional inputs that we need to
@@ -3584,9 +3604,20 @@ ErrCannotCoverFee :: Word64 -> ErrAdjustForFee
 --   fee (depending on how many change outputs the algorithm happened to
 --   choose).
 adjustForFee :: MonadRandom m => FeeOptions -> UTxO -> CoinSelection -> ExceptT ErrAdjustForFee m CoinSelection
+
+-- | Reduce the given change outputs by the total fee, returning the
+--   remainig change outputs if any are left, or the remaining fee
+--   otherwise
+--   
+--   We divvy up the fee over all change outputs proportionally, to try and
+--   keep any output:change ratio as unchanged as possible
+rebalanceChangeOutputs :: FeeOptions -> CoinSelection -> (CoinSelection, Fee)
 instance GHC.Classes.Eq Cardano.Wallet.Primitive.Fee.ErrAdjustForFee
 instance GHC.Show.Show Cardano.Wallet.Primitive.Fee.ErrAdjustForFee
 instance GHC.Generics.Generic Cardano.Wallet.Primitive.Fee.FeeOptions
+instance GHC.Classes.Eq Cardano.Wallet.Primitive.Fee.OnDanglingChange
+instance GHC.Show.Show Cardano.Wallet.Primitive.Fee.OnDanglingChange
+instance GHC.Generics.Generic Cardano.Wallet.Primitive.Fee.OnDanglingChange
 instance GHC.Show.Show Cardano.Wallet.Primitive.Fee.Fee
 instance GHC.Classes.Ord Cardano.Wallet.Primitive.Fee.Fee
 instance GHC.Classes.Eq Cardano.Wallet.Primitive.Fee.Fee
