@@ -4,7 +4,6 @@
 set -euo pipefail
 
 target=byron
-artifact_name=restore-$target-$NETWORK
 log=restore.log
 results=restore-$target-$NETWORK.txt
 total_time=restore-time.txt
@@ -26,16 +25,13 @@ if [ -n "${SCRATCH_DIR:-}" ]; then
   export HOME="$SCRATCH_DIR"
 fi
 
-command time -o $total_time -v $bench +RTS -N2 -qg -A1m -I0 -T -M8G -h -RTS 2>&1 | tee $log
+command time -o $total_time -v $bench +RTS -N2 -qg -A1m -I0 -T -M8G -RTS 2>&1 | tee $log
 
 grep -v INFO $log | awk '/All results/,EOF { print $0 }' > $results
 
 echo "+++ Results - $target - $NETWORK"
 
 cat $results
-
-mv restore.hp $artifact_name.hp
-hp2pretty $artifact_name.hp
 
 GNUPLOT_PROGRAM=$(cat <<EOP
 set timefmt "%s";
@@ -63,7 +59,6 @@ EOP
 
 if [ -n "${BUILDKITE:-}" ]; then
   echo "--- Upload"
-  buildkite-agent artifact upload $artifact_name.svg
   buildkite-agent artifact upload $results
 
   for file in *.timelog; do
@@ -75,10 +70,6 @@ if [ -n "${BUILDKITE:-}" ]; then
 
   # Plots all .log files in a single plot;
   echo $GNUPLOT_PROGRAM | gnuplot
-  buildkite-agent artifact upload plot.svg
-
-  echo "+++ Heap profile"
-  printf '\033]1338;url='"artifact://$artifact_name.svg"';alt='"Heap profile"'\a\n'
   echo "+++ Restore plot"
   printf '\033]1338;url='"artifact://plot.svg"';alt='"Restore plot"'\a\n'
 fi
