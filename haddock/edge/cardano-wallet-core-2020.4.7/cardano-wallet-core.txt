@@ -4927,12 +4927,12 @@ ApiTimeReference :: !UTCTime -> !ApiBlockReference -> ApiTimeReference
 [$sel:time:ApiTimeReference] :: ApiTimeReference -> !UTCTime
 [$sel:block:ApiTimeReference] :: ApiTimeReference -> !ApiBlockReference
 data ApiTransaction (n :: NetworkDiscriminant)
-ApiTransaction :: !ApiT (Hash "Tx") -> !Quantity "lovelace" Natural -> !Maybe ApiTimeReference -> !Maybe ApiTimeReference -> !Quantity "block" Natural -> !ApiT Direction -> ![ApiTxInput n] -> ![AddressAmount (ApiT Address, Proxy n)] -> !ApiT TxStatus -> ApiTransaction
+ApiTransaction :: !ApiT (Hash "Tx") -> !Quantity "lovelace" Natural -> !Maybe ApiTimeReference -> !Maybe ApiTimeReference -> !Maybe (Quantity "block" Natural) -> !ApiT Direction -> ![ApiTxInput n] -> ![AddressAmount (ApiT Address, Proxy n)] -> !ApiT TxStatus -> ApiTransaction
 [$sel:id:ApiTransaction] :: ApiTransaction -> !ApiT (Hash "Tx")
 [$sel:amount:ApiTransaction] :: ApiTransaction -> !Quantity "lovelace" Natural
 [$sel:insertedAt:ApiTransaction] :: ApiTransaction -> !Maybe ApiTimeReference
 [$sel:pendingSince:ApiTransaction] :: ApiTransaction -> !Maybe ApiTimeReference
-[$sel:depth:ApiTransaction] :: ApiTransaction -> !Quantity "block" Natural
+[$sel:depth:ApiTransaction] :: ApiTransaction -> !Maybe (Quantity "block" Natural)
 [$sel:direction:ApiTransaction] :: ApiTransaction -> !ApiT Direction
 [$sel:inputs:ApiTransaction] :: ApiTransaction -> ![ApiTxInput n]
 [$sel:outputs:ApiTransaction] :: ApiTransaction -> ![AddressAmount (ApiT Address, Proxy n)]
