@@ -3313,10 +3313,10 @@ FilteredBlock :: ![DelegationCertificate] -> ![(Tx, TxMeta)] -> FilteredBlock
 -- | Create a an empty wallet and apply the given genesis block
 --   
 --   The wallet tip will be set to the header of the applied genesis block.
-initWallet :: (IsOurs s Address, IsOurs s ChimericAccount, NFData s, Show s) => Block -> BlockchainParameters -> s -> ([(Tx, TxMeta)], Wallet s)
+initWallet :: (IsOurs s Address, IsOurs s ChimericAccount) => Block -> BlockchainParameters -> s -> ([(Tx, TxMeta)], Wallet s)
 
 -- | Update the state of an existing Wallet model
-updateState :: (IsOurs s Address, NFData s, Show s) => s -> Wallet s -> Wallet s
+updateState :: s -> Wallet s -> Wallet s
 
 -- | Apply a single block to a wallet.
 --   
@@ -3324,7 +3324,7 @@ updateState :: (IsOurs s Address, NFData s, Show s) => s -> Wallet s -> Wallet s
 --   
 --   Returns an updated wallet, as well as the set of data relevant to the
 --   wallet that were discovered while applying the block.
-applyBlock :: Block -> Wallet s -> (FilteredBlock, Wallet s)
+applyBlock :: (IsOurs s Address, IsOurs s ChimericAccount) => Block -> Wallet s -> (FilteredBlock, Wallet s)
 
 -- | Apply multiple blocks in sequence to an existing wallet, returning a
 --   list of intermediate wallet states.
@@ -3356,47 +3356,46 @@ applyBlock :: Block -> Wallet s -> (FilteredBlock, Wallet s)
 --   <li><b><tt>(w + bi)</tt></b> is the wallet state after applying block
 --   <b><tt>bi</tt></b> to wallet <b><tt>w</tt></b>.</li>
 --   </ul>
-applyBlocks :: NonEmpty Block -> Wallet s -> NonEmpty (FilteredBlock, Wallet s)
+applyBlocks :: (IsOurs s Address, IsOurs s ChimericAccount) => NonEmpty Block -> Wallet s -> NonEmpty (FilteredBlock, Wallet s)
 
 -- | Constructs a wallet from the exact given state. Using this function
 --   instead of <a>initWallet</a> and <a>applyBlock</a> allows the wallet
 --   invariants to be broken. Therefore it should only be used in the
 --   special case of loading wallet checkpoints from the database (where it
 --   is assumed a valid wallet was stored into the database).
-unsafeInitWallet :: (IsOurs s Address, IsOurs s ChimericAccount, NFData s, Show s) => UTxO -> BlockHeader -> s -> BlockchainParameters -> Wallet s
+unsafeInitWallet :: UTxO -> BlockHeader -> s -> BlockchainParameters -> Wallet s
 
--- | Get the wallet current tip
-currentTip :: Wallet s -> BlockHeader
+-- | Header of the latest applied block (current tip)
+($sel:currentTip:Wallet) :: Wallet s -> BlockHeader
 
--- | Get the wallet current state
-getState :: Wallet s -> s
+-- | Address discovery state
+($sel:getState:Wallet) :: Wallet s -> s
 
 -- | Available balance = <a>balance</a> . <a>availableUTxO</a>
 availableBalance :: Set Tx -> Wallet s -> Natural
 
 -- | Total balance = <a>balance</a> . <a>totalUTxO</a>
-totalBalance :: Set Tx -> Wallet s -> Natural
+totalBalance :: IsOurs s Address => Set Tx -> Wallet s -> Natural
 
 -- | Total UTxO = <a>availableUTxO</a> <tt>&lt;&gt;</tt> <a>changeUTxO</a>
-totalUTxO :: Set Tx -> Wallet s -> UTxO
+totalUTxO :: IsOurs s Address => Set Tx -> Wallet s -> UTxO
 
 -- | Available UTxO = <tt>pending ⋪ utxo</tt>
 availableUTxO :: Set Tx -> Wallet s -> UTxO
 
--- | Actual utxo
-utxo :: Wallet s -> UTxO
+-- | Unspent tx outputs belonging to this wallet
+($sel:utxo:Wallet) :: Wallet s -> UTxO
 
--- | Get the current chain parameters.
---   
---   Parameters may change over time via protocol updates, so we keep track
+-- | Parameters may change over time via protocol updates, so we keep track
 --   of them as part of the wallet checkpoints.
-blockchainParameters :: Wallet s -> BlockchainParameters
+($sel:blockchainParameters:Wallet) :: Wallet s -> BlockchainParameters
 instance GHC.Classes.Eq Cardano.Wallet.Primitive.Model.FilteredBlock
 instance GHC.Show.Show Cardano.Wallet.Primitive.Model.FilteredBlock
 instance GHC.Generics.Generic Cardano.Wallet.Primitive.Model.FilteredBlock
-instance GHC.Show.Show (Cardano.Wallet.Primitive.Model.Wallet s)
+instance GHC.Show.Show s => GHC.Show.Show (Cardano.Wallet.Primitive.Model.Wallet s)
 instance GHC.Classes.Eq s => GHC.Classes.Eq (Cardano.Wallet.Primitive.Model.Wallet s)
-instance Control.DeepSeq.NFData (Cardano.Wallet.Primitive.Model.Wallet s)
+instance GHC.Generics.Generic (Cardano.Wallet.Primitive.Model.Wallet s)
+instance Control.DeepSeq.NFData s => Control.DeepSeq.NFData (Cardano.Wallet.Primitive.Model.Wallet s)
 instance Formatting.Buildable.Buildable s => Formatting.Buildable.Buildable (Cardano.Wallet.Primitive.Model.Wallet s)
 
 
@@ -3488,8 +3487,8 @@ instance GHC.Show.Show wid => GHC.Show.Show (Cardano.Wallet.DB.Model.ErrErasePen
 instance GHC.Generics.Generic (Cardano.Wallet.DB.Model.Database wid s xprv)
 instance GHC.Generics.Generic (Cardano.Wallet.DB.Model.WalletDatabase s xprv)
 instance (GHC.Classes.Eq s, GHC.Classes.Eq xprv) => GHC.Classes.Eq (Cardano.Wallet.DB.Model.WalletDatabase s xprv)
-instance GHC.Show.Show xprv => GHC.Show.Show (Cardano.Wallet.DB.Model.WalletDatabase s xprv)
-instance (GHC.Show.Show wid, GHC.Show.Show xprv) => GHC.Show.Show (Cardano.Wallet.DB.Model.Database wid s xprv)
+instance (GHC.Show.Show s, GHC.Show.Show xprv) => GHC.Show.Show (Cardano.Wallet.DB.Model.WalletDatabase s xprv)
+instance (GHC.Show.Show wid, GHC.Show.Show s, GHC.Show.Show xprv) => GHC.Show.Show (Cardano.Wallet.DB.Model.Database wid s xprv)
 instance (GHC.Classes.Eq wid, GHC.Classes.Eq xprv, GHC.Classes.Eq s) => GHC.Classes.Eq (Cardano.Wallet.DB.Model.Database wid s xprv)
 
 
@@ -4222,7 +4221,7 @@ module Cardano.Wallet.DB.MVar
 
 -- | Instantiate a new in-memory "database" layer that simply stores data
 --   in a local MVar. Data vanishes if the software is shut down.
-newDBLayer :: forall s k. NFData (k  'RootK XPrv) => IO (DBLayer IO s k)
+newDBLayer :: forall s k. (NFData (k  'RootK XPrv), NFData s) => IO (DBLayer IO s k)
 instance GHC.Show.Show Cardano.Wallet.DB.MVar.MVarDBError
 instance GHC.Exception.Type.Exception Cardano.Wallet.DB.MVar.MVarDBError
 
@@ -4738,10 +4737,10 @@ module Cardano.Wallet.DB.Sqlite
 --   implementation. The database should be closed with
 --   <a>destroyDBLayer</a>. If you use <a>withDBLayer</a> then both of
 --   these things will be handled for you.
-newDBLayer :: forall s k. (IsOurs s Address, IsOurs s ChimericAccount, NFData s, Show s, PersistState s, PersistPrivateKey (k  'RootK)) => Tracer IO DBLog -> DefaultFieldValues -> Maybe FilePath -> IO (SqliteContext, DBLayer IO s k)
+newDBLayer :: forall s k. (PersistState s, PersistPrivateKey (k  'RootK)) => Tracer IO DBLog -> DefaultFieldValues -> Maybe FilePath -> IO (SqliteContext, DBLayer IO s k)
 
 -- | Instantiate a <a>DBFactory</a> from a given directory
-newDBFactory :: forall s k. (IsOurs s Address, IsOurs s ChimericAccount, NFData s, Show s, PersistState s, PersistPrivateKey (k  'RootK), WalletKey k) => Tracer IO DBLog -> DefaultFieldValues -> Maybe FilePath -> IO (DBFactory IO s k)
+newDBFactory :: forall s k. (PersistState s, PersistPrivateKey (k  'RootK), WalletKey k) => Tracer IO DBLog -> DefaultFieldValues -> Maybe FilePath -> IO (DBFactory IO s k)
 
 -- | Return all wallet databases that match the specified key type within
 --   the specified directory.
@@ -4753,7 +4752,7 @@ findDatabases :: forall k. WalletKey k => Tracer IO DBLog -> FilePath -> IO [Wal
 --   
 --   If the given file path does not exist, it will be created by the
 --   sqlite library.
-withDBLayer :: forall s k a. (IsOurs s Address, IsOurs s ChimericAccount, NFData s, Show s, PersistState s, PersistPrivateKey (k  'RootK)) => Tracer IO DBLog -> DefaultFieldValues -> Maybe FilePath -> ((SqliteContext, DBLayer IO s k) -> IO a) -> IO a
+withDBLayer :: forall s k a. (PersistState s, PersistPrivateKey (k  'RootK)) => Tracer IO DBLog -> DefaultFieldValues -> Maybe FilePath -> ((SqliteContext, DBLayer IO s k) -> IO a) -> IO a
 
 -- | Functions for saving/loading the wallet's address discovery state into
 --   SQLite.
@@ -5811,7 +5810,7 @@ deleteWallet :: forall ctx s k. HasDBLayer s k ctx => ctx -> WalletId -> ExceptT
 --   This function returns immediately, starting a worker thread in the
 --   background that will fetch and apply remaining blocks until the
 --   network tip is reached or until failure.
-restoreWallet :: forall ctx s t k. (HasLogger WalletLog ctx, HasNetworkLayer t ctx, HasDBLayer s k ctx, HasGenesisData ctx) => ctx -> WalletId -> ExceptT ErrNoSuchWallet IO ()
+restoreWallet :: forall ctx s t k. (HasLogger WalletLog ctx, HasNetworkLayer t ctx, HasDBLayer s k ctx, HasGenesisData ctx, IsOurs s Address, IsOurs s ChimericAccount) => ctx -> WalletId -> ExceptT ErrNoSuchWallet IO ()
 
 -- | Update a wallet's metadata with the given update function.
 updateWallet :: forall ctx s k. HasDBLayer s k ctx => ctx -> WalletId -> (WalletMetadata -> WalletMetadata) -> ExceptT ErrNoSuchWallet IO ()
@@ -5867,7 +5866,7 @@ createRandomAddress :: forall ctx s k n. (HasDBLayer s k ctx, PaymentAddress n B
 
 -- | List all addresses of a wallet with their metadata. Addresses are
 --   ordered from the most-recently-discovered to the oldest known.
-listAddresses :: forall ctx s k. (HasDBLayer s k ctx, IsOurs s Address, CompareDiscovery s, KnownAddresses s) => ctx -> WalletId -> (s -> Address -> Maybe Address) -> ExceptT ErrNoSuchWallet IO [(Address, AddressState)]
+listAddresses :: forall ctx s k. (HasDBLayer s k ctx, IsOurs s Address, IsOurs s ChimericAccount, CompareDiscovery s, KnownAddresses s) => ctx -> WalletId -> (s -> Address -> Maybe Address) -> ExceptT ErrNoSuchWallet IO [(Address, AddressState)]
 normalizeDelegationAddress :: forall s k n. (MkKeyFingerprint k Address, DelegationAddress n k, HasRewardAccount s, k ~ RewardAccountKey s) => s -> Address -> Maybe Address
 data ErrCreateRandomAddress
 ErrIndexAlreadyExists :: Index  'Hardened  'AddressK -> ErrCreateRandomAddress
@@ -6831,7 +6830,7 @@ server :: forall t n byron icarus shelley. (byron ~ ApiLayer (RndState  'Mainnet
 byronServer :: forall t n. (Buildable (ErrValidateSelection t), PaymentAddress n IcarusKey, PaymentAddress n ByronKey) => ApiLayer (RndState n) t ByronKey -> ApiLayer (SeqState n IcarusKey) t IcarusKey -> NtpClient -> Server (Api n)
 
 -- | Create a new instance of the wallet layer.
-newApiLayer :: forall ctx s t k. ctx ~ ApiLayer s t k => Tracer IO (WorkerLog WalletId WalletLog) -> (Block, BlockchainParameters, SyncTolerance) -> NetworkLayer IO t Block -> TransactionLayer t k -> DBFactory IO s k -> IO ctx
+newApiLayer :: forall ctx s t k. (ctx ~ ApiLayer s t k, IsOurs s ChimericAccount, IsOurs s Address) => Tracer IO (WorkerLog WalletId WalletLog) -> (Block, BlockchainParameters, SyncTolerance) -> NetworkLayer IO t Block -> TransactionLayer t k -> DBFactory IO s k -> IO ctx
 
 -- | Run an action with a TCP socket bound to a port specified by the
 --   <a>Listen</a> parameter.
