@@ -6406,7 +6406,7 @@ type GetByronWalletMigrationInfo = "byron-wallets" :> Capture "walletId" (ApiT W
 type Network = GetNetworkInformation :<|> GetNetworkParameters :<|> GetNetworkClock
 type GetNetworkInformation = "network" :> "information" :> Get '[JSON] ApiNetworkInformation
 type GetNetworkParameters = "network" :> "parameters" :> Capture "epochId" ApiEpochNumber :> Get '[JSON] ApiNetworkParameters
-type GetNetworkClock = "network" :> "clock" :> Get '[JSON] ApiNetworkClock
+type GetNetworkClock = "network" :> "clock" :> QueryFlag "forceNtpCheck" :> Get '[JSON] ApiNetworkClock
 type Proxy_ = PostExternalTransaction
 
 -- | 
@@ -6478,6 +6478,7 @@ getDelegationFee :: forall w. HasType (ApiT WalletId) w => w -> (Method, Text)
 getNetworkInfo :: (Method, Text)
 getNetworkParams :: forall e. HasType ApiEpochNumber e => e -> (Method, Text)
 getNetworkClock :: (Method, Text)
+getNetworkClock' :: Bool -> (Method, Text)
 postExternalTransaction :: (Method, Text)
 class PostWallet (style :: WalletStyle)
 class Discriminate (style :: WalletStyle)
@@ -6487,6 +6488,7 @@ instance Cardano.Wallet.Api.Link.HasVerb sub => Cardano.Wallet.Api.Link.HasVerb 
 instance Cardano.Wallet.Api.Link.HasVerb sub => Cardano.Wallet.Api.Link.HasVerb (Servant.API.Capture.Capture param t Servant.API.Sub.:> sub)
 instance Cardano.Wallet.Api.Link.HasVerb sub => Cardano.Wallet.Api.Link.HasVerb (Servant.API.ReqBody.ReqBody a b Servant.API.Sub.:> sub)
 instance Cardano.Wallet.Api.Link.HasVerb sub => Cardano.Wallet.Api.Link.HasVerb (Servant.API.QueryParam.QueryParam a b Servant.API.Sub.:> sub)
+instance Cardano.Wallet.Api.Link.HasVerb sub => Cardano.Wallet.Api.Link.HasVerb (Servant.API.QueryParam.QueryFlag sym Servant.API.Sub.:> sub)
 instance forall k sub (opts :: [*]) (name :: GHC.Types.Symbol) (ty :: k). Cardano.Wallet.Api.Link.HasVerb sub => Cardano.Wallet.Api.Link.HasVerb (Servant.API.Header.Header' opts name ty Servant.API.Sub.:> sub)
 instance Cardano.Wallet.Api.Link.Discriminate 'Cardano.Wallet.Api.Types.Shelley
 instance Cardano.Wallet.Api.Link.Discriminate 'Cardano.Wallet.Api.Types.Byron
@@ -6552,10 +6554,10 @@ StakePoolClient :: ClientM [ApiStakePool] -> (ApiPoolId -> ApiT WalletId -> ApiW
 -- | Produces an 'StakePoolsClient n' working against the /stake-pools API
 stakePoolClient :: StakePoolClient
 data NetworkClient
-NetworkClient :: ClientM ApiNetworkInformation -> (ApiEpochNumber -> ClientM ApiNetworkParameters) -> ClientM ApiNetworkClock -> NetworkClient
+NetworkClient :: ClientM ApiNetworkInformation -> (ApiEpochNumber -> ClientM ApiNetworkParameters) -> (Bool -> ClientM ApiNetworkClock) -> NetworkClient
 [$sel:networkInformation:NetworkClient] :: NetworkClient -> ClientM ApiNetworkInformation
 [$sel:networkParameters:NetworkClient] :: NetworkClient -> ApiEpochNumber -> ClientM ApiNetworkParameters
-[$sel:networkClock:NetworkClient] :: NetworkClient -> ClientM ApiNetworkClock
+[$sel:networkClock:NetworkClient] :: NetworkClient -> Bool -> ClientM ApiNetworkClock
 
 -- | Produces a <a>NetworkClient</a>
 networkClient :: NetworkClient
@@ -6683,7 +6685,7 @@ module Network.Ntp
 -- | Set up a <a>NtpClient</a> and pass it to the given action. The
 --   <a>NtpClient</a> is terminated when the callback returns.
 withWalletNtpClient :: IOManager -> Tracer IO NtpTrace -> (NtpClient -> IO a) -> IO a
-getNtpStatus :: NtpClient -> IO ApiNetworkClock
+getNtpStatus :: NtpClient -> Bool -> IO ApiNetworkClock
 data NtpTrace
 NtpTraceStartNtpClient :: NtpTrace
 NtpTraceRestartDelay :: !Int -> NtpTrace
