@@ -132,20 +132,25 @@ Port :: Int -> Port
 --   This way we can test mapping <tt>XPrv</tt>s to <tt>Text</tt> as pure
 --   code in <tt>Either String</tt>, rather than <tt>IO</tt>.
 data CliKeyScheme key m
-CliKeyScheme :: [Int] -> ([Text] -> m key) -> (key -> DerivationIndex -> m key) -> CliKeyScheme key m
+CliKeyScheme :: [Int] -> ([Text] -> m key) -> (key -> DerivationIndex -> m key) -> (key -> m key) -> (key -> m Text) -> CliKeyScheme key m
 [$sel:allowedWordLengths:CliKeyScheme] :: CliKeyScheme key m -> [Int]
 [$sel:mnemonicToRootKey:CliKeyScheme] :: CliKeyScheme key m -> [Text] -> m key
 [$sel:deriveChildKey:CliKeyScheme] :: CliKeyScheme key m -> key -> DerivationIndex -> m key
+[$sel:toPublic:CliKeyScheme] :: CliKeyScheme key m -> key -> m key
+[$sel:inspect:CliKeyScheme] :: CliKeyScheme key m -> key -> m Text
 newtype DerivationIndex
 DerivationIndex :: Word32 -> DerivationIndex
 [$sel:unDerivationIndex:DerivationIndex] :: DerivationIndex -> Word32
 newtype DerivationPath
 DerivationPath :: [DerivationIndex] -> DerivationPath
-newCliKeyScheme :: ByronWalletStyle -> CliKeyScheme XPrv (Either String)
+data XPrvOrXPub
+AXPrv :: XPrv -> XPrvOrXPub
+AXPub :: XPub -> XPrvOrXPub
+newCliKeyScheme :: ByronWalletStyle -> CliKeyScheme XPrvOrXPub (Either String)
 
 -- | Pair of functions representing the bidirectional transformation
---   between a <tt>XPrv</tt> and its 96-byte hex-encoded form.
-xPrvToTextTransform :: (XPrv -> Either String Text, Text -> Either String XPrv)
+--   between a <tt>XPrvOrXPub</tt> and its hex-encoded form.
+keyHexCodec :: (XPrvOrXPub -> Either String Text, Text -> Either String XPrvOrXPub)
 
 -- | Change the underlying monad of a <tt>CliKeyScheme</tt>.
 hoistKeyScheme :: (forall a. m1 a -> m2 a) -> CliKeyScheme key m1 -> CliKeyScheme key m2
@@ -156,6 +161,7 @@ hoistKeyScheme :: (forall a. m1 a -> m2 a) -> CliKeyScheme key m1 -> CliKeySchem
 --   one. Therefore we need a bidirectional mapping between the two key
 --   types.
 mapKey :: Monad m => (key1 -> m key2, key2 -> m key1) -> CliKeyScheme key1 m -> CliKeyScheme key2 m
+firstHardenedIndex :: Word32
 
 -- | Run an action with logging available and configured. When the action
 --   is finished (normally or otherwise), log messages are flushed.
@@ -238,6 +244,7 @@ instance GHC.Enum.Enum Cardano.CLI.MnemonicSize
 instance GHC.Enum.Bounded Cardano.CLI.MnemonicSize
 instance GHC.Classes.Eq Cardano.CLI.DerivationPath
 instance GHC.Show.Show Cardano.CLI.DerivationPath
+instance GHC.Classes.Ord Cardano.CLI.DerivationIndex
 instance GHC.Enum.Enum Cardano.CLI.DerivationIndex
 instance GHC.Enum.Bounded Cardano.CLI.DerivationIndex
 instance GHC.Classes.Eq Cardano.CLI.DerivationIndex
