@@ -118,26 +118,18 @@ newtype Port (tag :: Symbol)
 Port :: Int -> Port
 [$sel:getPort:Port] :: Port -> Int
 
--- | Record with mnemonic and key derivation funcionality — <i>without</i>
---   any type parameters related to scheme.
+-- | Record encapsulating <tt>mnemonicToRootKey</tt> — <i>without</i> any
+--   type parameters related to scheme.
 --   
 --   This means that we can have a value for byron, a value for icarus,
 --   both with the same type <tt>CliKeyScheme</tt>.
 --   
 --   <tt>CliKeyScheme</tt> is on the other hand parameterized over
---   <tt>key</tt> and <tt>m</tt>. <tt>hoistKeyScheme</tt> is provided for
---   mapping over <tt>m</tt>. <tt>mapKey</tt> is provided for mapping over
---   <tt>key</tt>.
---   
---   This way we can test mapping <tt>XPrv</tt>s to <tt>Text</tt> as pure
---   code in <tt>Either String</tt>, rather than <tt>IO</tt>.
+--   <tt>key</tt> and <tt>m</tt>.
 data CliKeyScheme key m
-CliKeyScheme :: [Int] -> ([Text] -> m key) -> (key -> DerivationIndex -> m key) -> (key -> m key) -> (key -> m Text) -> CliKeyScheme key m
+CliKeyScheme :: [Int] -> ([Text] -> m key) -> CliKeyScheme key m
 [$sel:allowedWordLengths:CliKeyScheme] :: CliKeyScheme key m -> [Int]
 [$sel:mnemonicToRootKey:CliKeyScheme] :: CliKeyScheme key m -> [Text] -> m key
-[$sel:deriveChildKey:CliKeyScheme] :: CliKeyScheme key m -> key -> DerivationIndex -> m key
-[$sel:toPublic:CliKeyScheme] :: CliKeyScheme key m -> key -> m key
-[$sel:inspect:CliKeyScheme] :: CliKeyScheme key m -> key -> m Text
 newtype DerivationIndex
 DerivationIndex :: Word32 -> DerivationIndex
 [$sel:unDerivationIndex:DerivationIndex] :: DerivationIndex -> Word32
@@ -146,22 +138,18 @@ DerivationPath :: [DerivationIndex] -> DerivationPath
 data XPrvOrXPub
 AXPrv :: XPrv -> XPrvOrXPub
 AXPub :: XPub -> XPrvOrXPub
+data KeyEncoding
+Hex :: KeyEncoding
+Bech32 :: KeyEncoding
 newCliKeyScheme :: ByronWalletStyle -> CliKeyScheme XPrvOrXPub (Either String)
-
--- | Pair of functions representing the bidirectional transformation
---   between a <tt>XPrvOrXPub</tt> and its hex-encoded form.
-keyHexCodec :: (XPrvOrXPub -> Either String Text, Text -> Either String XPrvOrXPub)
-
--- | Change the underlying monad of a <tt>CliKeyScheme</tt>.
-hoistKeyScheme :: (forall a. m1 a -> m2 a) -> CliKeyScheme key m1 -> CliKeyScheme key m2
-
--- | Map over the key type of a CliKeyScheme.
---   
---   <tt>deriveChildKey</tt> both takes a key as an argument and returns
---   one. Therefore we need a bidirectional mapping between the two key
---   types.
-mapKey :: Monad m => (key1 -> m key2, key2 -> m key1) -> CliKeyScheme key1 m -> CliKeyScheme key2 m
 firstHardenedIndex :: Word32
+fullKeyEncodingDescription :: String
+decodeKey :: KeyEncoding -> Text -> Either String XPrvOrXPub
+detectEncoding :: Text -> Either String KeyEncoding
+decodeAnyKey :: Text -> Either String (XPrvOrXPub, KeyEncoding)
+encodeKey :: KeyEncoding -> XPrvOrXPub -> Either String Text
+deriveChildKey :: XPrvOrXPub -> DerivationIndex -> Either String XPrvOrXPub
+toPublic :: XPrvOrXPub -> Either String XPrvOrXPub
 
 -- | Run an action with logging available and configured. When the action
 --   is finished (normally or otherwise), log messages are flushed.
@@ -249,6 +237,10 @@ instance GHC.Enum.Enum Cardano.CLI.DerivationIndex
 instance GHC.Enum.Bounded Cardano.CLI.DerivationIndex
 instance GHC.Classes.Eq Cardano.CLI.DerivationIndex
 instance GHC.Show.Show Cardano.CLI.DerivationIndex
+instance GHC.Enum.Bounded Cardano.CLI.KeyEncoding
+instance GHC.Enum.Enum Cardano.CLI.KeyEncoding
+instance GHC.Classes.Eq Cardano.CLI.KeyEncoding
+instance GHC.Show.Show Cardano.CLI.KeyEncoding
 instance Data.Text.Class.ToText Cardano.CLI.WaitForServiceLog
 instance Cardano.BM.Data.Tracer.HasPrivacyAnnotation Cardano.CLI.WaitForServiceLog
 instance Cardano.BM.Data.Tracer.HasSeverityAnnotation Cardano.CLI.WaitForServiceLog
@@ -262,3 +254,4 @@ instance Data.Text.Class.FromText Cardano.CLI.DerivationPath
 instance Data.Text.Class.ToText Cardano.CLI.DerivationPath
 instance Data.Text.Class.FromText Cardano.CLI.DerivationIndex
 instance Data.Text.Class.ToText Cardano.CLI.DerivationIndex
+instance Data.Text.Class.FromText Cardano.CLI.KeyEncoding

@@ -492,6 +492,9 @@ scenarioWalletResync02_notGenesis :: forall style t wallet. (Discriminate style,
 module Test.Integration.Scenario.API.Byron.Wallets
 spec :: forall n t. DecodeAddress n => SpecWith (Context t)
 
+module Test.Integration.Scenario.CLI.Keys
+spec :: forall t. KnownCommand t => Spec
+
 module Test.Integration.Scenario.CLI.Miscellaneous
 spec :: forall t. KnownCommand t => SpecWith ()
 
