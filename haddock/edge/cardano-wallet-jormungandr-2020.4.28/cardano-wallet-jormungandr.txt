@@ -9,6 +9,389 @@
 @version 2020.4.28
 
 
+-- | This module contains a function for downloading stake pool metadata
+--   from an external registry.
+module Cardano.Pool.Jormungandr.Metadata
+
+-- | Configuration parameters used by <a>getStakePoolMetadata</a>.
+data MetadataConfig
+MetadataConfig :: FilePath -> String -> NominalDiffTime -> String -> MetadataConfig
+
+-- | Directory where the cache is stored
+[cacheDirectory] :: MetadataConfig -> FilePath
+
+-- | Name of zip archive.
+[cacheName] :: MetadataConfig -> String
+
+-- | A constant for the maximum age of cached registry file before it's
+--   considered to be stale.
+[cacheTTL] :: MetadataConfig -> NominalDiffTime
+
+-- | URL to use to download registry
+[registryURL] :: MetadataConfig -> String
+
+-- | Filepath to the zip archive
+cacheArchive :: MetadataConfig -> FilePath
+
+-- | Returns the configuration for fetching metadata.
+--   
+--   <a>registryURL</a> will be the Cardano Foundation stake pool registry
+--   zipfile URL, or the <tt>CARDANO_WALLET_STAKE_POOL_REGISTRY_URL</tt>
+--   environment variable if it is set.
+--   
+--   The default <a>cacheTTL</a> is one hour.
+getMetadataConfig :: FilePath -> IO MetadataConfig
+
+-- | Associate a list of stake pool IDs with their metadata (if present),
+--   which is downloaded from the given URL.
+--   
+--   The URL must point to a zip archive, with the following stucture:
+--   
+--   <pre>
+--   master.zip
+--   └── testnet-stake-pool-registry-master/
+--       └── registry/
+--           ├── pk1afhcpw2tg7nr2m3wr4x8jaa4dv7d09gnv27kwfxpjyvukwxs8qdqwg85xp.json
+--           └── pk1z4vh8gva25w07x8574uujuveu8gz43fu6qfln3t4prcavrvcphjsk0pdqs.json
+--   </pre>
+--   
+--   <ul>
+--   <li>The name of the top-level directory can be anything.</li>
+--   <li>Other files in the archive are ignored by
+--   <a>getStakePoolMetadata</a>.</li>
+--   <li>The JSON file names are <a>PoolOwner</a>s.</li>
+--   <li>The required JSON structure is given by the
+--   <a>Data.Aeson.FromJSON</a> instance of <a>StakePoolMetadata</a>.</li>
+--   </ul>
+--   
+--   The URL which should be used for incentived testnet is
+--   <a>cardanoFoundationRegistryZip</a>.
+--   
+--   The returned list will have the same length as the given list of
+--   <a>PoolOwner</a>. If an metadata entry does not exist or could not be
+--   parsed, it will be <a>Nothing</a>.
+getStakePoolMetadata :: Tracer IO RegistryLog -> MetadataConfig -> [PoolOwner] -> IO (Either FetchError [Maybe StakePoolMetadata])
+
+-- | Name of the environment variable to set for tweaking the registry URL.
+--   Mostly use for testing.
+envVarMetadataRegistry :: String
+
+-- | The stake pool registry zipfile download URL for CF.
+cardanoFoundationRegistryZip :: String
+
+-- | Things that could go wrong with fetching metadata, which aren't
+--   programming errors or expected failures.
+data FetchError
+
+-- | Failed to download the registry archive.
+FetchErrorDownload :: String -> FetchError
+
+-- | Failed to store the registry archive in a temporary location.
+FetchErrorFile :: String -> FetchError
+
+-- | Failed to open the registry archive with the given path, as a zip
+--   file, due to the given cause.
+FetchErrorZipParsingFailed :: FilePath -> String -> FetchError
+
+-- | The log messages for <a>getStakePoolMetadata</a>.
+data RegistryLog
+RegistryLog :: String -> FilePath -> RegistryLogMsg -> RegistryLog
+[registryLogUrl] :: RegistryLog -> String
+[registryLogZipFile] :: RegistryLog -> FilePath
+[registryLogMsg] :: RegistryLog -> RegistryLogMsg
+
+-- | Log messages about processing a specific archive.
+data RegistryLogMsg
+MsgDownloadStarted :: RegistryLogMsg
+MsgDownloadComplete :: Integer -> RegistryLogMsg
+MsgDownloadError :: FetchError -> RegistryLogMsg
+MsgCleanupDownload :: RegistryLogMsg
+MsgExtractFile :: FilePath -> RegistryLogMsg
+MsgExtractFileResult :: Maybe (Either String StakePoolMetadata) -> RegistryLogMsg
+MsgUsingCached :: FilePath -> UTCTime -> RegistryLogMsg
+instance GHC.Classes.Eq Cardano.Pool.Jormungandr.Metadata.RegistryLog
+instance GHC.Show.Show Cardano.Pool.Jormungandr.Metadata.RegistryLog
+instance GHC.Generics.Generic Cardano.Pool.Jormungandr.Metadata.RegistryLog
+instance GHC.Classes.Eq Cardano.Pool.Jormungandr.Metadata.RegistryLogMsg
+instance GHC.Show.Show Cardano.Pool.Jormungandr.Metadata.RegistryLogMsg
+instance GHC.Generics.Generic Cardano.Pool.Jormungandr.Metadata.RegistryLogMsg
+instance GHC.Generics.Generic Cardano.Pool.Jormungandr.Metadata.FetchError
+instance GHC.Classes.Eq Cardano.Pool.Jormungandr.Metadata.FetchError
+instance GHC.Show.Show Cardano.Pool.Jormungandr.Metadata.FetchError
+instance GHC.Classes.Eq Cardano.Pool.Jormungandr.Metadata.MetadataConfig
+instance GHC.Show.Show Cardano.Pool.Jormungandr.Metadata.MetadataConfig
+instance Cardano.BM.Data.Tracer.HasPrivacyAnnotation Cardano.Pool.Jormungandr.Metadata.RegistryLog
+instance Cardano.BM.Data.Tracer.HasSeverityAnnotation Cardano.Pool.Jormungandr.Metadata.RegistryLog
+instance Data.Text.Class.ToText Cardano.Pool.Jormungandr.Metadata.RegistryLog
+instance Cardano.BM.Data.Tracer.HasPrivacyAnnotation Cardano.Pool.Jormungandr.Metadata.RegistryLogMsg
+instance Cardano.BM.Data.Tracer.HasSeverityAnnotation Cardano.Pool.Jormungandr.Metadata.RegistryLogMsg
+instance Data.Text.Class.ToText Cardano.Pool.Jormungandr.Metadata.RegistryLogMsg
+instance Data.Text.Class.ToText Cardano.Pool.Jormungandr.Metadata.FetchError
+
+
+-- | This module defines necessary bits to compute an averaged apparent
+--   performance for stake pools. The definition is inspired from the
+--   "Design Specification for Delegation and Incentives in Cardano" by
+--   Kant et Al, yet deviates slightly from it because of different real
+--   constraints:
+--   
+--   a) The wallet software doesn't have a reliable access to various epoch
+--   details such as the stake distribution for past epochs.
+--   
+--   b) The wallet software makes therefore a significant use of the
+--   current epoch's data which represents unfinished snapshots of epochs
+--   which, because of their non-deterministic nature, may favor leaders
+--   elected early in the process more than those not yet elected.
+--   
+--   To cope with these two issues, we try to harmonize past known epochs
+--   with the ongoing one by averaging over a whole range of epochs,
+--   simultaneously. This means computing a ratio of the total blocks
+--   produced by a leader on the total number of blocks we could reasonably
+--   expect a leader to have produced, across many epochs at once (i.e.,
+--   doing a ratio of sums, instead of a sum of ratios).
+--   
+--   This should be less punitive for leaders that have not yet been
+--   elected as part of the ongoing epoch while having still performed
+--   reasonably okay in the past.
+module Cardano.Pool.Jormungandr.Performance
+data EpochStats
+EpochStats :: !Natural -> !Natural -> !Natural -> !Natural -> EpochStats
+[poolProduction] :: EpochStats -> !Natural
+[poolStake] :: EpochStats -> !Natural
+[totalStake] :: EpochStats -> !Natural
+[totalProduction] :: EpochStats -> !Natural
+apparentPerformance :: [EpochStats] -> Double
+
+-- | Read pool performances of many epochs from the database
+readPoolsPerformances :: Monad m => DBLayer m -> EpochNo -> m (Map PoolId Double)
+
+-- | Count elements inside a <a>Map</a>
+count :: Map k [a] -> Map k (Quantity any Word64)
+instance GHC.Show.Show Cardano.Pool.Jormungandr.Performance.EpochStats
+instance GHC.Generics.Generic Cardano.Pool.Jormungandr.Performance.EpochStats
+
+
+-- | A self contained module for ranking pools according to the delegation
+--   design spec <i>Design Specification for Delegation and Incentives in
+--   Cardano</i> <a>(Kant et al, 2019)</a>.
+--   
+--   The module currently implements the non-myopic desirability, and might
+--   later support calculating the full non-myopic pool member rewards. The
+--   latter being the recomended way to rank stake-pools (see section 4.3).
+--   
+--   The term non-myopic is explained on page 37:
+--   
+--   <pre>
+--   It would be short-sighted (“myopic”) for stakeholders to directly use the
+--   reward splitting formulas from Section 6.5. They should instead take the
+--   long-term (“non-myopic”) view. To this end, the system will calculate and
+--   display the “non-myopic” rewards that pool leaders and pool members can
+--   expect, thus supporting stakeholders in their decision whether to create a
+--   pool and to which pool to delegate their stake.
+--   
+--   The idea is to first rank all pools by “desirability”, to then assume that
+--   the k most desirable pools will eventually be saturated, whereas all other
+--   pools will lose all their members, then to finally base all reward
+--   calculations on these assumptions.
+--   </pre>
+--   
+--   <h2>Relevant identifiers</h2>
+--   
+--   Epoch Parameters
+--   
+--   TODO: table
+--   
+--   Pool's Parameters
+--   
+--   TODO: table
+module Cardano.Pool.Jormungandr.Ranking
+
+-- | Non-myopic pool desirability according to section 5.6.1.
+--   
+--   Is <i>not</i> affected by oversaturation nor pool stake in general.
+desirability :: EpochConstants -> Pool -> Double
+
+-- | The saturation-level of a pool indicate how far a pool is from the
+--   desired relative stake fixed by the network. A saturation level above
+--   1 means that the pool is satured. A level of 0.5 / 50% means that the
+--   pool owns half the ideal stake.
+--   
+--   The saturation corresponds therefore to the ratio between the ideal
+--   relative stake of a pool on the actual relative stake of that pool.
+--   
+--   The ideal relative stake is given by:
+--   
+--   1 S 1 σ_ideal = --- * --- = --- = z0 (where S stands for the total
+--   available S k k stake in Ada)
+--   
+--   which gives us the saturation as:
+--   
+--   σ σ sat = --------- = ---- σ_ideal z0
+saturation :: EpochConstants -> Quantity "lovelace" Word64 -> Quantity "lovelace" Word64 -> Double
+
+-- | Total rewards for a pool if it were saturated.
+--   
+--   When a0 = 0 this reduces to just p*R*z0 (tested by
+--   <tt>prop_saturatedPoolRewardsReduces</tt>)
+saturatedPoolRewards :: EpochConstants -> Pool -> Double
+
+-- | Determines z0, i.e 1 / k
+saturatedPoolSize :: EpochConstants -> Percentage
+data EpochConstants
+EpochConstants :: NonNegative Double -> Positive Int -> Quantity "lovelace" Word64 -> EpochConstants
+
+-- | a_0
+[leaderStakeInfluence] :: EpochConstants -> NonNegative Double
+
+-- | k
+[desiredNumberOfPools] :: EpochConstants -> Positive Int
+
+-- | Total rewards in an epoch. <a>R</a> in the spec.
+[totalRewards] :: EpochConstants -> Quantity "lovelace" Word64
+data Pool
+Pool :: Percentage -> Quantity "lovelace" Word64 -> Percentage -> NonNegative Double -> Pool
+
+-- | s
+[leaderStake] :: Pool -> Percentage
+
+-- | c
+[cost] :: Pool -> Quantity "lovelace" Word64
+
+-- | m
+[margin] :: Pool -> Percentage
+
+-- | hat{p}, an already averaged (apparent) performance-value.
+--   
+--   Should mostly be in the range [0, 1]. May be higher than 1 due to
+--   randomness.
+[recentAvgPerformance] :: Pool -> NonNegative Double
+newtype NonNegative a
+NonNegative :: a -> NonNegative a
+[getNonNegative] :: NonNegative a -> a
+newtype Positive a
+Positive :: a -> Positive a
+[getPositive] :: Positive a -> a
+unsafeMkPositive :: (Ord a, Show a, Num a) => a -> Positive a
+unsafeMkNonNegative :: (Ord a, Show a, Num a) => a -> NonNegative a
+instance GHC.Generics.Generic Cardano.Pool.Jormungandr.Ranking.EpochConstants
+instance GHC.Classes.Eq Cardano.Pool.Jormungandr.Ranking.EpochConstants
+instance GHC.Show.Show Cardano.Pool.Jormungandr.Ranking.EpochConstants
+instance GHC.Generics.Generic Cardano.Pool.Jormungandr.Ranking.Pool
+instance GHC.Classes.Eq Cardano.Pool.Jormungandr.Ranking.Pool
+instance GHC.Show.Show Cardano.Pool.Jormungandr.Ranking.Pool
+instance GHC.Num.Num a => GHC.Num.Num (Cardano.Pool.Jormungandr.Ranking.NonNegative a)
+instance GHC.Classes.Ord a => GHC.Classes.Ord (Cardano.Pool.Jormungandr.Ranking.NonNegative a)
+instance GHC.Show.Show a => GHC.Show.Show (Cardano.Pool.Jormungandr.Ranking.NonNegative a)
+instance GHC.Classes.Eq a => GHC.Classes.Eq (Cardano.Pool.Jormungandr.Ranking.NonNegative a)
+instance GHC.Generics.Generic (Cardano.Pool.Jormungandr.Ranking.NonNegative a)
+instance GHC.Num.Num a => GHC.Num.Num (Cardano.Pool.Jormungandr.Ranking.Positive a)
+instance GHC.Classes.Ord a => GHC.Classes.Ord (Cardano.Pool.Jormungandr.Ranking.Positive a)
+instance GHC.Show.Show a => GHC.Show.Show (Cardano.Pool.Jormungandr.Ranking.Positive a)
+instance GHC.Classes.Eq a => GHC.Classes.Eq (Cardano.Pool.Jormungandr.Ranking.Positive a)
+instance GHC.Generics.Generic (Cardano.Pool.Jormungandr.Ranking.Positive a)
+instance Formatting.Buildable.Buildable Cardano.Pool.Jormungandr.Ranking.EpochConstants
+
+
+-- | This module can fold over a blockchain to collect metrics about Stake
+--   pools.
+--   
+--   It interacts with: - <a>Cardano.Wallet.Network</a> which provides the
+--   chain - <a>Cardano.Pool.DB</a> - which can persist the metrics -
+--   <a>Cardano.Wallet.Api.Server</a> - which presents the results in an
+--   endpoint
+module Cardano.Pool.Jormungandr.Metrics
+
+-- | Information from a block relevant to monitoring stake pools.
+data Block
+Block :: BlockHeader -> PoolId -> ![PoolRegistrationCertificate] -> Block
+[$sel:header:Block] :: Block -> BlockHeader
+
+-- | The stake pool that minted this block.
+[$sel:producer:Block] :: Block -> PoolId
+
+-- | Any stake pools that were registered in this block.
+[$sel:poolRegistrations:Block] :: Block -> ![PoolRegistrationCertificate]
+newStakePoolLayer :: Tracer IO StakePoolLog -> BlockHeader -> (EpochNo -> Quantity "lovelace" Word64 -> EpochConstants) -> DBLayer IO -> NetworkLayer IO t Block -> FilePath -> StakePoolLayer ErrListStakePools IO
+data ErrListStakePools
+ErrMetricsIsUnsynced :: Quantity "percent" Percentage -> ErrListStakePools
+ErrListStakePoolsCurrentNodeTip :: ErrCurrentNodeTip -> ErrListStakePools
+
+-- | <a>monitorStakePools</a> follows the chain and puts pool productions
+--   and stake distributions to a <a>DBLayer</a>, such that the data in the
+--   database is always consistent.
+--   
+--   The pool productions and stake distrubtions in the db can <i>never</i>
+--   be from different forks such that it's safe for readers to access it.
+monitorStakePools :: Tracer IO StakePoolLog -> (Block, Quantity "block" Word32) -> NetworkLayer IO t Block -> DBLayer IO -> IO ()
+
+-- | Combines three different sources of data into one:
+--   
+--   <ol>
+--   <li>A stake-distribution map</li>
+--   <li>A pool-production map</li>
+--   <li>A pool-performance map</li>
+--   </ol>
+--   
+--   If a pool is in 2 or 3 but not in 1, it means that the pool has been
+--   de-registered.
+--   
+--   If a pool is in (1+2) but not in (3), it simply means it has produced
+--   0 blocks so far.
+combineMetrics :: Map PoolId (Quantity "lovelace" Word64) -> Map PoolId (Quantity "block" Word64) -> Map PoolId Double -> Map PoolId (Quantity "lovelace" Word64, Quantity "block" Word64, Double)
+
+-- | Given a mapping from <a>PoolId</a> -&gt; <a>PoolOwner</a> and a
+--   mapping between <a>PoolOwner</a> <a>-</a> <a>StakePoolMetadata</a>,
+--   return a matching <tt>StakePoolMeta</tt> entry for every
+--   <a>PoolId</a>.
+--   
+--   If there is no metadata for a pool, it returns Nothing for that
+--   <a>PoolId</a>. If there is different metadata submitted by multiple
+--   owners of a pool, it returns Nothing. If there is one unique metadata
+--   for a pool, it returns <a>Just</a> the metadata for that
+--   <a>PoolId</a>.
+--   
+--   It also provides a log message for each association.
+associateMetadata :: [(PoolId, [PoolOwner])] -> [(PoolOwner, Maybe StakePoolMetadata)] -> [(StakePoolLog, Maybe StakePoolMetadata)]
+
+-- | Messages associated with stake pool layer.
+data StakePoolLog
+MsgRegistry :: RegistryLog -> StakePoolLog
+MsgListStakePoolsBegin :: StakePoolLog
+MsgMetadataUnavailable :: StakePoolLog
+MsgMetadataUsing :: PoolId -> PoolOwner -> StakePoolMetadata -> StakePoolLog
+MsgMetadataMissing :: PoolId -> StakePoolLog
+MsgMetadataMultiple :: PoolId -> [(PoolOwner, StakePoolMetadata)] -> StakePoolLog
+MsgComputedProgress :: BlockHeader -> BlockHeader -> StakePoolLog
+MsgStartMonitoring :: [BlockHeader] -> StakePoolLog
+MsgFollow :: FollowLog -> StakePoolLog
+MsgStakeDistribution :: EpochNo -> StakePoolLog
+MsgStakePoolRegistration :: PoolRegistrationCertificate -> StakePoolLog
+MsgRollingBackTo :: SlotId -> StakePoolLog
+MsgApplyError :: ErrMonitorStakePools -> StakePoolLog
+MsgUsingRankingEpochConstants :: EpochConstants -> StakePoolLog
+MsgUsingTotalStakeForRanking :: Quantity "lovelace" Word64 -> StakePoolLog
+instance GHC.Classes.Eq Cardano.Pool.Jormungandr.Metrics.StakePoolLog
+instance GHC.Show.Show Cardano.Pool.Jormungandr.Metrics.StakePoolLog
+instance GHC.Show.Show Cardano.Pool.Jormungandr.Metrics.ErrListStakePools
+instance GHC.Classes.Eq Cardano.Pool.Jormungandr.Metrics.ErrMonitorStakePools
+instance GHC.Show.Show Cardano.Pool.Jormungandr.Metrics.ErrMonitorStakePools
+instance GHC.Generics.Generic Cardano.Pool.Jormungandr.Metrics.Block
+instance GHC.Show.Show Cardano.Pool.Jormungandr.Metrics.Block
+instance GHC.Classes.Eq Cardano.Pool.Jormungandr.Metrics.Block
+instance Cardano.BM.Data.Tracer.HasPrivacyAnnotation Cardano.Pool.Jormungandr.Metrics.StakePoolLog
+instance Cardano.BM.Data.Tracer.HasSeverityAnnotation Cardano.Pool.Jormungandr.Metrics.StakePoolLog
+instance Data.Text.Class.ToText Cardano.Pool.Jormungandr.Metrics.StakePoolLog
+
+
+-- | API handlers and server using the underlying wallet layer to provide
+--   endpoints reachable through HTTP.
+module Cardano.Wallet.Jormungandr.Api.Server
+
+-- | A Servant server for our wallet API
+server :: forall t n byron icarus shelley. (byron ~ ApiLayer (RndState  'Mainnet) t ByronKey, icarus ~ ApiLayer (SeqState  'Mainnet IcarusKey) t IcarusKey, shelley ~ ApiLayer (SeqState n ShelleyKey) t ShelleyKey, DelegationAddress n ShelleyKey, Buildable (ErrValidateSelection t)) => byron -> icarus -> shelley -> StakePoolLayer ErrListStakePools IO -> NtpClient -> Server (Api n)
+instance Cardano.Wallet.Api.Server.LiftHandler Cardano.Pool.Jormungandr.Metrics.ErrListStakePools
+
+
 -- | Contains various implementation decision that are specific to a
 --   particular network / protocol. This allows us to easily select a
 --   particular backend (Byron, Shelley-Rust, Shelley-Haskell) and isolate
@@ -756,8 +1139,8 @@ module Cardano.Wallet.Jormungandr
 --   all components of the wallet.
 serveWallet :: forall (n :: NetworkDiscriminant) t. (t ~ Jormungandr, NetworkDiscriminantVal n, DecodeAddress n, EncodeAddress n, DelegationAddress n ShelleyKey) => Tracers IO -> SyncTolerance -> Maybe FilePath -> HostPreference -> Listen -> JormungandrBackend -> (SockAddr -> Port "node" -> BlockchainParameters -> IO ()) -> IO ExitCode
 
--- | Covert a raw block to one that the <a>Cardano.Pool.Metrics</a> module
---   accepts.
+-- | Covert a raw block to one that the
+--   <a>Cardano.Pool.Jormungandr.Metrics</a> module accepts.
 toSPBlock :: Block -> Block
 
 -- | The types of trace events produced by the Jörmungandr API server.

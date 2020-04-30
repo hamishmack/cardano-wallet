@@ -903,6 +903,16 @@ WalletBalance :: !Quantity "lovelace" Natural -> !Quantity "lovelace" Natural ->
 [$sel:reward:WalletBalance] :: WalletBalance -> !Quantity "lovelace" Natural
 class IsDelegatingTo a
 isDelegatingTo :: IsDelegatingTo a => (PoolId -> Bool) -> a -> Bool
+data StakePool
+StakePool :: PoolId -> Quantity "lovelace" Word64 -> Quantity "block" Word64 -> Double -> Double -> Quantity "lovelace" Word64 -> Percentage -> Double -> StakePool
+[$sel:poolId:StakePool] :: StakePool -> PoolId
+[$sel:stake:StakePool] :: StakePool -> Quantity "lovelace" Word64
+[$sel:production:StakePool] :: StakePool -> Quantity "block" Word64
+[$sel:performance:StakePool] :: StakePool -> Double
+[$sel:desirability:StakePool] :: StakePool -> Double
+[$sel:cost:StakePool] :: StakePool -> Quantity "lovelace" Word64
+[$sel:margin:StakePool] :: StakePool -> Percentage
+[$sel:saturation:StakePool] :: StakePool -> Double
 
 -- | Identifies a stake pool. For Jörmungandr a <a>PoolId</a> is the
 --   blake2b-256 hash of the stake pool registration certificate.
@@ -921,6 +931,44 @@ StakeDistribution :: Quantity "lovelace" Word64 -> [(PoolId, Quantity "lovelace"
 [$sel:pools:StakeDistribution] :: StakeDistribution -> [(PoolId, Quantity "lovelace" Word64)]
 [$sel:unassigned:StakeDistribution] :: StakeDistribution -> Quantity "lovelace" Word64
 poolIdBytesLength :: Int
+
+-- | Information about a stake pool, published by a stake pool owner in the
+--   stake pool registry.
+--   
+--   The wallet searches for registrations involving the owner, to find
+--   metadata for a given PoolID.
+--   
+--   The metadata information is not used directly by cardano-wallet, but
+--   rather passed straight through to API consumers.
+data StakePoolMetadata
+StakePoolMetadata :: PoolOwner -> StakePoolTicker -> Text -> Maybe Text -> Text -> Text -> StakePoolMetadata
+
+-- | Bech32-encoded ed25519 public key.
+[$sel:owner:StakePoolMetadata] :: StakePoolMetadata -> PoolOwner
+
+-- | Very short human-readable ID for the stake pool.
+[$sel:ticker:StakePoolMetadata] :: StakePoolMetadata -> StakePoolTicker
+
+-- | Name of the stake pool.
+[$sel:name:StakePoolMetadata] :: StakePoolMetadata -> Text
+
+-- | Short description of the stake pool.
+[$sel:description:StakePoolMetadata] :: StakePoolMetadata -> Maybe Text
+
+-- | Absolute URL for the stake pool's homepage link.
+[$sel:homepage:StakePoolMetadata] :: StakePoolMetadata -> Text
+
+-- | Bech32-encoded address.
+[$sel:pledgeAddress:StakePoolMetadata] :: StakePoolMetadata -> Text
+
+-- | Very short name for a stake pool.
+newtype StakePoolTicker
+StakePoolTicker :: Text -> StakePoolTicker
+[$sel:unStakePoolTicker:StakePoolTicker] :: StakePoolTicker -> Text
+
+-- | Returns <a>True</a> iff metadata is exactly equal, modulo
+--   <a>PoolOwner</a>.
+sameStakePoolMetadata :: StakePoolMetadata -> StakePoolMetadata -> Bool
 
 -- | Represents a sort order, applicable to the results returned by a
 --   query.
@@ -1210,6 +1258,9 @@ instance GHC.Show.Show Cardano.Wallet.Primitive.Types.TxStatus
 instance GHC.Generics.Generic Cardano.Wallet.Primitive.Types.StakeDistribution
 instance GHC.Show.Show Cardano.Wallet.Primitive.Types.StakeDistribution
 instance GHC.Classes.Eq Cardano.Wallet.Primitive.Types.StakeDistribution
+instance GHC.Generics.Generic Cardano.Wallet.Primitive.Types.StakePoolMetadata
+instance GHC.Show.Show Cardano.Wallet.Primitive.Types.StakePoolMetadata
+instance GHC.Classes.Eq Cardano.Wallet.Primitive.Types.StakePoolMetadata
 instance GHC.Classes.Ord Cardano.Wallet.Primitive.Types.PoolOwner
 instance GHC.Show.Show Cardano.Wallet.Primitive.Types.PoolOwner
 instance GHC.Classes.Eq Cardano.Wallet.Primitive.Types.PoolOwner
@@ -1217,10 +1268,16 @@ instance GHC.Generics.Generic Cardano.Wallet.Primitive.Types.PoolOwner
 instance GHC.Show.Show Cardano.Wallet.Primitive.Types.WalletDelegationStatus
 instance GHC.Classes.Eq Cardano.Wallet.Primitive.Types.WalletDelegationStatus
 instance GHC.Generics.Generic Cardano.Wallet.Primitive.Types.WalletDelegationStatus
+instance GHC.Generics.Generic Cardano.Wallet.Primitive.Types.StakePool
+instance GHC.Show.Show Cardano.Wallet.Primitive.Types.StakePool
 instance GHC.Classes.Ord Cardano.Wallet.Primitive.Types.PoolId
 instance GHC.Show.Show Cardano.Wallet.Primitive.Types.PoolId
 instance GHC.Classes.Eq Cardano.Wallet.Primitive.Types.PoolId
 instance GHC.Generics.Generic Cardano.Wallet.Primitive.Types.PoolId
+instance Data.Text.Class.ToText Cardano.Wallet.Primitive.Types.StakePoolTicker
+instance GHC.Classes.Eq Cardano.Wallet.Primitive.Types.StakePoolTicker
+instance GHC.Show.Show Cardano.Wallet.Primitive.Types.StakePoolTicker
+instance GHC.Generics.Generic Cardano.Wallet.Primitive.Types.StakePoolTicker
 instance GHC.Classes.Ord a => GHC.Classes.Ord (Cardano.Wallet.Primitive.Types.RangeBound a)
 instance GHC.Classes.Eq a => GHC.Classes.Eq (Cardano.Wallet.Primitive.Types.RangeBound a)
 instance GHC.Show.Show a => GHC.Show.Show (Cardano.Wallet.Primitive.Types.Range a)
@@ -1250,6 +1307,7 @@ instance GHC.Generics.Generic Cardano.Wallet.Primitive.Types.WalletId
 instance GHC.Show.Show Cardano.Wallet.Primitive.Types.WalletName
 instance GHC.Classes.Eq Cardano.Wallet.Primitive.Types.WalletName
 instance GHC.Generics.Generic Cardano.Wallet.Primitive.Types.WalletName
+instance Data.Aeson.Types.FromJSON.FromJSON Cardano.Wallet.Primitive.Types.StakePoolTicker
 instance Data.Aeson.Types.FromJSON.FromJSON Cardano.Wallet.Primitive.Types.PoolOwner
 instance Control.DeepSeq.NFData a => Control.DeepSeq.NFData (Cardano.Wallet.Primitive.Types.ShowFmt a)
 instance Formatting.Buildable.Buildable a => GHC.Show.Show (Cardano.Wallet.Primitive.Types.ShowFmt a)
@@ -1342,6 +1400,8 @@ instance Control.DeepSeq.NFData Cardano.Wallet.Primitive.Types.PoolId
 instance Formatting.Buildable.Buildable Cardano.Wallet.Primitive.Types.PoolId
 instance Data.Text.Class.ToText Cardano.Wallet.Primitive.Types.PoolId
 instance Data.Text.Class.FromText Cardano.Wallet.Primitive.Types.PoolId
+instance Data.Text.Class.FromText Cardano.Wallet.Primitive.Types.StakePoolTicker
+instance Data.Aeson.Types.ToJSON.ToJSON Cardano.Wallet.Primitive.Types.StakePoolTicker
 instance Data.Text.Class.ToText Cardano.Wallet.Primitive.Types.SortOrder
 instance Data.Text.Class.FromText Cardano.Wallet.Primitive.Types.SortOrder
 instance Control.DeepSeq.NFData Cardano.Wallet.Primitive.Types.WalletPassphraseInfo
@@ -2832,177 +2892,6 @@ instance (TypeError ...) => Database.Persist.Class.PersistUnique.AtLeastOneUniqu
 instance (Database.Persist.Class.PersistQuery backend, Database.Persist.Class.PersistEntity.PersistEntityBackend Cardano.Wallet.DB.Sqlite.TH.Wallet Data.Type.Equality.~ Database.Persist.Class.PersistStore.BaseBackend backend) => Database.Persist.Class.DeleteCascade.DeleteCascade Cardano.Wallet.DB.Sqlite.TH.Wallet backend
 
 
--- | This module contains a function for downloading stake pool metadata
---   from an external registry.
-module Cardano.Pool.Metadata
-
--- | Information about a stake pool, published by a stake pool owner in the
---   stake pool registry.
---   
---   The wallet searches for registrations involving the owner, to find
---   metadata for a given PoolID.
---   
---   The metadata information is not used directly by cardano-wallet, but
---   rather passed straight through to API consumers.
-data StakePoolMetadata
-StakePoolMetadata :: PoolOwner -> StakePoolTicker -> Text -> Maybe Text -> Text -> Text -> StakePoolMetadata
-
--- | Bech32-encoded ed25519 public key.
-[owner] :: StakePoolMetadata -> PoolOwner
-
--- | Very short human-readable ID for the stake pool.
-[ticker] :: StakePoolMetadata -> StakePoolTicker
-
--- | Name of the stake pool.
-[name] :: StakePoolMetadata -> Text
-
--- | Short description of the stake pool.
-[description] :: StakePoolMetadata -> Maybe Text
-
--- | Absolute URL for the stake pool's homepage link.
-[homepage] :: StakePoolMetadata -> Text
-
--- | Bech32-encoded address.
-[pledgeAddress] :: StakePoolMetadata -> Text
-
--- | Returns <a>True</a> iff metadata is exactly equal, modulo
---   <a>PoolOwner</a>.
-sameStakePoolMetadata :: StakePoolMetadata -> StakePoolMetadata -> Bool
-
--- | Very short name for a stake pool.
-data StakePoolTicker
-
--- | Configuration parameters used by <a>getStakePoolMetadata</a>.
-data MetadataConfig
-MetadataConfig :: FilePath -> String -> NominalDiffTime -> String -> MetadataConfig
-
--- | Directory where the cache is stored
-[cacheDirectory] :: MetadataConfig -> FilePath
-
--- | Name of zip archive.
-[cacheName] :: MetadataConfig -> String
-
--- | A constant for the maximum age of cached registry file before it's
---   considered to be stale.
-[cacheTTL] :: MetadataConfig -> NominalDiffTime
-
--- | URL to use to download registry
-[registryURL] :: MetadataConfig -> String
-
--- | Filepath to the zip archive
-cacheArchive :: MetadataConfig -> FilePath
-
--- | Returns the configuration for fetching metadata.
---   
---   <a>registryURL</a> will be the Cardano Foundation stake pool registry
---   zipfile URL, or the <tt>CARDANO_WALLET_STAKE_POOL_REGISTRY_URL</tt>
---   environment variable if it is set.
---   
---   The default <a>cacheTTL</a> is one hour.
-getMetadataConfig :: FilePath -> IO MetadataConfig
-
--- | Associate a list of stake pool IDs with their metadata (if present),
---   which is downloaded from the given URL.
---   
---   The URL must point to a zip archive, with the following stucture:
---   
---   <pre>
---   master.zip
---   └── testnet-stake-pool-registry-master/
---       └── registry/
---           ├── pk1afhcpw2tg7nr2m3wr4x8jaa4dv7d09gnv27kwfxpjyvukwxs8qdqwg85xp.json
---           └── pk1z4vh8gva25w07x8574uujuveu8gz43fu6qfln3t4prcavrvcphjsk0pdqs.json
---   </pre>
---   
---   <ul>
---   <li>The name of the top-level directory can be anything.</li>
---   <li>Other files in the archive are ignored by
---   <a>getStakePoolMetadata</a>.</li>
---   <li>The JSON file names are <a>PoolOwner</a>s.</li>
---   <li>The required JSON structure is given by the
---   <a>Data.Aeson.FromJSON</a> instance of <a>StakePoolMetadata</a>.</li>
---   </ul>
---   
---   The URL which should be used for incentived testnet is
---   <a>cardanoFoundationRegistryZip</a>.
---   
---   The returned list will have the same length as the given list of
---   <a>PoolOwner</a>. If an metadata entry does not exist or could not be
---   parsed, it will be <a>Nothing</a>.
-getStakePoolMetadata :: Tracer IO RegistryLog -> MetadataConfig -> [PoolOwner] -> IO (Either FetchError [Maybe StakePoolMetadata])
-
--- | Name of the environment variable to set for tweaking the registry URL.
---   Mostly use for testing.
-envVarMetadataRegistry :: String
-
--- | The stake pool registry zipfile download URL for CF.
-cardanoFoundationRegistryZip :: String
-
--- | Things that could go wrong with fetching metadata, which aren't
---   programming errors or expected failures.
-data FetchError
-
--- | Failed to download the registry archive.
-FetchErrorDownload :: String -> FetchError
-
--- | Failed to store the registry archive in a temporary location.
-FetchErrorFile :: String -> FetchError
-
--- | Failed to open the registry archive with the given path, as a zip
---   file, due to the given cause.
-FetchErrorZipParsingFailed :: FilePath -> String -> FetchError
-
--- | The log messages for <a>getStakePoolMetadata</a>.
-data RegistryLog
-RegistryLog :: String -> FilePath -> RegistryLogMsg -> RegistryLog
-[registryLogUrl] :: RegistryLog -> String
-[registryLogZipFile] :: RegistryLog -> FilePath
-[registryLogMsg] :: RegistryLog -> RegistryLogMsg
-
--- | Log messages about processing a specific archive.
-data RegistryLogMsg
-MsgDownloadStarted :: RegistryLogMsg
-MsgDownloadComplete :: Integer -> RegistryLogMsg
-MsgDownloadError :: FetchError -> RegistryLogMsg
-MsgCleanupDownload :: RegistryLogMsg
-MsgExtractFile :: FilePath -> RegistryLogMsg
-MsgExtractFileResult :: Maybe (Either String StakePoolMetadata) -> RegistryLogMsg
-MsgUsingCached :: FilePath -> UTCTime -> RegistryLogMsg
-instance Data.Aeson.Types.ToJSON.ToJSON Cardano.Pool.Metadata.RegistryLog
-instance GHC.Classes.Eq Cardano.Pool.Metadata.RegistryLog
-instance GHC.Show.Show Cardano.Pool.Metadata.RegistryLog
-instance GHC.Generics.Generic Cardano.Pool.Metadata.RegistryLog
-instance Data.Aeson.Types.ToJSON.ToJSON Cardano.Pool.Metadata.RegistryLogMsg
-instance GHC.Classes.Eq Cardano.Pool.Metadata.RegistryLogMsg
-instance GHC.Show.Show Cardano.Pool.Metadata.RegistryLogMsg
-instance GHC.Generics.Generic Cardano.Pool.Metadata.RegistryLogMsg
-instance Data.Aeson.Types.ToJSON.ToJSON Cardano.Pool.Metadata.FetchError
-instance GHC.Generics.Generic Cardano.Pool.Metadata.FetchError
-instance GHC.Classes.Eq Cardano.Pool.Metadata.FetchError
-instance GHC.Show.Show Cardano.Pool.Metadata.FetchError
-instance GHC.Classes.Eq Cardano.Pool.Metadata.MetadataConfig
-instance GHC.Show.Show Cardano.Pool.Metadata.MetadataConfig
-instance GHC.Generics.Generic Cardano.Pool.Metadata.StakePoolMetadata
-instance GHC.Show.Show Cardano.Pool.Metadata.StakePoolMetadata
-instance GHC.Classes.Eq Cardano.Pool.Metadata.StakePoolMetadata
-instance Data.Text.Class.ToText Cardano.Pool.Metadata.StakePoolTicker
-instance GHC.Classes.Eq Cardano.Pool.Metadata.StakePoolTicker
-instance GHC.Show.Show Cardano.Pool.Metadata.StakePoolTicker
-instance GHC.Generics.Generic Cardano.Pool.Metadata.StakePoolTicker
-instance Cardano.BM.Data.Tracer.HasPrivacyAnnotation Cardano.Pool.Metadata.RegistryLog
-instance Cardano.BM.Data.Tracer.HasSeverityAnnotation Cardano.Pool.Metadata.RegistryLog
-instance Data.Text.Class.ToText Cardano.Pool.Metadata.RegistryLog
-instance Cardano.BM.Data.Tracer.HasPrivacyAnnotation Cardano.Pool.Metadata.RegistryLogMsg
-instance Cardano.BM.Data.Tracer.HasSeverityAnnotation Cardano.Pool.Metadata.RegistryLogMsg
-instance Data.Text.Class.ToText Cardano.Pool.Metadata.RegistryLogMsg
-instance Data.Text.Class.ToText Cardano.Pool.Metadata.FetchError
-instance Data.Aeson.Types.FromJSON.FromJSON Cardano.Pool.Metadata.StakePoolMetadata
-instance Data.Aeson.Types.ToJSON.ToJSON Cardano.Pool.Metadata.StakePoolMetadata
-instance Data.Text.Class.FromText Cardano.Pool.Metadata.StakePoolTicker
-instance Data.Aeson.Types.FromJSON.FromJSON Cardano.Pool.Metadata.StakePoolTicker
-instance Data.Aeson.Types.ToJSON.ToJSON Cardano.Pool.Metadata.StakePoolTicker
-
-
 -- | Auto-generated Sqlite &amp; Persistent machinery via Template-Haskell.
 --   This has been moved into a separate file so that we can treat it
 --   slightly differently when computing code-coverage.
@@ -3133,6 +3022,22 @@ instance Database.Persist.Class.PersistStore.ToBackendKey Database.Persist.Sql.T
 instance (TypeError ...) => Database.Persist.Class.PersistUnique.OnlyOneUniqueKey Cardano.Pool.DB.Sqlite.TH.ArbitrarySeed
 instance (TypeError ...) => Database.Persist.Class.PersistUnique.AtLeastOneUniqueKey Cardano.Pool.DB.Sqlite.TH.ArbitrarySeed
 instance (Database.Persist.Class.PersistQuery backend, Database.Persist.Class.PersistEntity.PersistEntityBackend Cardano.Pool.DB.Sqlite.TH.ArbitrarySeed Data.Type.Equality.~ Database.Persist.Class.PersistStore.BaseBackend backend) => Database.Persist.Class.DeleteCascade.DeleteCascade Cardano.Pool.DB.Sqlite.TH.ArbitrarySeed backend
+
+
+-- | High-level interface for dealing with stake pools.
+module Cardano.Pool
+
+-- | <tt>StakePoolLayer</tt> is a thin layer ontop of the DB. It is
+--   <i>one</i> value that can easily be passed to the API-server, where it
+--   can be used in a simple way.
+data StakePoolLayer e m
+StakePoolLayer :: ExceptT e m [(StakePool, Maybe StakePoolMetadata)] -> m [PoolId] -> StakePoolLayer e m
+[listStakePools] :: StakePoolLayer e m -> ExceptT e m [(StakePool, Maybe StakePoolMetadata)]
+
+-- | Get a list of known pools that doesn't require fetching things from
+--   any registry. This list comes from the registration certificates that
+--   have been seen on chain.
+[knownStakePools] :: StakePoolLayer e m -> m [PoolId]
 
 
 -- | Here we find the "business logic" to manage a Cardano wallet. This is
@@ -4259,48 +4164,6 @@ instance GHC.Show.Show Cardano.Pool.DB.ErrPointAlreadyExists
 instance GHC.Classes.Eq Cardano.Pool.DB.ErrPointAlreadyExists
 
 
--- | This module defines necessary bits to compute an averaged apparent
---   performance for stake pools. The definition is inspired from the
---   "Design Specification for Delegation and Incentives in Cardano" by
---   Kant et Al, yet deviates slightly from it because of different real
---   constraints:
---   
---   a) The wallet software doesn't have a reliable access to various epoch
---   details such as the stake distribution for past epochs.
---   
---   b) The wallet software makes therefore a significant use of the
---   current epoch's data which represents unfinished snapshots of epochs
---   which, because of their non-deterministic nature, may favor leaders
---   elected early in the process more than those not yet elected.
---   
---   To cope with these two issues, we try to harmonize past known epochs
---   with the ongoing one by averaging over a whole range of epochs,
---   simultaneously. This means computing a ratio of the total blocks
---   produced by a leader on the total number of blocks we could reasonably
---   expect a leader to have produced, across many epochs at once (i.e.,
---   doing a ratio of sums, instead of a sum of ratios).
---   
---   This should be less punitive for leaders that have not yet been
---   elected as part of the ongoing epoch while having still performed
---   reasonably okay in the past.
-module Cardano.Pool.Performance
-data EpochStats
-EpochStats :: !Natural -> !Natural -> !Natural -> !Natural -> EpochStats
-[poolProduction] :: EpochStats -> !Natural
-[poolStake] :: EpochStats -> !Natural
-[totalStake] :: EpochStats -> !Natural
-[totalProduction] :: EpochStats -> !Natural
-apparentPerformance :: [EpochStats] -> Double
-
--- | Read pool performances of many epochs from the database
-readPoolsPerformances :: Monad m => DBLayer m -> EpochNo -> m (Map PoolId Double)
-
--- | Count elements inside a <a>Map</a>
-count :: Map k [a] -> Map k (Quantity any Word64)
-instance GHC.Show.Show Cardano.Pool.Performance.EpochStats
-instance GHC.Generics.Generic Cardano.Pool.Performance.EpochStats
-
-
 -- | Dummy implementation of the database-layer, using <a>MVar</a>. This
 --   may be good for testing to compare with an implementation on a real
 --   data store, or to use when compiling the wallet for targets which
@@ -4749,11 +4612,11 @@ ApiCoinSelectionInput :: !ApiT (Hash "Tx") -> !Word32 -> !(ApiT Address, Proxy n
 [$sel:address:ApiCoinSelectionInput] :: ApiCoinSelectionInput -> !(ApiT Address, Proxy n)
 [$sel:amount:ApiCoinSelectionInput] :: ApiCoinSelectionInput -> !Quantity "lovelace" Natural
 data ApiStakePool
-ApiStakePool :: !ApiT PoolId -> !ApiStakePoolMetrics -> !Double -> !Maybe StakePoolMetadata -> !Quantity "lovelace" Natural -> !Quantity "percent" Percentage -> !Double -> !Double -> ApiStakePool
+ApiStakePool :: !ApiT PoolId -> !ApiStakePoolMetrics -> !Double -> !Maybe (ApiT StakePoolMetadata) -> !Quantity "lovelace" Natural -> !Quantity "percent" Percentage -> !Double -> !Double -> ApiStakePool
 [$sel:id:ApiStakePool] :: ApiStakePool -> !ApiT PoolId
 [$sel:metrics:ApiStakePool] :: ApiStakePool -> !ApiStakePoolMetrics
 [$sel:apparentPerformance:ApiStakePool] :: ApiStakePool -> !Double
-[$sel:metadata:ApiStakePool] :: ApiStakePool -> !Maybe StakePoolMetadata
+[$sel:metadata:ApiStakePool] :: ApiStakePool -> !Maybe (ApiT StakePoolMetadata)
 [$sel:cost:ApiStakePool] :: ApiStakePool -> !Quantity "lovelace" Natural
 [$sel:margin:ApiStakePool] :: ApiStakePool -> !Quantity "percent" Percentage
 [$sel:desirability:ApiStakePool] :: ApiStakePool -> !Double
@@ -5333,6 +5196,8 @@ instance Data.Aeson.Types.FromJSON.FromJSON (Cardano.Wallet.Api.Types.ApiT Carda
 instance Data.Aeson.Types.ToJSON.ToJSON (Cardano.Wallet.Api.Types.ApiT Cardano.Wallet.Primitive.Types.Direction)
 instance Data.Aeson.Types.FromJSON.FromJSON (Cardano.Wallet.Api.Types.ApiT Cardano.Wallet.Primitive.Types.TxStatus)
 instance Data.Aeson.Types.ToJSON.ToJSON (Cardano.Wallet.Api.Types.ApiT Cardano.Wallet.Primitive.Types.TxStatus)
+instance Data.Aeson.Types.FromJSON.FromJSON (Cardano.Wallet.Api.Types.ApiT Cardano.Wallet.Primitive.Types.StakePoolMetadata)
+instance Data.Aeson.Types.ToJSON.ToJSON (Cardano.Wallet.Api.Types.ApiT Cardano.Wallet.Primitive.Types.StakePoolMetadata)
 instance Data.Aeson.Types.FromJSON.FromJSON (Cardano.Wallet.Api.Types.ApiT Cardano.Wallet.Primitive.Types.StartTime)
 instance Data.Aeson.Types.ToJSON.ToJSON (Cardano.Wallet.Api.Types.ApiT Cardano.Wallet.Primitive.Types.StartTime)
 instance Data.Aeson.Types.FromJSON.FromJSON (Cardano.Wallet.Api.Types.ApiT Cardano.Wallet.Primitive.Types.SlotLength)
@@ -5439,127 +5304,6 @@ someDummyMnemonic :: forall mw ent csz. (HasCallStack, ValidEntropySize ent, Val
 unsafeMkMnemonic :: forall mw n csz. (ConsistentEntropy n mw csz, EntropySize mw ~ n, HasCallStack) => [Text] -> Mnemonic mw
 unsafeMkEntropy :: forall ent csz. (HasCallStack, ValidEntropySize ent, ValidChecksumSize ent csz) => ByteString -> Entropy ent
 unsafeMkSomeMnemonicFromEntropy :: forall mw ent csz. (HasCallStack, ValidEntropySize ent, ValidChecksumSize ent csz, ValidMnemonicSentence mw, ent ~ EntropySize mw, mw ~ MnemonicWords ent) => Proxy mw -> ByteString -> SomeMnemonic
-
-
--- | A self contained module for ranking pools according to the delegation
---   design spec <i>Design Specification for Delegation and Incentives in
---   Cardano</i> <a>(Kant et al, 2019)</a>.
---   
---   The module currently implements the non-myopic desirability, and might
---   later support calculating the full non-myopic pool member rewards. The
---   latter being the recomended way to rank stake-pools (see section 4.3).
---   
---   The term non-myopic is explained on page 37:
---   
---   <pre>
---   It would be short-sighted (“myopic”) for stakeholders to directly use the
---   reward splitting formulas from Section 6.5. They should instead take the
---   long-term (“non-myopic”) view. To this end, the system will calculate and
---   display the “non-myopic” rewards that pool leaders and pool members can
---   expect, thus supporting stakeholders in their decision whether to create a
---   pool and to which pool to delegate their stake.
---   
---   The idea is to first rank all pools by “desirability”, to then assume that
---   the k most desirable pools will eventually be saturated, whereas all other
---   pools will lose all their members, then to finally base all reward
---   calculations on these assumptions.
---   </pre>
---   
---   <h2>Relevant identifiers</h2>
---   
---   Epoch Parameters
---   
---   TODO: table
---   
---   Pool's Parameters
---   
---   TODO: table
-module Cardano.Pool.Ranking
-
--- | Non-myopic pool desirability according to section 5.6.1.
---   
---   Is <i>not</i> affected by oversaturation nor pool stake in general.
-desirability :: EpochConstants -> Pool -> Double
-
--- | The saturation-level of a pool indicate how far a pool is from the
---   desired relative stake fixed by the network. A saturation level above
---   1 means that the pool is satured. A level of 0.5 / 50% means that the
---   pool owns half the ideal stake.
---   
---   The saturation corresponds therefore to the ratio between the ideal
---   relative stake of a pool on the actual relative stake of that pool.
---   
---   The ideal relative stake is given by:
---   
---   1 S 1 σ_ideal = --- * --- = --- = z0 (where S stands for the total
---   available S k k stake in Ada)
---   
---   which gives us the saturation as:
---   
---   σ σ sat = --------- = ---- σ_ideal z0
-saturation :: EpochConstants -> Quantity "lovelace" Word64 -> Quantity "lovelace" Word64 -> Double
-
--- | Total rewards for a pool if it were saturated.
---   
---   When a0 = 0 this reduces to just p*R*z0 (tested by
---   <tt>prop_saturatedPoolRewardsReduces</tt>)
-saturatedPoolRewards :: EpochConstants -> Pool -> Double
-
--- | Determines z0, i.e 1 / k
-saturatedPoolSize :: EpochConstants -> Percentage
-data EpochConstants
-EpochConstants :: NonNegative Double -> Positive Int -> Quantity "lovelace" Word64 -> EpochConstants
-
--- | a_0
-[leaderStakeInfluence] :: EpochConstants -> NonNegative Double
-
--- | k
-[desiredNumberOfPools] :: EpochConstants -> Positive Int
-
--- | Total rewards in an epoch. <a>R</a> in the spec.
-[totalRewards] :: EpochConstants -> Quantity "lovelace" Word64
-data Pool
-Pool :: Percentage -> Quantity "lovelace" Word64 -> Percentage -> NonNegative Double -> Pool
-
--- | s
-[leaderStake] :: Pool -> Percentage
-
--- | c
-[cost] :: Pool -> Quantity "lovelace" Word64
-
--- | m
-[margin] :: Pool -> Percentage
-
--- | hat{p}, an already averaged (apparent) performance-value.
---   
---   Should mostly be in the range [0, 1]. May be higher than 1 due to
---   randomness.
-[recentAvgPerformance] :: Pool -> NonNegative Double
-newtype NonNegative a
-NonNegative :: a -> NonNegative a
-[getNonNegative] :: NonNegative a -> a
-newtype Positive a
-Positive :: a -> Positive a
-[getPositive] :: Positive a -> a
-unsafeMkPositive :: (Ord a, Show a, Num a) => a -> Positive a
-unsafeMkNonNegative :: (Ord a, Show a, Num a) => a -> NonNegative a
-instance GHC.Generics.Generic Cardano.Pool.Ranking.EpochConstants
-instance GHC.Classes.Eq Cardano.Pool.Ranking.EpochConstants
-instance GHC.Show.Show Cardano.Pool.Ranking.EpochConstants
-instance GHC.Generics.Generic Cardano.Pool.Ranking.Pool
-instance GHC.Classes.Eq Cardano.Pool.Ranking.Pool
-instance GHC.Show.Show Cardano.Pool.Ranking.Pool
-instance GHC.Num.Num a => GHC.Num.Num (Cardano.Pool.Ranking.NonNegative a)
-instance GHC.Classes.Ord a => GHC.Classes.Ord (Cardano.Pool.Ranking.NonNegative a)
-instance GHC.Show.Show a => GHC.Show.Show (Cardano.Pool.Ranking.NonNegative a)
-instance GHC.Classes.Eq a => GHC.Classes.Eq (Cardano.Pool.Ranking.NonNegative a)
-instance GHC.Generics.Generic (Cardano.Pool.Ranking.NonNegative a)
-instance GHC.Num.Num a => GHC.Num.Num (Cardano.Pool.Ranking.Positive a)
-instance GHC.Classes.Ord a => GHC.Classes.Ord (Cardano.Pool.Ranking.Positive a)
-instance GHC.Show.Show a => GHC.Show.Show (Cardano.Pool.Ranking.Positive a)
-instance GHC.Classes.Eq a => GHC.Classes.Eq (Cardano.Pool.Ranking.Positive a)
-instance GHC.Generics.Generic (Cardano.Pool.Ranking.Positive a)
-instance Formatting.Buildable.Buildable Cardano.Pool.Ranking.EpochConstants
 
 
 -- | An implementation of the DBLayer which uses Persistent and SQLite.
@@ -6454,121 +6198,6 @@ NetworkClient :: ClientM ApiNetworkInformation -> (ApiEpochNumber -> ClientM Api
 networkClient :: NetworkClient
 
 
--- | This module can fold over a blockchain to collect metrics about Stake
---   pools.
---   
---   It interacts with: - <a>Cardano.Wallet.Network</a> which provides the
---   chain - <a>Cardano.Pool.DB</a> - which can persist the metrics -
---   <a>Cardano.Wallet.Api.Server</a> - which presents the results in an
---   endpoint
-module Cardano.Pool.Metrics
-
--- | Information from a block relevant to monitoring stake pools.
-data Block
-Block :: BlockHeader -> PoolId -> ![PoolRegistrationCertificate] -> Block
-[$sel:header:Block] :: Block -> BlockHeader
-
--- | The stake pool that minted this block.
-[$sel:producer:Block] :: Block -> PoolId
-
--- | Any stake pools that were registered in this block.
-[$sel:poolRegistrations:Block] :: Block -> ![PoolRegistrationCertificate]
-data StakePool
-StakePool :: PoolId -> Quantity "lovelace" Word64 -> Quantity "block" Word64 -> Double -> Double -> Quantity "lovelace" Word64 -> Percentage -> Double -> StakePool
-[$sel:poolId:StakePool] :: StakePool -> PoolId
-[$sel:stake:StakePool] :: StakePool -> Quantity "lovelace" Word64
-[$sel:production:StakePool] :: StakePool -> Quantity "block" Word64
-[$sel:performance:StakePool] :: StakePool -> Double
-[$sel:desirability:StakePool] :: StakePool -> Double
-[$sel:cost:StakePool] :: StakePool -> Quantity "lovelace" Word64
-[$sel:margin:StakePool] :: StakePool -> Percentage
-[$sel:saturation:StakePool] :: StakePool -> Double
-
--- | <tt>StakePoolLayer</tt> is a thin layer ontop of the DB. It is
---   <i>one</i> value that can easily be passed to the API-server, where it
---   can be used in a simple way.
-data StakePoolLayer m
-StakePoolLayer :: ExceptT ErrListStakePools m [(StakePool, Maybe StakePoolMetadata)] -> m [PoolId] -> StakePoolLayer m
-[$sel:listStakePools:StakePoolLayer] :: StakePoolLayer m -> ExceptT ErrListStakePools m [(StakePool, Maybe StakePoolMetadata)]
-
--- | Get a list of known pools that doesn't require fetching things from
---   Jörmungandr or any registry. This list comes from the registration
---   certificates that have been seen on chain.
-[$sel:knownStakePools:StakePoolLayer] :: StakePoolLayer m -> m [PoolId]
-newStakePoolLayer :: Tracer IO StakePoolLog -> BlockHeader -> (EpochNo -> Quantity "lovelace" Word64 -> EpochConstants) -> DBLayer IO -> NetworkLayer IO t Block -> FilePath -> StakePoolLayer IO
-data ErrListStakePools
-ErrMetricsIsUnsynced :: Quantity "percent" Percentage -> ErrListStakePools
-ErrListStakePoolsCurrentNodeTip :: ErrCurrentNodeTip -> ErrListStakePools
-
--- | <a>monitorStakePools</a> follows the chain and puts pool productions
---   and stake distributions to a <a>DBLayer</a>, such that the data in the
---   database is always consistent.
---   
---   The pool productions and stake distrubtions in the db can <i>never</i>
---   be from different forks such that it's safe for readers to access it.
-monitorStakePools :: Tracer IO StakePoolLog -> (Block, Quantity "block" Word32) -> NetworkLayer IO t Block -> DBLayer IO -> IO ()
-
--- | Combines three different sources of data into one:
---   
---   <ol>
---   <li>A stake-distribution map</li>
---   <li>A pool-production map</li>
---   <li>A pool-performance map</li>
---   </ol>
---   
---   If a pool is in 2 or 3 but not in 1, it means that the pool has been
---   de-registered.
---   
---   If a pool is in (1+2) but not in (3), it simply means it has produced
---   0 blocks so far.
-combineMetrics :: Map PoolId (Quantity "lovelace" Word64) -> Map PoolId (Quantity "block" Word64) -> Map PoolId Double -> Map PoolId (Quantity "lovelace" Word64, Quantity "block" Word64, Double)
-
--- | Given a mapping from <a>PoolId</a> -&gt; <a>PoolOwner</a> and a
---   mapping between <a>PoolOwner</a> <a>-</a> <a>StakePoolMetadata</a>,
---   return a matching <tt>StakePoolMeta</tt> entry for every
---   <a>PoolId</a>.
---   
---   If there is no metadata for a pool, it returns Nothing for that
---   <a>PoolId</a>. If there is different metadata submitted by multiple
---   owners of a pool, it returns Nothing. If there is one unique metadata
---   for a pool, it returns <a>Just</a> the metadata for that
---   <a>PoolId</a>.
---   
---   It also provides a log message for each association.
-associateMetadata :: [(PoolId, [PoolOwner])] -> [(PoolOwner, Maybe StakePoolMetadata)] -> [(StakePoolLog, Maybe StakePoolMetadata)]
-
--- | Messages associated with stake pool layer.
-data StakePoolLog
-MsgRegistry :: RegistryLog -> StakePoolLog
-MsgListStakePoolsBegin :: StakePoolLog
-MsgMetadataUnavailable :: StakePoolLog
-MsgMetadataUsing :: PoolId -> PoolOwner -> StakePoolMetadata -> StakePoolLog
-MsgMetadataMissing :: PoolId -> StakePoolLog
-MsgMetadataMultiple :: PoolId -> [(PoolOwner, StakePoolMetadata)] -> StakePoolLog
-MsgComputedProgress :: BlockHeader -> BlockHeader -> StakePoolLog
-MsgStartMonitoring :: [BlockHeader] -> StakePoolLog
-MsgFollow :: FollowLog -> StakePoolLog
-MsgStakeDistribution :: EpochNo -> StakePoolLog
-MsgStakePoolRegistration :: PoolRegistrationCertificate -> StakePoolLog
-MsgRollingBackTo :: SlotId -> StakePoolLog
-MsgApplyError :: ErrMonitorStakePools -> StakePoolLog
-MsgUsingRankingEpochConstants :: EpochConstants -> StakePoolLog
-MsgUsingTotalStakeForRanking :: Quantity "lovelace" Word64 -> StakePoolLog
-instance GHC.Classes.Eq Cardano.Pool.Metrics.StakePoolLog
-instance GHC.Show.Show Cardano.Pool.Metrics.StakePoolLog
-instance GHC.Show.Show Cardano.Pool.Metrics.ErrListStakePools
-instance GHC.Classes.Eq Cardano.Pool.Metrics.ErrMonitorStakePools
-instance GHC.Show.Show Cardano.Pool.Metrics.ErrMonitorStakePools
-instance GHC.Generics.Generic Cardano.Pool.Metrics.StakePool
-instance GHC.Show.Show Cardano.Pool.Metrics.StakePool
-instance GHC.Generics.Generic Cardano.Pool.Metrics.Block
-instance GHC.Show.Show Cardano.Pool.Metrics.Block
-instance GHC.Classes.Eq Cardano.Pool.Metrics.Block
-instance Cardano.BM.Data.Tracer.HasPrivacyAnnotation Cardano.Pool.Metrics.StakePoolLog
-instance Cardano.BM.Data.Tracer.HasSeverityAnnotation Cardano.Pool.Metrics.StakePoolLog
-instance Data.Text.Class.ToText Cardano.Pool.Metrics.StakePoolLog
-
-
 -- | This module provides the Ntp client related settings, types and
 --   re-exports used in a number of places throught codebase.
 module Network.Ntp
@@ -6716,18 +6345,43 @@ TlsConfiguration :: !FilePath -> !FilePath -> !FilePath -> TlsConfiguration
 start :: Settings -> Tracer IO ApiLog -> Maybe TlsConfiguration -> Socket -> Application -> IO ()
 serve :: HasServer api ([] :: [Type]) => Proxy api -> Server api -> Application
 
--- | A Servant server for our wallet API
-server :: forall t n byron icarus shelley. (byron ~ ApiLayer (RndState  'Mainnet) t ByronKey, icarus ~ ApiLayer (SeqState  'Mainnet IcarusKey) t IcarusKey, shelley ~ ApiLayer (SeqState n ShelleyKey) t ShelleyKey, DelegationAddress n ShelleyKey, Buildable (ErrValidateSelection t)) => byron -> icarus -> shelley -> StakePoolLayer IO -> NtpClient -> Server (Api n)
-
--- | A diminished servant server to serve Byron wallets only.
-byronServer :: forall t n. (Buildable (ErrValidateSelection t), PaymentAddress n IcarusKey, PaymentAddress n ByronKey) => ApiLayer (RndState n) t ByronKey -> ApiLayer (SeqState n IcarusKey) t IcarusKey -> NtpClient -> Server (Api n)
-
--- | Create a new instance of the wallet layer.
-newApiLayer :: forall ctx s t k. (ctx ~ ApiLayer s t k, IsOurs s ChimericAccount, IsOurs s Address) => Tracer IO (WorkerLog WalletId WalletLog) -> (Block, BlockchainParameters, SyncTolerance) -> NetworkLayer IO t Block -> TransactionLayer t k -> DBFactory IO s k -> IO ctx
-
 -- | Run an action with a TCP socket bound to a port specified by the
 --   <a>Listen</a> parameter.
 withListeningSocket :: HostPreference -> Listen -> (Either ListenError (Port, Socket) -> IO a) -> IO a
+
+-- | Create a new instance of the wallet layer.
+newApiLayer :: forall ctx s t k. (ctx ~ ApiLayer s t k, IsOurs s ChimericAccount, IsOurs s Address) => Tracer IO (WorkerLog WalletId WalletLog) -> (Block, BlockchainParameters, SyncTolerance) -> NetworkLayer IO t Block -> TransactionLayer t k -> DBFactory IO s k -> IO ctx
+delegationFee :: forall ctx s t n k. (s ~ SeqState n k, k ~ ShelleyKey, ctx ~ ApiLayer s t k) => ctx -> ApiT WalletId -> Handler ApiFee
+deleteTransaction :: forall ctx s t k. ctx ~ ApiLayer s t k => ctx -> ApiT WalletId -> ApiTxId -> Handler NoContent
+deleteWallet :: forall ctx s t k. ctx ~ ApiLayer s t k => ctx -> ApiT WalletId -> Handler NoContent
+forceResyncWallet :: forall ctx s t k. (ctx ~ ApiLayer s t k, IsOurs s ChimericAccount, IsOurs s Address) => ctx -> ApiT WalletId -> ApiNetworkTip -> Handler NoContent
+getMigrationInfo :: forall s t k. () => ApiLayer s t k -> ApiT WalletId -> Handler ApiByronWalletMigrationInfo
+getNetworkClock :: NtpClient -> Bool -> Handler ApiNetworkClock
+getNetworkInformation :: forall t. () => (Block, BlockchainParameters, SyncTolerance) -> NetworkLayer IO t Block -> Handler ApiNetworkInformation
+getNetworkParameters :: (Block, BlockchainParameters, SyncTolerance) -> ApiEpochNumber -> Handler ApiNetworkParameters
+getUTxOsStatistics :: forall ctx s t k. ctx ~ ApiLayer s t k => ctx -> ApiT WalletId -> Handler ApiUtxoStatistics
+getWallet :: forall ctx s t k apiWallet. (ctx ~ ApiLayer s t k, HasWorkerRegistry s k ctx, HasDBFactory s k ctx) => ctx -> MkApiWallet ctx s apiWallet -> ApiT WalletId -> Handler (apiWallet, UTCTime)
+joinStakePool :: forall ctx s t n k e. (DelegationAddress n k, s ~ SeqState n k, k ~ ShelleyKey, HardDerivation k, ctx ~ ApiLayer s t k) => ctx -> StakePoolLayer e IO -> ApiPoolId -> ApiT WalletId -> ApiWalletPassphrase -> Handler (ApiTransaction n)
+listAddresses :: forall ctx s t k n. (ctx ~ ApiLayer s t k, IsOurs s Address, CompareDiscovery s, KnownAddresses s, IsOurs s ChimericAccount) => ctx -> (s -> Address -> Maybe Address) -> ApiT WalletId -> Maybe (ApiT AddressState) -> Handler [ApiAddress n]
+listPools :: LiftHandler e => StakePoolLayer e IO -> Handler [ApiStakePool]
+listTransactions :: forall ctx s t k n. ctx ~ ApiLayer s t k => ctx -> ApiT WalletId -> Maybe Iso8601Time -> Maybe Iso8601Time -> Maybe (ApiT SortOrder) -> Handler [ApiTransaction n]
+listWallets :: forall ctx s t k apiWallet. ctx ~ ApiLayer s t k => ctx -> MkApiWallet ctx s apiWallet -> Handler [(apiWallet, UTCTime)]
+migrateWallet :: forall s t k n. (Show s, NFData s, IsOwned s k, DelegationAddress n ShelleyKey) => ApiLayer s t k -> ApiLayer (SeqState n ShelleyKey) t ShelleyKey -> ApiT WalletId -> ApiT WalletId -> ApiWalletPassphrase -> Handler [ApiTransaction n]
+postExternalTransaction :: forall ctx s t k. ctx ~ ApiLayer s t k => ctx -> PostExternalTransactionData -> Handler ApiTxId
+postIcarusWallet :: forall ctx s t k n. (ctx ~ ApiLayer s t k, s ~ SeqState n k, k ~ IcarusKey, HasWorkerRegistry s k ctx, PaymentAddress n IcarusKey) => ctx -> ByronWalletPostData '[15] -> Handler ApiByronWallet
+postLedgerWallet :: forall ctx s t k n. (ctx ~ ApiLayer s t k, s ~ SeqState n k, k ~ IcarusKey, HasWorkerRegistry s k ctx, PaymentAddress n IcarusKey) => ctx -> ByronWalletPostData '[12, 15, 18, 21, 24] -> Handler ApiByronWallet
+postRandomAddress :: forall ctx s t k n. (s ~ RndState n, k ~ ByronKey, ctx ~ ApiLayer s t k, PaymentAddress n ByronKey) => ctx -> ApiT WalletId -> ApiPostRandomAddressData -> Handler (ApiAddress n)
+postRandomWallet :: forall ctx s t k n. (ctx ~ ApiLayer s t k, s ~ RndState n, k ~ ByronKey) => ctx -> ByronWalletPostData '[12] -> Handler ApiByronWallet
+postRandomWalletFromXPrv :: forall ctx s t k n. (ctx ~ ApiLayer s t k, s ~ RndState n, k ~ ByronKey) => ctx -> ByronWalletFromXPrvPostData -> Handler ApiByronWallet
+postTransaction :: forall ctx s t k n. (Buildable (ErrValidateSelection t), GenChange s, IsOwned s k, NFData s, Show s, ctx ~ ApiLayer s t k) => ctx -> ArgGenChange s -> ApiT WalletId -> PostTransactionData n -> Handler (ApiTransaction n)
+postTransactionFee :: forall ctx s t k n. (Buildable (ErrValidateSelection t), ctx ~ ApiLayer s t k) => ctx -> ApiT WalletId -> PostTransactionFeeData n -> Handler ApiFee
+postTrezorWallet :: forall ctx s t k n. (ctx ~ ApiLayer s t k, s ~ SeqState n k, k ~ IcarusKey, HasWorkerRegistry s k ctx, PaymentAddress n IcarusKey) => ctx -> ByronWalletPostData '[12, 15, 18, 21, 24] -> Handler ApiByronWallet
+postWallet :: forall ctx s t k n. (s ~ SeqState n k, k ~ ShelleyKey, ctx ~ ApiLayer s t k, HasDBFactory s k ctx, HasWorkerRegistry s k ctx) => ctx -> WalletOrAccountPostData -> Handler ApiWallet
+putByronWalletPassphrase :: forall ctx s t k. (WalletKey k, ctx ~ ApiLayer s t k) => ctx -> ApiT WalletId -> ByronWalletPutPassphraseData -> Handler NoContent
+putWallet :: forall ctx s t k apiWallet. ctx ~ ApiLayer s t k => ctx -> MkApiWallet ctx s apiWallet -> ApiT WalletId -> WalletPutData -> Handler apiWallet
+putWalletPassphrase :: forall ctx s t k. (WalletKey k, ctx ~ ApiLayer s t k) => ctx -> ApiT WalletId -> WalletPutPassphraseData -> Handler NoContent
+quitStakePool :: forall ctx s t n k. (DelegationAddress n k, s ~ SeqState n k, k ~ ShelleyKey, HardDerivation k, ctx ~ ApiLayer s t k) => ctx -> ApiT WalletId -> ApiWalletPassphrase -> Handler (ApiTransaction n)
+selectCoins :: forall ctx s t k n. (Buildable (ErrValidateSelection t), DelegationAddress n k, k ~ ShelleyKey, s ~ SeqState n k, ctx ~ ApiLayer s t k) => ctx -> ApiT WalletId -> ApiSelectCoinsData n -> Handler (ApiCoinSelection n)
 
 -- | Lift our wallet layer into servant <a>Handler</a>, by mapping each
 --   error to a corresponding servant error.
@@ -6735,6 +6389,18 @@ class LiftHandler e
 liftHandler :: LiftHandler e => ExceptT e IO a -> Handler a
 liftE :: LiftHandler e => e -> Handler a
 handler :: LiftHandler e => e -> ServerError
+apiError :: ServerError -> ApiErrorCode -> Text -> ServerError
+mkShelleyWallet :: forall ctx s t k n. (ctx ~ ApiLayer s t k, s ~ SeqState n k, WalletKey k, IsOurs s Address, HasWorkerRegistry s k ctx) => MkApiWallet ctx s ApiWallet
+mkLegacyWallet :: forall ctx s k. (HasWorkerRegistry s k ctx, HasDBFactory s k ctx, KnownDiscovery s, IsOurs s Address) => ctx -> WalletId -> Wallet s -> WalletMetadata -> Set Tx -> SyncProgress -> Handler ApiByronWallet
+withLegacyLayer :: forall byron icarus t n a. (byron ~ ApiLayer (RndState n) t ByronKey, icarus ~ ApiLayer (SeqState n IcarusKey) t IcarusKey) => ApiT WalletId -> (byron, Handler a) -> (icarus, Handler a) -> Handler a
+
+-- | Like <a>withLegacyLayer</a> but allow passing a custom handler for
+--   handling dead workers.
+withLegacyLayer' :: forall byron icarus t n a. (byron ~ ApiLayer (RndState n) t ByronKey, icarus ~ ApiLayer (SeqState n IcarusKey) t IcarusKey) => ApiT WalletId -> (byron, Handler a, ErrWalletNotResponding -> Handler a) -> (icarus, Handler a, ErrWalletNotResponding -> Handler a) -> Handler a
+
+-- | Handler for fetching the <a>ArgGenChange</a> for the <a>RndState</a>
+--   (i.e. the root XPrv), necessary to derive new change addresses.
+rndStateChange :: forall ctx s t k n. (ctx ~ ApiLayer s t k, s ~ RndState n, k ~ ByronKey) => ctx -> ApiT WalletId -> Passphrase "raw" -> Handler (ArgGenChange s)
 instance GHC.Show.Show Cardano.Wallet.Api.Server.ErrRejectedTip
 instance GHC.Classes.Eq Cardano.Wallet.Api.Server.ErrRejectedTip
 instance GHC.Show.Show Cardano.Wallet.Api.Server.ErrCreateWallet
@@ -6772,7 +6438,6 @@ instance Cardano.Wallet.Api.Server.LiftHandler Cardano.Wallet.ErrUpdatePassphras
 instance Cardano.Wallet.Api.Server.LiftHandler Cardano.Wallet.ErrListTransactions
 instance Cardano.Wallet.Api.Server.LiftHandler Cardano.Wallet.ErrStartTimeLaterThanEndTime
 instance Cardano.Wallet.Api.Server.LiftHandler Cardano.Wallet.Network.ErrCurrentNodeTip
-instance Cardano.Wallet.Api.Server.LiftHandler Cardano.Pool.Metrics.ErrListStakePools
 instance Cardano.Wallet.Api.Server.LiftHandler Cardano.Wallet.ErrSelectForDelegation
 instance Cardano.Wallet.Api.Server.LiftHandler Cardano.Wallet.ErrSignDelegation
 instance Cardano.Wallet.Api.Server.LiftHandler Cardano.Wallet.ErrJoinStakePool
