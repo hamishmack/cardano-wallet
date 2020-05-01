@@ -5893,7 +5893,7 @@ module Cardano.Wallet.Api
 type Api n = Wallets :<|> Addresses n :<|> CoinSelections n :<|> Transactions n :<|> StakePools n :<|> ByronWallets :<|> ByronAddresses n :<|> ByronTransactions n :<|> ByronMigrations n :<|> Network :<|> Proxy_
 type ApiV2 n = "v2" :> Api n
 type family PostData wallet :: *
-type Wallets = DeleteWallet :<|> GetWallet :<|> ListWallets :<|> PostWallet :<|> PutWallet :<|> PutWalletPassphrase :<|> GetUTxOsStatistics :<|> ForceResyncWallet
+type Wallets = DeleteWallet :<|> GetWallet :<|> ListWallets :<|> PostWallet :<|> PutWallet :<|> PutWalletPassphrase :<|> GetUTxOsStatistics
 
 -- | 
 --   <a>https://input-output-hk.github.io/cardano-wallet/api/#operation/deleteWallet</a>
@@ -5922,10 +5922,6 @@ type PutWalletPassphrase = "wallets" :> Capture "walletId" (ApiT WalletId) :> "p
 -- | 
 --   <a>https://input-output-hk.github.io/cardano-wallet/api/#operation/getUTxOsStatistics</a>
 type GetUTxOsStatistics = "wallets" :> Capture "walletId" (ApiT WalletId) :> "statistics" :> "utxos" :> Get '[JSON] ApiUtxoStatistics
-
--- | 
---   <a>https://input-output-hk.github.io/cardano-wallet/api/#operation/forceResync</a>
-type ForceResyncWallet = "wallets" :> Capture "walletId" (ApiT WalletId) :> "tip" :> ReqBody '[JSON] ApiNetworkTip :> PutNoContent
 type Addresses n = ListAddresses n
 
 -- | 
@@ -5970,7 +5966,7 @@ type QuitStakePool n = "stake-pools" :> "*" :> "wallets" :> Capture "walletId" (
 -- | 
 --   <a>https://input-output-hk.github.io/cardano-wallet/api/#operation/getDelegationFee</a>
 type DelegationFee = "wallets" :> Capture "walletId" (ApiT WalletId) :> "delegation-fees" :> Get '[JSON] ApiFee
-type ByronWallets = PostByronWallet :<|> DeleteByronWallet :<|> GetByronWallet :<|> ListByronWallets :<|> ForceResyncByronWallet :<|> PutByronWallet :<|> GetByronUTxOsStatistics :<|> PutByronWalletPassphrase
+type ByronWallets = PostByronWallet :<|> DeleteByronWallet :<|> GetByronWallet :<|> ListByronWallets :<|> PutByronWallet :<|> GetByronUTxOsStatistics :<|> PutByronWalletPassphrase
 
 -- | 
 --   <a>https://input-output-hk.github.io/cardano-wallet/api/#operation/deleteByronWallet</a>
@@ -5987,10 +5983,6 @@ type ListByronWallets = "byron-wallets" :> Get '[JSON] [ApiByronWallet]
 -- | 
 --   <a>https://input-output-hk.github.io/cardano-wallet/api/#operation/postByronWallet</a>
 type PostByronWallet = "byron-wallets" :> ReqBody '[JSON] (PostData ApiByronWallet) :> PostCreated '[JSON] ApiByronWallet
-
--- | 
---   <a>https://input-output-hk.github.io/cardano-wallet/api/#operation/forceResyncByron</a>
-type ForceResyncByronWallet = "byron-wallets" :> Capture "walletId" (ApiT WalletId) :> "tip" :> ReqBody '[JSON] ApiNetworkTip :> PutNoContent
 
 -- | 
 --   <a>https://input-output-hk.github.io/cardano-wallet/api/#operation/putByronWallet</a>
@@ -6096,7 +6088,6 @@ putWalletPassphrase :: forall (style :: WalletStyle) w. (Discriminate style, Has
 getUTxOsStatistics :: forall (style :: WalletStyle) w. (Discriminate style, HasType (ApiT WalletId) w) => w -> (Method, Text)
 getMigrationInfo :: forall w. HasType (ApiT WalletId) w => w -> (Method, Text)
 migrateWallet :: forall from to. (HasType (ApiT WalletId) from, HasType (ApiT WalletId) to) => from -> to -> (Method, Text)
-forceResyncWallet :: forall style w. (HasType (ApiT WalletId) w, Discriminate style) => w -> (Method, Text)
 postRandomAddress :: forall w. HasType (ApiT WalletId) w => w -> (Method, Text)
 listAddresses :: forall style w. (HasType (ApiT WalletId) w, Discriminate style) => w -> (Method, Text)
 listAddresses' :: forall style w. (HasType (ApiT WalletId) w, Discriminate style) => w -> Maybe AddressState -> (Method, Text)
@@ -6141,7 +6132,7 @@ module Cardano.Wallet.Api.Client
 -- | This data type encapsulates the client functions for all endpoints of
 --   the cardano-wallet V2 API.
 data WalletClient wallet
-WalletClient :: (ApiT WalletId -> ClientM ()) -> (ApiT WalletId -> ClientM wallet) -> (ApiT WalletId -> ClientM ApiUtxoStatistics) -> ClientM [wallet] -> (PostData wallet -> ClientM wallet) -> (ApiT WalletId -> WalletPutData -> ClientM wallet) -> (ApiT WalletId -> WalletPutPassphraseData -> ClientM NoContent) -> (ApiT WalletId -> ApiNetworkTip -> ClientM NoContent) -> WalletClient wallet
+WalletClient :: (ApiT WalletId -> ClientM ()) -> (ApiT WalletId -> ClientM wallet) -> (ApiT WalletId -> ClientM ApiUtxoStatistics) -> ClientM [wallet] -> (PostData wallet -> ClientM wallet) -> (ApiT WalletId -> WalletPutData -> ClientM wallet) -> (ApiT WalletId -> WalletPutPassphraseData -> ClientM NoContent) -> WalletClient wallet
 [$sel:deleteWallet:WalletClient] :: WalletClient wallet -> ApiT WalletId -> ClientM ()
 [$sel:getWallet:WalletClient] :: WalletClient wallet -> ApiT WalletId -> ClientM wallet
 [$sel:getWalletUtxoStatistics:WalletClient] :: WalletClient wallet -> ApiT WalletId -> ClientM ApiUtxoStatistics
@@ -6149,7 +6140,6 @@ WalletClient :: (ApiT WalletId -> ClientM ()) -> (ApiT WalletId -> ClientM walle
 [$sel:postWallet:WalletClient] :: WalletClient wallet -> PostData wallet -> ClientM wallet
 [$sel:putWallet:WalletClient] :: WalletClient wallet -> ApiT WalletId -> WalletPutData -> ClientM wallet
 [$sel:putWalletPassphrase:WalletClient] :: WalletClient wallet -> ApiT WalletId -> WalletPutPassphraseData -> ClientM NoContent
-[$sel:forceResyncWallet:WalletClient] :: WalletClient wallet -> ApiT WalletId -> ApiNetworkTip -> ClientM NoContent
 
 -- | Produces a <a>WalletClient</a> working against the /wallets API.
 walletClient :: WalletClient ApiWallet
@@ -6354,7 +6344,6 @@ newApiLayer :: forall ctx s t k. (ctx ~ ApiLayer s t k, IsOurs s ChimericAccount
 delegationFee :: forall ctx s t n k. (s ~ SeqState n k, k ~ ShelleyKey, ctx ~ ApiLayer s t k) => ctx -> ApiT WalletId -> Handler ApiFee
 deleteTransaction :: forall ctx s t k. ctx ~ ApiLayer s t k => ctx -> ApiT WalletId -> ApiTxId -> Handler NoContent
 deleteWallet :: forall ctx s t k. ctx ~ ApiLayer s t k => ctx -> ApiT WalletId -> Handler NoContent
-forceResyncWallet :: forall ctx s t k. (ctx ~ ApiLayer s t k, IsOurs s ChimericAccount, IsOurs s Address) => ctx -> ApiT WalletId -> ApiNetworkTip -> Handler NoContent
 getMigrationInfo :: forall s t k. () => ApiLayer s t k -> ApiT WalletId -> Handler ApiByronWalletMigrationInfo
 getNetworkClock :: NtpClient -> Bool -> Handler ApiNetworkClock
 getNetworkInformation :: forall t. () => (Block, BlockchainParameters, SyncTolerance) -> NetworkLayer IO t Block -> Handler ApiNetworkInformation
