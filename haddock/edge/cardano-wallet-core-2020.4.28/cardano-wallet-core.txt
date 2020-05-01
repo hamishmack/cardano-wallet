@@ -1767,10 +1767,6 @@ data ErrUnXPrvStripPub
 --   <tt>XPrv</tt> was encrypted, or because it was an old (Byron) key.
 ErrCannotRoundtripToSameXPrv :: ErrUnXPrvStripPub
 
--- | Small helper to collect <a>Nat</a> values from a type-level list
-class NatVals (ns :: [Nat])
-natVals :: NatVals ns => Proxy ns -> [Integer]
-
 -- | Available network options.
 data NetworkDiscriminant
 Mainnet :: NetworkDiscriminant
@@ -1894,26 +1890,6 @@ class PassphraseMaxLength (purpose :: Symbol)
 -- | Maximum length for a passphrase
 passphraseMaxLength :: PassphraseMaxLength purpose => Proxy purpose -> Int
 
--- | Create a passphrase from a mnemonic sentence. This class enables
---   caller to parse text list of variable length into mnemonic sentences.
---   
---   <pre>
---   &gt;&gt;&gt; fromMnemonic @'[12,15,18,21] @"generation" ["toilet", "curse", ... ]
---   Right (Passphrase &lt;ScrubbedBytes&gt;)
---   </pre>
---   
---   Note that the given <a>Nat</a>s **have** to be valid mnemonic sizes,
---   otherwise the underlying code won't even compile, with not-so-friendly
---   error messages.
-class FromMnemonic (sz :: [Nat])
-fromMnemonic :: FromMnemonic sz => [Text] -> Either (FromMnemonicError sz) SomeMnemonic
-
--- | Error reported from trying to create a passphrase from a given
---   mnemonic
-newtype FromMnemonicError (sz :: [Nat])
-FromMnemonicError :: String -> FromMnemonicError
-[getFromMnemonicError] :: FromMnemonicError -> String
-
 -- | Indicate a failure when checking for a given <a>Passphrase</a> match
 data ErrWrongPassphrase
 ErrWrongPassphrase :: ErrWrongPassphrase
@@ -1948,9 +1924,6 @@ instance forall (s :: GHC.Types.Symbol) k (key :: k). GHC.Show.Show (Cardano.Wal
 instance forall (s :: GHC.Types.Symbol) k (key :: k). GHC.Generics.Generic (Cardano.Wallet.Primitive.AddressDerivation.KeyFingerprint s key)
 instance GHC.Classes.Eq Cardano.Wallet.Primitive.AddressDerivation.ErrWrongPassphrase
 instance GHC.Show.Show Cardano.Wallet.Primitive.AddressDerivation.ErrWrongPassphrase
-instance Formatting.Buildable.Buildable (Cardano.Wallet.Primitive.AddressDerivation.FromMnemonicError sz)
-instance GHC.Show.Show (Cardano.Wallet.Primitive.AddressDerivation.FromMnemonicError sz)
-instance GHC.Classes.Eq (Cardano.Wallet.Primitive.AddressDerivation.FromMnemonicError sz)
 instance Data.ByteArray.Types.ByteArrayAccess (Cardano.Wallet.Primitive.AddressDerivation.Passphrase purpose)
 instance Control.DeepSeq.NFData (Cardano.Wallet.Primitive.AddressDerivation.Passphrase purpose)
 instance GHC.Base.Monoid (Cardano.Wallet.Primitive.AddressDerivation.Passphrase purpose)
@@ -1969,10 +1942,6 @@ instance GHC.Generics.Generic Cardano.Wallet.Primitive.AddressDerivation.Account
 instance forall k (s :: GHC.Types.Symbol) (key :: k). Control.DeepSeq.NFData (Cardano.Wallet.Primitive.AddressDerivation.KeyFingerprint s key)
 instance Cardano.Wallet.Primitive.AddressDerivation.NetworkDiscriminantVal 'Cardano.Wallet.Primitive.AddressDerivation.Mainnet
 instance GHC.TypeNats.KnownNat pm => Cardano.Wallet.Primitive.AddressDerivation.NetworkDiscriminantVal ('Cardano.Wallet.Primitive.AddressDerivation.Testnet pm)
-instance (n Data.Type.Equality.~ Crypto.Encoding.BIP39.EntropySize mw, csz Data.Type.Equality.~ Crypto.Encoding.BIP39.CheckSumBits n, Crypto.Encoding.BIP39.ConsistentEntropy n mw csz, Cardano.Wallet.Primitive.AddressDerivation.FromMnemonic rest, Cardano.Wallet.Primitive.AddressDerivation.NatVals rest) => Cardano.Wallet.Primitive.AddressDerivation.FromMnemonic (mw : rest)
-instance Cardano.Wallet.Primitive.AddressDerivation.NatVals '[]
-instance (GHC.TypeNats.KnownNat n, Cardano.Wallet.Primitive.AddressDerivation.NatVals rest) => Cardano.Wallet.Primitive.AddressDerivation.NatVals (n : rest)
-instance (n Data.Type.Equality.~ Crypto.Encoding.BIP39.EntropySize mw, csz Data.Type.Equality.~ Crypto.Encoding.BIP39.CheckSumBits n, Crypto.Encoding.BIP39.ConsistentEntropy n mw csz) => Cardano.Wallet.Primitive.AddressDerivation.FromMnemonic '[mw]
 instance Cardano.Wallet.Primitive.AddressDerivation.PassphraseMaxLength "raw"
 instance Cardano.Wallet.Primitive.AddressDerivation.PassphraseMaxLength "lenient"
 instance (Cardano.Wallet.Primitive.AddressDerivation.PassphraseMaxLength purpose, Cardano.Wallet.Primitive.AddressDerivation.PassphraseMinLength purpose) => Data.Text.Class.FromText (Cardano.Wallet.Primitive.AddressDerivation.Passphrase purpose)
@@ -5182,9 +5151,9 @@ instance Data.Aeson.Types.FromJSON.FromJSON Cardano.Wallet.Api.Types.WalletPostD
 instance Data.Aeson.Types.ToJSON.ToJSON Cardano.Wallet.Api.Types.WalletPostData
 instance Data.Aeson.Types.ToJSON.ToJSON Cardano.Wallet.Api.Types.SomeByronWalletPostData
 instance Data.Aeson.Types.FromJSON.FromJSON Cardano.Wallet.Api.Types.SomeByronWalletPostData
-instance Cardano.Wallet.Primitive.AddressDerivation.FromMnemonic mw => Data.Aeson.Types.FromJSON.FromJSON (Cardano.Wallet.Api.Types.ByronWalletPostData mw)
+instance Cardano.Mnemonic.MkSomeMnemonic mw => Data.Aeson.Types.FromJSON.FromJSON (Cardano.Wallet.Api.Types.ByronWalletPostData mw)
 instance Data.Aeson.Types.ToJSON.ToJSON (Cardano.Wallet.Api.Types.ByronWalletPostData mw)
-instance Cardano.Wallet.Primitive.AddressDerivation.FromMnemonic sizes => Data.Aeson.Types.FromJSON.FromJSON (Cardano.Wallet.Api.Types.ApiMnemonicT sizes)
+instance Cardano.Mnemonic.MkSomeMnemonic sizes => Data.Aeson.Types.FromJSON.FromJSON (Cardano.Wallet.Api.Types.ApiMnemonicT sizes)
 instance Data.Aeson.Types.ToJSON.ToJSON (Cardano.Wallet.Api.Types.ApiMnemonicT sizes)
 instance Data.Aeson.Types.FromJSON.FromJSON Cardano.Wallet.Api.Types.ApiWallet
 instance Data.Aeson.Types.ToJSON.ToJSON Cardano.Wallet.Api.Types.ApiWallet

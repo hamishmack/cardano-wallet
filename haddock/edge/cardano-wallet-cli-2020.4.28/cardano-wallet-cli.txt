@@ -171,7 +171,7 @@ hPutErrLn :: Handle -> Text -> IO ()
 enableWindowsANSI :: IO ()
 
 -- | Like <a>hGetLine</a> but with default handles
-getLine :: Buildable e => Text -> (Text -> Either e a) -> IO (a, Text)
+getLine :: Text -> (Text -> Either String a) -> IO (a, Text)
 
 -- | Prompt user and parse the input. Re-prompt on invalid inputs.
 hGetLine :: Buildable e => (Handle, Handle) -> Text -> (Text -> Either e a) -> IO (a, Text)
