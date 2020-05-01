@@ -28,7 +28,7 @@ mainnetVersionData :: NodeVersionData
 
 -- | Settings for configuring a TestNet network client
 testnetVersionData :: ProtocolMagic -> NodeVersionData
-mainnetBlockchainParameters :: BlockchainParameters
+mainnetBlockchainParameters :: GenesisBlockParameters
 emptyGenesis :: BlockchainParameters -> Block
 genesisTip :: Tip ByronBlock
 toByronHash :: Hash "BlockHeader" -> ByronHash
@@ -45,7 +45,7 @@ fromByronHash :: ByronHash -> Hash "BlockHeader"
 fromChainHash :: Hash "Genesis" -> ChainHash ByronBlock -> Hash "BlockHeader"
 
 -- | Convert genesis data into blockchain params and an initial set of UTxO
-fromGenesisData :: (GenesisData, GenesisHash) -> (BlockchainParameters, [TxOut])
+fromGenesisData :: (GenesisData, GenesisHash) -> (GenesisBlockParameters, [TxOut])
 fromNetworkMagic :: NetworkMagic -> ProtocolMagic
 fromProtocolMagicId :: ProtocolMagicId -> ProtocolMagic
 fromSlotNo :: EpochLength -> SlotNo -> SlotId
@@ -53,6 +53,10 @@ fromTip :: Hash "Genesis" -> EpochLength -> Tip ByronBlock -> BlockHeader
 fromTxAux :: TxAux -> Tx
 fromTxIn :: TxIn -> TxIn
 fromTxOut :: TxOut -> TxOut
+
+-- | Pluck the blockchain parameters relevant to creating transactions out
+--   of the cardano-chain update state record.
+txParametersFromUpdateState :: State -> TxParameters
 
 
 -- | Network Layer for talking to Haskell re-written nodes.
@@ -70,7 +74,7 @@ module Cardano.Wallet.Byron.Network
 pattern Cursor :: () => Point ByronBlock -> TQueue m (ChainSyncCmd m) -> Cursor (m Byron)
 
 -- | Create an instance of the network layer
-withNetworkLayer :: Tracer IO NetworkLayerLog -> BlockchainParameters -> FilePath -> (NodeToClientVersionData, CodecCBORTerm Text NodeToClientVersionData) -> (NetworkLayer IO (IO Byron) ByronBlock -> IO a) -> IO a
+withNetworkLayer :: Tracer IO NetworkLayerLog -> GenesisBlockParameters -> FilePath -> (NodeToClientVersionData, CodecCBORTerm Text NodeToClientVersionData) -> (NetworkLayer IO (IO Byron) ByronBlock -> IO a) -> IO a
 data NetworkLayerLog
 instance Data.Text.Class.ToText Cardano.Wallet.Byron.Network.NetworkLayerLog
 instance Cardano.BM.Data.Tracer.HasPrivacyAnnotation Cardano.Wallet.Byron.Network.NetworkLayerLog
@@ -126,7 +130,7 @@ data SomeNetworkDiscriminant
 -- | The <tt>cardano-wallet-shelley</tt> main function. It takes the
 --   configuration which was passed from the CLI and environment and starts
 --   all components of the wallet.
-serveWallet :: forall t. t ~ IO Byron => SomeNetworkDiscriminant -> Tracers IO -> SyncTolerance -> Maybe FilePath -> HostPreference -> Listen -> Maybe TlsConfiguration -> FilePath -> Block -> (BlockchainParameters, (NodeToClientVersionData, CodecCBORTerm Text NodeToClientVersionData)) -> (SockAddr -> IO ()) -> IO ExitCode
+serveWallet :: forall t. t ~ IO Byron => SomeNetworkDiscriminant -> Tracers IO -> SyncTolerance -> Maybe FilePath -> HostPreference -> Listen -> Maybe TlsConfiguration -> FilePath -> Block -> (GenesisBlockParameters, (NodeToClientVersionData, CodecCBORTerm Text NodeToClientVersionData)) -> (SockAddr -> IO ()) -> IO ExitCode
 
 -- | The types of trace events produced by the Byron API server.
 data Tracers' f
@@ -185,7 +189,7 @@ module Cardano.Wallet.Byron.Launch
 --   
 --   IMPORTANT: <tt>cardano-node</tt> must be available on the current
 --   path.
-withCardanoNode :: Trace IO Text -> FilePath -> Severity -> (FilePath -> Block -> (BlockchainParameters, NodeVersionData) -> IO a) -> IO a
+withCardanoNode :: Trace IO Text -> FilePath -> Severity -> (FilePath -> Block -> (GenesisBlockParameters, NodeVersionData) -> IO a) -> IO a
 data NetworkConfiguration
 [MainnetConfig] :: (SomeNetworkDiscriminant, NodeVersionData) -> NetworkConfiguration
 [TestnetConfig] :: FilePath -> NetworkConfiguration
@@ -199,5 +203,5 @@ nodeSocketOption :: Parser FilePath
 --   <li>-mainnet | (--testnet=FILE)</li>
 --   </ul>
 networkConfigurationOption :: Parser NetworkConfiguration
-parseGenesisData :: NetworkConfiguration -> ExceptT String IO (SomeNetworkDiscriminant, BlockchainParameters, NodeVersionData, Block)
+parseGenesisData :: NetworkConfiguration -> ExceptT String IO (SomeNetworkDiscriminant, GenesisBlockParameters, NodeVersionData, Block)
 instance GHC.Show.Show Cardano.Wallet.Byron.Launch.NetworkConfiguration

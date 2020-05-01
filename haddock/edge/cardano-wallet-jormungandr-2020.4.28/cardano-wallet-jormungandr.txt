@@ -894,13 +894,13 @@ module Cardano.Wallet.Jormungandr.Api.Client
 
 -- | Endpoints of the jormungandr REST API.
 data JormungandrClient m
-JormungandrClient :: (Hash "Account" -> ExceptT ErrGetAccountState m AccountState) -> ExceptT ErrNetworkUnavailable m (Hash "BlockHeader") -> (Hash "BlockHeader" -> ExceptT ErrGetBlock m Block) -> (Hash "BlockHeader" -> Word -> ExceptT ErrGetDescendants m [Hash "BlockHeader"]) -> (SealedTx -> ExceptT ErrPostTx m ()) -> (Hash "Genesis" -> ExceptT ErrGetBlockchainParams m (Block, BlockchainParameters)) -> (EpochNo -> ExceptT ErrNetworkUnavailable m StakeApiResponse) -> JormungandrClient m
+JormungandrClient :: (Hash "Account" -> ExceptT ErrGetAccountState m AccountState) -> ExceptT ErrNetworkUnavailable m (Hash "BlockHeader") -> (Hash "BlockHeader" -> ExceptT ErrGetBlock m Block) -> (Hash "BlockHeader" -> Word -> ExceptT ErrGetDescendants m [Hash "BlockHeader"]) -> (SealedTx -> ExceptT ErrPostTx m ()) -> (Hash "Genesis" -> ExceptT ErrGetBlockchainParams m (Block, GenesisBlockParameters)) -> (EpochNo -> ExceptT ErrNetworkUnavailable m StakeApiResponse) -> JormungandrClient m
 [$sel:getAccountState:JormungandrClient] :: JormungandrClient m -> Hash "Account" -> ExceptT ErrGetAccountState m AccountState
 [$sel:getTipId:JormungandrClient] :: JormungandrClient m -> ExceptT ErrNetworkUnavailable m (Hash "BlockHeader")
 [$sel:getBlock:JormungandrClient] :: JormungandrClient m -> Hash "BlockHeader" -> ExceptT ErrGetBlock m Block
 [$sel:getDescendantIds:JormungandrClient] :: JormungandrClient m -> Hash "BlockHeader" -> Word -> ExceptT ErrGetDescendants m [Hash "BlockHeader"]
 [$sel:postMessage:JormungandrClient] :: JormungandrClient m -> SealedTx -> ExceptT ErrPostTx m ()
-[$sel:getInitialBlockchainParameters:JormungandrClient] :: JormungandrClient m -> Hash "Genesis" -> ExceptT ErrGetBlockchainParams m (Block, BlockchainParameters)
+[$sel:getInitialBlockchainParameters:JormungandrClient] :: JormungandrClient m -> Hash "Genesis" -> ExceptT ErrGetBlockchainParams m (Block, GenesisBlockParameters)
 [$sel:getStakeDistribution:JormungandrClient] :: JormungandrClient m -> EpochNo -> ExceptT ErrNetworkUnavailable m StakeApiResponse
 
 -- | Construct a <a>JormungandrClient</a>
@@ -1003,11 +1003,11 @@ JormungandrConnParams :: Hash "Genesis" -> BaseUrl -> JormungandrConnParams
 -- | Starts the network layer and runs the given action with a
 --   <a>NetworkLayer</a>. The caller is responsible for handling errors
 --   which may have occurred while starting the Node.
-withNetworkLayer :: forall a t. t ~ Jormungandr => Tracer IO NetworkLayerLog -> JormungandrBackend -> (Either ErrStartup (JormungandrConnParams, (Block, BlockchainParameters), NetworkLayer IO t Block) -> IO a) -> IO a
+withNetworkLayer :: forall a t. t ~ Jormungandr => Tracer IO NetworkLayerLog -> JormungandrBackend -> (Either ErrStartup (JormungandrConnParams, (Block, GenesisBlockParameters), NetworkLayer IO t Block) -> IO a) -> IO a
 
 -- | Creates a new <a>NetworkLayer</a> connecting to an underlying
 --   <a>Jormungandr</a> backend target.
-newNetworkLayer :: forall t. t ~ Jormungandr => Tracer IO NetworkLayerLog -> BaseUrl -> Hash "Genesis" -> ExceptT ErrGetBlockchainParams IO ((Block, BlockchainParameters), NetworkLayer IO t Block)
+newNetworkLayer :: forall t. t ~ Jormungandr => Tracer IO NetworkLayerLog -> BaseUrl -> Hash "Genesis" -> ExceptT ErrGetBlockchainParams IO ((Block, GenesisBlockParameters), NetworkLayer IO t Block)
 
 -- | A subset of the Jormungandr configuration parameters, used for
 --   starting the Jormungandr node backend.
@@ -1074,7 +1074,7 @@ MsgWaitForService :: WaitForServiceLog -> NetworkLayerLog
 --   
 --   This version provides the full, raw blocks from
 --   <a>Cardano.Wallet.Jormungandr.Binary</a>.
-mkRawNetworkLayer :: forall m t block. (MonadBaseControl IO m, t ~ Jormungandr, block ~ Block) => BlockchainParameters -> Word -> MVar BlockHeaders -> JormungandrClient m -> NetworkLayer m t block
+mkRawNetworkLayer :: forall m t block. (MonadBaseControl IO m, t ~ Jormungandr, block ~ Block) => GenesisBlockParameters -> Word -> MVar BlockHeaders -> JormungandrClient m -> NetworkLayer m t block
 data BaseUrl
 BaseUrl :: Scheme -> String -> Int -> String -> BaseUrl
 [baseUrlScheme] :: BaseUrl -> Scheme
@@ -1137,7 +1137,7 @@ module Cardano.Wallet.Jormungandr
 -- | The <tt>cardano-wallet-jormungandr</tt> main function. It takes the
 --   configuration which was passed from the CLI and environment and starts
 --   all components of the wallet.
-serveWallet :: forall (n :: NetworkDiscriminant) t. (t ~ Jormungandr, NetworkDiscriminantVal n, DecodeAddress n, EncodeAddress n, DelegationAddress n ShelleyKey) => Tracers IO -> SyncTolerance -> Maybe FilePath -> HostPreference -> Listen -> JormungandrBackend -> (SockAddr -> Port "node" -> BlockchainParameters -> IO ()) -> IO ExitCode
+serveWallet :: forall (n :: NetworkDiscriminant) t. (t ~ Jormungandr, NetworkDiscriminantVal n, DecodeAddress n, EncodeAddress n, DelegationAddress n ShelleyKey) => Tracers IO -> SyncTolerance -> Maybe FilePath -> HostPreference -> Listen -> JormungandrBackend -> (SockAddr -> Port "node" -> GenesisBlockParameters -> IO ()) -> IO ExitCode
 
 -- | Covert a raw block to one that the
 --   <a>Cardano.Pool.Jormungandr.Metrics</a> module accepts.

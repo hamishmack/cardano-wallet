@@ -657,8 +657,22 @@ computeUtxoStatistics :: BoundType -> UTxO -> UTxOStatistics
 
 -- | Smart-constructor to create bounds using a log-10 scale
 log10 :: BoundType
+
+-- | Initial blockchain parameters loaded from the application
+--   configuration and genesis block.
+data GenesisBlockParameters
+GenesisBlockParameters :: BlockchainParameters -> TxParameters -> GenesisBlockParameters
+
+-- | These parameters are defined by the configuration and genesis block.
+--   At present, none of these are covered by the update system.
+[$sel:staticParameters:GenesisBlockParameters] :: GenesisBlockParameters -> BlockchainParameters
+
+-- | These parameters may be changed through update proposals. Currently
+--   the only dynamic blockchain parameters that the wallet needs are
+--   related to creating transactions.
+[$sel:txParameters:GenesisBlockParameters] :: GenesisBlockParameters -> TxParameters
 data BlockchainParameters
-BlockchainParameters :: Hash "Genesis" -> StartTime -> FeePolicy -> SlotLength -> EpochLength -> Quantity "byte" Word16 -> Quantity "block" Word32 -> ActiveSlotCoefficient -> BlockchainParameters
+BlockchainParameters :: Hash "Genesis" -> StartTime -> SlotLength -> EpochLength -> Quantity "block" Word32 -> ActiveSlotCoefficient -> BlockchainParameters
 
 -- | Hash of the very first block
 [$sel:getGenesisBlockHash:BlockchainParameters] :: BlockchainParameters -> Hash "Genesis"
@@ -666,17 +680,11 @@ BlockchainParameters :: Hash "Genesis" -> StartTime -> FeePolicy -> SlotLength -
 -- | Start time of the chain.
 [$sel:getGenesisBlockDate:BlockchainParameters] :: BlockchainParameters -> StartTime
 
--- | Policy regarding transaction fee.
-[$sel:getFeePolicy:BlockchainParameters] :: BlockchainParameters -> FeePolicy
-
 -- | Length, in seconds, of a slot.
 [$sel:getSlotLength:BlockchainParameters] :: BlockchainParameters -> SlotLength
 
 -- | Number of slots in a single epoch.
 [$sel:getEpochLength:BlockchainParameters] :: BlockchainParameters -> EpochLength
-
--- | Maximum size of a transaction (soft or hard limit).
-[$sel:getTxMaxSize:BlockchainParameters] :: BlockchainParameters -> Quantity "byte" Word16
 
 -- | Length of the suffix of the chain considered unstable
 [$sel:getEpochStability:BlockchainParameters] :: BlockchainParameters -> Quantity "block" Word32
@@ -684,6 +692,16 @@ BlockchainParameters :: Hash "Genesis" -> StartTime -> FeePolicy -> SlotLength -
 -- | In Genesis/Praos, corresponds to the % of active slots (i.e. slots for
 --   which someone can be elected as leader).
 [$sel:getActiveSlotCoefficient:BlockchainParameters] :: BlockchainParameters -> ActiveSlotCoefficient
+
+-- | Blockchain parameters relating to constructing transactions.
+data TxParameters
+TxParameters :: FeePolicy -> Quantity "byte" Word16 -> TxParameters
+
+-- | Formula for calculating the transaction fee.
+[$sel:getFeePolicy:TxParameters] :: TxParameters -> FeePolicy
+
+-- | Maximum size of a transaction (soft or hard limit).
+[$sel:getTxMaxSize:TxParameters] :: TxParameters -> Quantity "byte" Word16
 newtype ActiveSlotCoefficient
 ActiveSlotCoefficient :: Double -> ActiveSlotCoefficient
 [$sel:unActiveSlotCoefficient:ActiveSlotCoefficient] :: ActiveSlotCoefficient -> Double
@@ -1125,6 +1143,9 @@ instance GHC.Classes.Ord Cardano.Wallet.Primitive.Types.TxIn
 instance GHC.Classes.Eq Cardano.Wallet.Primitive.Types.TxIn
 instance GHC.Generics.Generic Cardano.Wallet.Primitive.Types.TxIn
 instance GHC.Show.Show Cardano.Wallet.Primitive.Types.TxIn
+instance GHC.Classes.Eq Cardano.Wallet.Primitive.Types.GenesisBlockParameters
+instance GHC.Show.Show Cardano.Wallet.Primitive.Types.GenesisBlockParameters
+instance GHC.Generics.Generic Cardano.Wallet.Primitive.Types.GenesisBlockParameters
 instance GHC.Classes.Eq Cardano.Wallet.Primitive.Types.BlockchainParameters
 instance GHC.Show.Show Cardano.Wallet.Primitive.Types.BlockchainParameters
 instance GHC.Generics.Generic Cardano.Wallet.Primitive.Types.BlockchainParameters
@@ -1202,6 +1223,9 @@ instance GHC.Classes.Ord Cardano.Wallet.Primitive.Types.SlotNo
 instance GHC.Classes.Eq Cardano.Wallet.Primitive.Types.SlotNo
 instance GHC.Read.Read Cardano.Wallet.Primitive.Types.SlotNo
 instance GHC.Show.Show Cardano.Wallet.Primitive.Types.SlotNo
+instance GHC.Classes.Eq Cardano.Wallet.Primitive.Types.TxParameters
+instance GHC.Show.Show Cardano.Wallet.Primitive.Types.TxParameters
+instance GHC.Generics.Generic Cardano.Wallet.Primitive.Types.TxParameters
 instance GHC.Real.Fractional Cardano.Wallet.Primitive.Types.ActiveSlotCoefficient
 instance GHC.Num.Num Cardano.Wallet.Primitive.Types.ActiveSlotCoefficient
 instance Formatting.Buildable.Buildable Cardano.Wallet.Primitive.Types.ActiveSlotCoefficient
@@ -1323,6 +1347,8 @@ instance Formatting.Buildable.Buildable Cardano.Wallet.Primitive.Types.UTxO
 instance Control.DeepSeq.NFData Cardano.Wallet.Primitive.Types.TxIn
 instance Formatting.Buildable.Buildable Cardano.Wallet.Primitive.Types.TxIn
 instance Formatting.Buildable.Buildable (Cardano.Wallet.Primitive.Types.TxIn, Cardano.Wallet.Primitive.Types.TxOut)
+instance Control.DeepSeq.NFData Cardano.Wallet.Primitive.Types.GenesisBlockParameters
+instance Formatting.Buildable.Buildable Cardano.Wallet.Primitive.Types.GenesisBlockParameters
 instance Control.DeepSeq.NFData Cardano.Wallet.Primitive.Types.BlockchainParameters
 instance Formatting.Buildable.Buildable Cardano.Wallet.Primitive.Types.BlockchainParameters
 instance Control.DeepSeq.NFData (Cardano.Wallet.Primitive.Types.Hash tag)
@@ -1362,6 +1388,8 @@ instance Formatting.Buildable.Buildable Cardano.Wallet.Primitive.Types.SlotId
 instance Data.Text.Class.ToText Cardano.Wallet.Primitive.Types.EpochNo
 instance Formatting.Buildable.Buildable Cardano.Wallet.Primitive.Types.EpochNo
 instance Control.DeepSeq.NFData Cardano.Wallet.Primitive.Types.EpochNo
+instance Control.DeepSeq.NFData Cardano.Wallet.Primitive.Types.TxParameters
+instance Formatting.Buildable.Buildable Cardano.Wallet.Primitive.Types.TxParameters
 instance Control.DeepSeq.NFData Cardano.Wallet.Primitive.Types.ActiveSlotCoefficient
 instance Formatting.Buildable.Buildable Cardano.Wallet.Primitive.Types.UTxOStatistics
 instance GHC.Classes.Eq Cardano.Wallet.Primitive.Types.UTxOStatistics
@@ -2550,7 +2578,7 @@ TxOut :: !TxId -> !Word32 -> !Address -> !Coin -> TxOut
 [txOutputAmount] :: TxOut -> !Coin
 type TxOutId = Key TxOut
 data Checkpoint
-Checkpoint :: !WalletId -> !SlotId -> !BlockId -> !BlockId -> !Word32 -> !BlockId -> !UTCTime -> !FeePolicy -> !Word64 -> !Word32 -> !Word16 -> !Word32 -> !Double -> Checkpoint
+Checkpoint :: !WalletId -> !SlotId -> !BlockId -> !BlockId -> !Word32 -> !BlockId -> !UTCTime -> !Word64 -> !Word32 -> !Word32 -> !Double -> Checkpoint
 [checkpointWalletId] :: Checkpoint -> !WalletId
 [checkpointSlot] :: Checkpoint -> !SlotId
 [checkpointHeaderHash] :: Checkpoint -> !BlockId
@@ -2558,13 +2586,17 @@ Checkpoint :: !WalletId -> !SlotId -> !BlockId -> !BlockId -> !Word32 -> !BlockI
 [checkpointBlockHeight] :: Checkpoint -> !Word32
 [checkpointGenesisHash] :: Checkpoint -> !BlockId
 [checkpointGenesisStart] :: Checkpoint -> !UTCTime
-[checkpointFeePolicy] :: Checkpoint -> !FeePolicy
 [checkpointSlotLength] :: Checkpoint -> !Word64
 [checkpointEpochLength] :: Checkpoint -> !Word32
-[checkpointTxMaxSize] :: Checkpoint -> !Word16
 [checkpointEpochStability] :: Checkpoint -> !Word32
 [checkpointActiveSlotCoeff] :: Checkpoint -> !Double
 type CheckpointId = Key Checkpoint
+data TxParameters
+TxParameters :: !WalletId -> !FeePolicy -> !Word16 -> TxParameters
+[txParametersWalletId] :: TxParameters -> !WalletId
+[txParametersFeePolicy] :: TxParameters -> !FeePolicy
+[txParametersTxMaxSize] :: TxParameters -> !Word16
+type TxParametersId = Key TxParameters
 data DelegationCertificate
 DelegationCertificate :: !WalletId -> !SlotId -> !Maybe PoolId -> DelegationCertificate
 [certWalletId] :: DelegationCertificate -> !WalletId
@@ -2632,6 +2664,7 @@ seq_state_address :: SeqStateAddress -> Key Checkpoint
 seq_state :: SeqState -> Key Wallet
 utxo :: UTxO -> Key Checkpoint
 delegationCertificate :: DelegationCertificate -> Key Wallet
+fk_wallet_tx_parameters :: TxParameters -> Key Wallet
 checkpoint :: Checkpoint -> Key Wallet
 fk_wallet_tx_meta :: TxMeta -> Key Wallet
 fk_wallet_private_key :: PrivateKey -> Key Wallet
@@ -2651,6 +2684,8 @@ instance GHC.Generics.Generic Cardano.Wallet.DB.Sqlite.TH.UTxO
 instance GHC.Show.Show Cardano.Wallet.DB.Sqlite.TH.UTxO
 instance GHC.Generics.Generic Cardano.Wallet.DB.Sqlite.TH.DelegationCertificate
 instance GHC.Show.Show Cardano.Wallet.DB.Sqlite.TH.DelegationCertificate
+instance GHC.Generics.Generic Cardano.Wallet.DB.Sqlite.TH.TxParameters
+instance GHC.Show.Show Cardano.Wallet.DB.Sqlite.TH.TxParameters
 instance GHC.Generics.Generic Cardano.Wallet.DB.Sqlite.TH.Checkpoint
 instance GHC.Show.Show Cardano.Wallet.DB.Sqlite.TH.Checkpoint
 instance GHC.Generics.Generic Cardano.Wallet.DB.Sqlite.TH.TxOut
@@ -2705,6 +2740,17 @@ instance GHC.Classes.Ord (Database.Persist.Class.PersistEntity.Key Cardano.Walle
 instance GHC.Classes.Eq (Database.Persist.Class.PersistEntity.Key Cardano.Wallet.DB.Sqlite.TH.Checkpoint)
 instance GHC.Read.Read (Database.Persist.Class.PersistEntity.Key Cardano.Wallet.DB.Sqlite.TH.Checkpoint)
 instance GHC.Show.Show (Database.Persist.Class.PersistEntity.Key Cardano.Wallet.DB.Sqlite.TH.Checkpoint)
+instance Data.Aeson.Types.FromJSON.FromJSON (Database.Persist.Class.PersistEntity.Key Cardano.Wallet.DB.Sqlite.TH.TxParameters)
+instance Data.Aeson.Types.ToJSON.ToJSON (Database.Persist.Class.PersistEntity.Key Cardano.Wallet.DB.Sqlite.TH.TxParameters)
+instance Database.Persist.Sql.Class.PersistFieldSql (Database.Persist.Class.PersistEntity.Key Cardano.Wallet.DB.Sqlite.TH.TxParameters)
+instance Database.Persist.Class.PersistField.PersistField (Database.Persist.Class.PersistEntity.Key Cardano.Wallet.DB.Sqlite.TH.TxParameters)
+instance Web.Internal.HttpApiData.FromHttpApiData (Database.Persist.Class.PersistEntity.Key Cardano.Wallet.DB.Sqlite.TH.TxParameters)
+instance Web.Internal.HttpApiData.ToHttpApiData (Database.Persist.Class.PersistEntity.Key Cardano.Wallet.DB.Sqlite.TH.TxParameters)
+instance Web.PathPieces.PathPiece (Database.Persist.Class.PersistEntity.Key Cardano.Wallet.DB.Sqlite.TH.TxParameters)
+instance GHC.Classes.Ord (Database.Persist.Class.PersistEntity.Key Cardano.Wallet.DB.Sqlite.TH.TxParameters)
+instance GHC.Classes.Eq (Database.Persist.Class.PersistEntity.Key Cardano.Wallet.DB.Sqlite.TH.TxParameters)
+instance GHC.Read.Read (Database.Persist.Class.PersistEntity.Key Cardano.Wallet.DB.Sqlite.TH.TxParameters)
+instance GHC.Show.Show (Database.Persist.Class.PersistEntity.Key Cardano.Wallet.DB.Sqlite.TH.TxParameters)
 instance GHC.Generics.Generic (Database.Persist.Class.PersistEntity.Key Cardano.Wallet.DB.Sqlite.TH.DelegationCertificate)
 instance GHC.Classes.Ord (Database.Persist.Class.PersistEntity.Key Cardano.Wallet.DB.Sqlite.TH.DelegationCertificate)
 instance GHC.Classes.Eq (Database.Persist.Class.PersistEntity.Key Cardano.Wallet.DB.Sqlite.TH.DelegationCertificate)
@@ -2838,6 +2884,12 @@ instance Data.Aeson.Types.FromJSON.FromJSON (Database.Persist.Class.PersistEntit
 instance (TypeError ...) => Database.Persist.Class.PersistUnique.OnlyOneUniqueKey Cardano.Wallet.DB.Sqlite.TH.DelegationCertificate
 instance (TypeError ...) => Database.Persist.Class.PersistUnique.AtLeastOneUniqueKey Cardano.Wallet.DB.Sqlite.TH.DelegationCertificate
 instance (Database.Persist.Class.PersistQuery backend, Database.Persist.Class.PersistEntity.PersistEntityBackend Cardano.Wallet.DB.Sqlite.TH.DelegationCertificate Data.Type.Equality.~ Database.Persist.Class.PersistStore.BaseBackend backend) => Database.Persist.Class.DeleteCascade.DeleteCascade Cardano.Wallet.DB.Sqlite.TH.DelegationCertificate backend
+instance Database.Persist.Class.PersistEntity.PersistEntity Cardano.Wallet.DB.Sqlite.TH.TxParameters
+instance Database.Persist.Class.PersistField.PersistField Cardano.Wallet.DB.Sqlite.TH.TxParameters
+instance Database.Persist.Sql.Class.PersistFieldSql Cardano.Wallet.DB.Sqlite.TH.TxParameters
+instance (TypeError ...) => Database.Persist.Class.PersistUnique.OnlyOneUniqueKey Cardano.Wallet.DB.Sqlite.TH.TxParameters
+instance (TypeError ...) => Database.Persist.Class.PersistUnique.AtLeastOneUniqueKey Cardano.Wallet.DB.Sqlite.TH.TxParameters
+instance (Database.Persist.Class.PersistQuery backend, Database.Persist.Class.PersistEntity.PersistEntityBackend Cardano.Wallet.DB.Sqlite.TH.TxParameters Data.Type.Equality.~ Database.Persist.Class.PersistStore.BaseBackend backend) => Database.Persist.Class.DeleteCascade.DeleteCascade Cardano.Wallet.DB.Sqlite.TH.TxParameters backend
 instance Database.Persist.Class.PersistEntity.PersistEntity Cardano.Wallet.DB.Sqlite.TH.Checkpoint
 instance Database.Persist.Class.PersistField.PersistField Cardano.Wallet.DB.Sqlite.TH.Checkpoint
 instance Database.Persist.Sql.Class.PersistFieldSql Cardano.Wallet.DB.Sqlite.TH.Checkpoint
@@ -3219,12 +3271,13 @@ Database :: !Map wid (WalletDatabase s xprv) -> Map (Hash "Tx") Tx -> Database w
 
 -- | Model database record for a single wallet.
 data WalletDatabase s xprv
-WalletDatabase :: !Map SlotId (Wallet s) -> !Map SlotId (Maybe PoolId) -> !WalletMetadata -> !Map (Hash "Tx") TxMeta -> !Maybe xprv -> WalletDatabase s xprv
+WalletDatabase :: !Map SlotId (Wallet s) -> !Map SlotId (Maybe PoolId) -> !WalletMetadata -> !Map (Hash "Tx") TxMeta -> !Maybe xprv -> !TxParameters -> WalletDatabase s xprv
 [$sel:checkpoints:WalletDatabase] :: WalletDatabase s xprv -> !Map SlotId (Wallet s)
 [$sel:certificates:WalletDatabase] :: WalletDatabase s xprv -> !Map SlotId (Maybe PoolId)
 [$sel:metadata:WalletDatabase] :: WalletDatabase s xprv -> !WalletMetadata
 [$sel:txHistory:WalletDatabase] :: WalletDatabase s xprv -> !Map (Hash "Tx") TxMeta
 [$sel:xprv:WalletDatabase] :: WalletDatabase s xprv -> !Maybe xprv
+[$sel:txParameters:WalletDatabase] :: WalletDatabase s xprv -> !TxParameters
 
 -- | Produces an empty model database.
 emptyDatabase :: Ord wid => Database wid s xprv
@@ -3255,7 +3308,7 @@ ErrErasePendingTxNoSuchWallet :: wid -> ErrErasePendingTx wid
 ErrErasePendingTxNoTx :: Hash "Tx" -> ErrErasePendingTx wid
 ErrErasePendingTxNoPendingTx :: Hash "Tx" -> ErrErasePendingTx wid
 mCleanDB :: Ord wid => ModelOp wid s xprv ()
-mInitializeWallet :: forall wid s xprv. Ord wid => wid -> Wallet s -> WalletMetadata -> TxHistory -> ModelOp wid s xprv ()
+mInitializeWallet :: forall wid s xprv. Ord wid => wid -> Wallet s -> WalletMetadata -> TxHistory -> TxParameters -> ModelOp wid s xprv ()
 mRemoveWallet :: Ord wid => wid -> ModelOp wid s xprv ()
 mListWallets :: Ord wid => ModelOp wid s xprv [wid]
 mPutCheckpoint :: Ord wid => wid -> Wallet s -> ModelOp wid s xprv ()
@@ -3267,9 +3320,11 @@ mReadWalletMeta :: Ord wid => wid -> ModelOp wid s xprv (Maybe WalletMetadata)
 mPutDelegationCertificate :: Ord wid => wid -> DelegationCertificate -> SlotId -> ModelOp wid s xprv ()
 mPutTxHistory :: forall wid s xprv. Ord wid => wid -> TxHistory -> ModelOp wid s xprv ()
 mReadTxHistory :: forall wid s xprv. Ord wid => wid -> SortOrder -> Range SlotId -> Maybe TxStatus -> ModelOp wid s xprv TxHistory
+mRemovePendingTx :: Ord wid => wid -> Hash "Tx" -> ModelOp wid s xprv ()
 mPutPrivateKey :: Ord wid => wid -> xprv -> ModelOp wid s xprv ()
 mReadPrivateKey :: Ord wid => wid -> ModelOp wid s xprv (Maybe xprv)
-mRemovePendingTx :: Ord wid => wid -> Hash "Tx" -> ModelOp wid s xprv ()
+mPutTxParameters :: Ord wid => wid -> TxParameters -> ModelOp wid s xprv ()
+mReadTxParameters :: Ord wid => wid -> ModelOp wid s xprv (Maybe TxParameters)
 instance Data.Traversable.Traversable Cardano.Wallet.DB.Model.Err
 instance Data.Foldable.Foldable Cardano.Wallet.DB.Model.Err
 instance GHC.Base.Functor Cardano.Wallet.DB.Model.Err
@@ -3584,7 +3639,7 @@ instance Control.DeepSeq.NFData Cardano.Wallet.Network.BlockHeaders.BlockHeaders
 
 module Cardano.Wallet.Network
 data NetworkLayer m target block
-NetworkLayer :: (Cursor target -> ExceptT ErrGetBlock m (NextBlocksResult (Cursor target) block)) -> ([BlockHeader] -> m (Cursor target)) -> (Cursor target -> SlotId) -> ExceptT ErrCurrentNodeTip m BlockHeader -> (SealedTx -> ExceptT ErrPostTx m ()) -> (EpochNo -> ExceptT ErrNetworkUnavailable m (Map PoolId (Quantity "lovelace" Word64))) -> (ChimericAccount -> ExceptT ErrGetAccountBalance m (Quantity "lovelace" Word64)) -> NetworkLayer m target block
+NetworkLayer :: (Cursor target -> ExceptT ErrGetBlock m (NextBlocksResult (Cursor target) block)) -> ([BlockHeader] -> m (Cursor target)) -> (Cursor target -> SlotId) -> ExceptT ErrCurrentNodeTip m BlockHeader -> m TxParameters -> (SealedTx -> ExceptT ErrPostTx m ()) -> (EpochNo -> ExceptT ErrNetworkUnavailable m (Map PoolId (Quantity "lovelace" Word64))) -> (ChimericAccount -> ExceptT ErrGetAccountBalance m (Quantity "lovelace" Word64)) -> NetworkLayer m target block
 
 -- | Starting from the given <a>Cursor</a>, fetches a contiguous sequence
 --   of blocks from the node, if they are available. An updated cursor will
@@ -3608,6 +3663,7 @@ NetworkLayer :: (Cursor target -> ExceptT ErrGetBlock m (NextBlocksResult (Curso
 
 -- | Get the current tip from the chain producer
 [currentNodeTip] :: NetworkLayer m target block -> ExceptT ErrCurrentNodeTip m BlockHeader
+[getTxParameters] :: NetworkLayer m target block -> m TxParameters
 
 -- | Broadcast a transaction to the chain producer
 [postTx] :: NetworkLayer m target block -> SealedTx -> ExceptT ErrPostTx m ()
@@ -3646,7 +3702,7 @@ data family Cursor target
 --   known list of headers, re-initializing the cursor.
 --   
 --   Exits with <a>Nothing</a> in case of error.
-follow :: forall target block e. Show e => NetworkLayer IO target block -> Tracer IO FollowLog -> [BlockHeader] -> (NonEmpty block -> BlockHeader -> IO (FollowAction e)) -> (block -> BlockHeader) -> IO FollowExit
+follow :: forall target block e. Show e => NetworkLayer IO target block -> Tracer IO FollowLog -> [BlockHeader] -> (NonEmpty block -> (BlockHeader, TxParameters) -> IO (FollowAction e)) -> (block -> BlockHeader) -> IO FollowExit
 
 -- | <tt>FollowAction</tt> enables the callback of <tt>follow</tt> to
 --   signal if the chain-following should <tt>ExitWith</tt>,
@@ -3705,6 +3761,12 @@ data ErrGetBlock
 ErrGetBlockNetworkUnreachable :: ErrNetworkUnavailable -> ErrGetBlock
 ErrGetBlockNotFound :: Hash "BlockHeader" -> ErrGetBlock
 
+-- | Error while querying local parameters state.
+data ErrGetTxParameters
+ErrGetTxParametersTip :: ErrCurrentNodeTip -> ErrGetTxParameters
+ErrGetTxParametersNetworkUnreachable :: ErrNetworkUnavailable -> ErrGetTxParameters
+ErrGetTxParametersNotFound :: ErrGetTxParameters
+
 -- | Error while trying to send a transaction
 data ErrPostTx
 ErrPostTxNetworkUnreachable :: ErrNetworkUnavailable -> ErrPostTx
@@ -3740,6 +3802,9 @@ instance GHC.Generics.Generic Cardano.Wallet.Network.ErrGetAccountBalance
 instance GHC.Classes.Eq Cardano.Wallet.Network.ErrPostTx
 instance GHC.Show.Show Cardano.Wallet.Network.ErrPostTx
 instance GHC.Generics.Generic Cardano.Wallet.Network.ErrPostTx
+instance GHC.Classes.Eq Cardano.Wallet.Network.ErrGetTxParameters
+instance GHC.Show.Show Cardano.Wallet.Network.ErrGetTxParameters
+instance GHC.Generics.Generic Cardano.Wallet.Network.ErrGetTxParameters
 instance GHC.Classes.Eq Cardano.Wallet.Network.ErrGetBlock
 instance GHC.Show.Show Cardano.Wallet.Network.ErrGetBlock
 instance GHC.Generics.Generic Cardano.Wallet.Network.ErrGetBlock
@@ -3755,6 +3820,7 @@ instance Cardano.BM.Data.Tracer.HasSeverityAnnotation Cardano.Wallet.Network.Fol
 instance GHC.Base.Functor m => GHC.Base.Functor (Cardano.Wallet.Network.NetworkLayer m target)
 instance GHC.Base.Functor (Cardano.Wallet.Network.NextBlocksResult cursor)
 instance GHC.Exception.Type.Exception Cardano.Wallet.Network.ErrPostTx
+instance GHC.Exception.Type.Exception Cardano.Wallet.Network.ErrGetTxParameters
 instance GHC.Exception.Type.Exception Cardano.Wallet.Network.ErrCurrentNodeTip
 instance GHC.Exception.Type.Exception Cardano.Wallet.Network.ErrNetworkUnavailable
 
@@ -3800,12 +3866,12 @@ module Cardano.Wallet.DB
 --   <tt>let</tt> binding here as the semantic for those are slightly
 --   different: we really need a pattern match here!
 data DBLayer m s k
-DBLayer :: (PrimaryKey WalletId -> Wallet s -> WalletMetadata -> [(Tx, TxMeta)] -> ExceptT ErrWalletAlreadyExists stm ()) -> (PrimaryKey WalletId -> ExceptT ErrNoSuchWallet stm ()) -> stm [PrimaryKey WalletId] -> (PrimaryKey WalletId -> Wallet s -> ExceptT ErrNoSuchWallet stm ()) -> (PrimaryKey WalletId -> stm (Maybe (Wallet s))) -> (PrimaryKey WalletId -> stm [BlockHeader]) -> (PrimaryKey WalletId -> WalletMetadata -> ExceptT ErrNoSuchWallet stm ()) -> (PrimaryKey WalletId -> stm (Maybe WalletMetadata)) -> (PrimaryKey WalletId -> DelegationCertificate -> SlotId -> ExceptT ErrNoSuchWallet stm ()) -> (PrimaryKey WalletId -> [(Tx, TxMeta)] -> ExceptT ErrNoSuchWallet stm ()) -> (PrimaryKey WalletId -> SortOrder -> Range SlotId -> Maybe TxStatus -> stm [(Tx, TxMeta)]) -> (PrimaryKey WalletId -> Hash "Tx" -> ExceptT ErrRemovePendingTx stm ()) -> (PrimaryKey WalletId -> (k  'RootK XPrv, Hash "encryption") -> ExceptT ErrNoSuchWallet stm ()) -> (PrimaryKey WalletId -> stm (Maybe (k  'RootK XPrv, Hash "encryption"))) -> (PrimaryKey WalletId -> SlotId -> ExceptT ErrNoSuchWallet stm SlotId) -> (PrimaryKey WalletId -> ExceptT ErrNoSuchWallet stm ()) -> (forall a. stm a -> m a) -> DBLayer m s k
+DBLayer :: (PrimaryKey WalletId -> Wallet s -> WalletMetadata -> [(Tx, TxMeta)] -> TxParameters -> ExceptT ErrWalletAlreadyExists stm ()) -> (PrimaryKey WalletId -> ExceptT ErrNoSuchWallet stm ()) -> stm [PrimaryKey WalletId] -> (PrimaryKey WalletId -> Wallet s -> ExceptT ErrNoSuchWallet stm ()) -> (PrimaryKey WalletId -> stm (Maybe (Wallet s))) -> (PrimaryKey WalletId -> stm [BlockHeader]) -> (PrimaryKey WalletId -> WalletMetadata -> ExceptT ErrNoSuchWallet stm ()) -> (PrimaryKey WalletId -> stm (Maybe WalletMetadata)) -> (PrimaryKey WalletId -> DelegationCertificate -> SlotId -> ExceptT ErrNoSuchWallet stm ()) -> (PrimaryKey WalletId -> [(Tx, TxMeta)] -> ExceptT ErrNoSuchWallet stm ()) -> (PrimaryKey WalletId -> SortOrder -> Range SlotId -> Maybe TxStatus -> stm [(Tx, TxMeta)]) -> (PrimaryKey WalletId -> Hash "Tx" -> ExceptT ErrRemovePendingTx stm ()) -> (PrimaryKey WalletId -> (k  'RootK XPrv, Hash "encryption") -> ExceptT ErrNoSuchWallet stm ()) -> (PrimaryKey WalletId -> stm (Maybe (k  'RootK XPrv, Hash "encryption"))) -> (PrimaryKey WalletId -> TxParameters -> ExceptT ErrNoSuchWallet stm ()) -> (PrimaryKey WalletId -> stm (Maybe TxParameters)) -> (PrimaryKey WalletId -> SlotId -> ExceptT ErrNoSuchWallet stm SlotId) -> (PrimaryKey WalletId -> ExceptT ErrNoSuchWallet stm ()) -> (forall a. stm a -> m a) -> DBLayer m s k
 
 -- | Initialize a database entry for a given wallet. <a>putCheckpoint</a>,
---   <a>putWalletMeta</a> or <a>putTxHistory</a> will actually all fail if
---   they are called _first_ on a wallet.
-[initializeWallet] :: DBLayer m s k -> PrimaryKey WalletId -> Wallet s -> WalletMetadata -> [(Tx, TxMeta)] -> ExceptT ErrWalletAlreadyExists stm ()
+--   <a>putWalletMeta</a>, <a>putTxHistory</a> or <a>putTxParameters</a>
+--   will actually all fail if they are called _first_ on a wallet.
+[initializeWallet] :: DBLayer m s k -> PrimaryKey WalletId -> Wallet s -> WalletMetadata -> [(Tx, TxMeta)] -> TxParameters -> ExceptT ErrWalletAlreadyExists stm ()
 
 -- | Remove a given wallet and all its associated data (checkpoints,
 --   metadata, tx history ...)
@@ -3880,6 +3946,12 @@ DBLayer :: (PrimaryKey WalletId -> Wallet s -> WalletMetadata -> [(Tx, TxMeta)] 
 -- | Read a previously stored private key and its associated passphrase
 --   hash.
 [readPrivateKey] :: DBLayer m s k -> PrimaryKey WalletId -> stm (Maybe (k  'RootK XPrv, Hash "encryption"))
+
+-- | Store blockchain parameters for the node tip.
+[putTxParameters] :: DBLayer m s k -> PrimaryKey WalletId -> TxParameters -> ExceptT ErrNoSuchWallet stm ()
+
+-- | Read the previously stored node tip blockchain parameters.
+[readTxParameters] :: DBLayer m s k -> PrimaryKey WalletId -> stm (Maybe TxParameters)
 
 -- | Drops all checkpoints and transaction data after the given slot.
 --   
@@ -5395,7 +5467,7 @@ shuffleWith :: RandomGen g => g -> [a] -> IO [a]
 --   </ul>
 module Cardano.Wallet
 data WalletLayer s t (k :: Depth -> * -> *)
-WalletLayer :: Tracer IO WalletLog -> (Block, BlockchainParameters, SyncTolerance) -> NetworkLayer IO t Block -> TransactionLayer t k -> DBLayer IO s k -> WalletLayer s t
+WalletLayer :: Tracer IO WalletLog -> (Block, GenesisBlockParameters, SyncTolerance) -> NetworkLayer IO t Block -> TransactionLayer t k -> DBLayer IO s k -> WalletLayer s t
 type HasDBLayer s k = HasType (DBLayer IO s k)
 dbLayer :: forall s k ctx. HasDBLayer s k ctx => Lens' ctx (DBLayer IO s k)
 type HasLogger msg = HasType (Tracer IO msg)
@@ -5407,8 +5479,8 @@ type HasNetworkLayer t = HasType (NetworkLayer IO t Block)
 networkLayer :: forall t ctx. HasNetworkLayer t ctx => Lens' ctx (NetworkLayer IO t Block)
 type HasTransactionLayer t k = HasType (TransactionLayer t k)
 transactionLayer :: forall t k ctx. HasTransactionLayer t k ctx => Lens' ctx (TransactionLayer t k)
-type HasGenesisData = HasType (Block, BlockchainParameters, SyncTolerance)
-genesisData :: forall ctx. HasGenesisData ctx => Lens' ctx (Block, BlockchainParameters, SyncTolerance)
+type HasGenesisData = HasType (Block, GenesisBlockParameters, SyncTolerance)
+genesisData :: forall ctx. HasGenesisData ctx => Lens' ctx (Block, GenesisBlockParameters, SyncTolerance)
 
 -- | Initialise and store a new wallet, returning its ID.
 createWallet :: forall ctx s k. (HasGenesisData ctx, HasDBLayer s k ctx, Show s, NFData s, IsOurs s Address, IsOurs s ChimericAccount) => ctx -> WalletId -> WalletName -> s -> ExceptT ErrWalletAlreadyExists IO WalletId
@@ -6040,7 +6112,7 @@ type Proxy_ = PostExternalTransaction
 --   <a>https://input-output-hk.github.io/cardano-wallet/api/#operation/postExternalTransaction</a>
 type PostExternalTransaction = "proxy" :> "transactions" :> ReqBody '[OctetStream] PostExternalTransactionData :> PostAccepted '[JSON] ApiTxId
 data ApiLayer s t (k :: Depth -> * -> *)
-ApiLayer :: Tracer IO (WorkerLog WalletId WalletLog) -> (Block, BlockchainParameters, SyncTolerance) -> NetworkLayer IO t Block -> TransactionLayer t k -> DBFactory IO s k -> WorkerRegistry WalletId (DBLayer IO s k) -> ApiLayer s t
+ApiLayer :: Tracer IO (WorkerLog WalletId WalletLog) -> (Block, GenesisBlockParameters, SyncTolerance) -> NetworkLayer IO t Block -> TransactionLayer t k -> DBFactory IO s k -> WorkerRegistry WalletId (DBLayer IO s k) -> ApiLayer s t
 type HasWorkerRegistry s k ctx = (HasType (WorkerRegistry WalletId (DBLayer IO s k)) ctx, HasWorkerCtx (DBLayer IO s k) ctx, WorkerKey ctx ~ WalletId, WorkerMsg ctx ~ WalletLog)
 workerRegistry :: forall s k ctx. HasWorkerRegistry s k ctx => Lens' ctx (WorkerRegistry WalletId (DBLayer IO s k))
 type HasDBFactory s k = HasType (DBFactory IO s k)
@@ -6340,14 +6412,14 @@ serve :: HasServer api ([] :: [Type]) => Proxy api -> Server api -> Application
 withListeningSocket :: HostPreference -> Listen -> (Either ListenError (Port, Socket) -> IO a) -> IO a
 
 -- | Create a new instance of the wallet layer.
-newApiLayer :: forall ctx s t k. (ctx ~ ApiLayer s t k, IsOurs s ChimericAccount, IsOurs s Address) => Tracer IO (WorkerLog WalletId WalletLog) -> (Block, BlockchainParameters, SyncTolerance) -> NetworkLayer IO t Block -> TransactionLayer t k -> DBFactory IO s k -> IO ctx
+newApiLayer :: forall ctx s t k. (ctx ~ ApiLayer s t k, IsOurs s ChimericAccount, IsOurs s Address) => Tracer IO (WorkerLog WalletId WalletLog) -> (Block, GenesisBlockParameters, SyncTolerance) -> NetworkLayer IO t Block -> TransactionLayer t k -> DBFactory IO s k -> IO ctx
 delegationFee :: forall ctx s t n k. (s ~ SeqState n k, k ~ ShelleyKey, ctx ~ ApiLayer s t k) => ctx -> ApiT WalletId -> Handler ApiFee
 deleteTransaction :: forall ctx s t k. ctx ~ ApiLayer s t k => ctx -> ApiT WalletId -> ApiTxId -> Handler NoContent
 deleteWallet :: forall ctx s t k. ctx ~ ApiLayer s t k => ctx -> ApiT WalletId -> Handler NoContent
 getMigrationInfo :: forall s t k. () => ApiLayer s t k -> ApiT WalletId -> Handler ApiByronWalletMigrationInfo
 getNetworkClock :: NtpClient -> Bool -> Handler ApiNetworkClock
-getNetworkInformation :: forall t. () => (Block, BlockchainParameters, SyncTolerance) -> NetworkLayer IO t Block -> Handler ApiNetworkInformation
-getNetworkParameters :: (Block, BlockchainParameters, SyncTolerance) -> ApiEpochNumber -> Handler ApiNetworkParameters
+getNetworkInformation :: forall t. () => (Block, GenesisBlockParameters, SyncTolerance) -> NetworkLayer IO t Block -> Handler ApiNetworkInformation
+getNetworkParameters :: (Block, GenesisBlockParameters, SyncTolerance) -> ApiEpochNumber -> Handler ApiNetworkParameters
 getUTxOsStatistics :: forall ctx s t k. ctx ~ ApiLayer s t k => ctx -> ApiT WalletId -> Handler ApiUtxoStatistics
 getWallet :: forall ctx s t k apiWallet. (ctx ~ ApiLayer s t k, HasWorkerRegistry s k ctx, HasDBFactory s k ctx) => ctx -> MkApiWallet ctx s apiWallet -> ApiT WalletId -> Handler (apiWallet, UTCTime)
 joinStakePool :: forall ctx s t n k e. (DelegationAddress n k, s ~ SeqState n k, k ~ ShelleyKey, HardDerivation k, ctx ~ ApiLayer s t k) => ctx -> StakePoolLayer e IO -> ApiPoolId -> ApiT WalletId -> ApiWalletPassphrase -> Handler (ApiTransaction n)
