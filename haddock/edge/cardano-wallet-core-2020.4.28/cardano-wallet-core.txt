@@ -979,6 +979,26 @@ StakePoolMetadata :: PoolOwner -> StakePoolTicker -> Text -> Maybe Text -> Text 
 -- | Bech32-encoded address.
 [$sel:pledgeAddress:StakePoolMetadata] :: StakePoolMetadata -> Text
 
+-- | A subset of the <a>StakePoolMetadata</a> but with the information that
+--   is available off-chain. The
+--   <a>$sel:pledgeAddress:StakePoolMetadata</a> and
+--   <a>$sel:owner:StakePoolMetadata</a> are actually part of the pool
+--   registration certificates published on-chain.
+data StakePoolOffChainMetadata
+StakePoolOffChainMetadata :: StakePoolTicker -> Text -> Text -> Text -> StakePoolOffChainMetadata
+
+-- | Very short human-readable ID for the stake pool.
+[$sel:ticker:StakePoolOffChainMetadata] :: StakePoolOffChainMetadata -> StakePoolTicker
+
+-- | Name of the stake pool.
+[$sel:name:StakePoolOffChainMetadata] :: StakePoolOffChainMetadata -> Text
+
+-- | Short description of the stake pool.
+[$sel:description:StakePoolOffChainMetadata] :: StakePoolOffChainMetadata -> Text
+
+-- | Absolute URL for the stake pool's homepage link.
+[$sel:homepage:StakePoolOffChainMetadata] :: StakePoolOffChainMetadata -> Text
+
 -- | Very short name for a stake pool.
 newtype StakePoolTicker
 StakePoolTicker :: Text -> StakePoolTicker
@@ -1298,6 +1318,9 @@ instance GHC.Classes.Ord Cardano.Wallet.Primitive.Types.PoolId
 instance GHC.Show.Show Cardano.Wallet.Primitive.Types.PoolId
 instance GHC.Classes.Eq Cardano.Wallet.Primitive.Types.PoolId
 instance GHC.Generics.Generic Cardano.Wallet.Primitive.Types.PoolId
+instance GHC.Generics.Generic Cardano.Wallet.Primitive.Types.StakePoolOffChainMetadata
+instance GHC.Show.Show Cardano.Wallet.Primitive.Types.StakePoolOffChainMetadata
+instance GHC.Classes.Eq Cardano.Wallet.Primitive.Types.StakePoolOffChainMetadata
 instance Data.Text.Class.ToText Cardano.Wallet.Primitive.Types.StakePoolTicker
 instance GHC.Classes.Eq Cardano.Wallet.Primitive.Types.StakePoolTicker
 instance GHC.Show.Show Cardano.Wallet.Primitive.Types.StakePoolTicker
@@ -5239,6 +5262,8 @@ instance Data.Aeson.Types.FromJSON.FromJSON (Cardano.Wallet.Api.Types.ApiT Carda
 instance Data.Aeson.Types.ToJSON.ToJSON (Cardano.Wallet.Api.Types.ApiT Cardano.Wallet.Primitive.Types.TxStatus)
 instance Data.Aeson.Types.FromJSON.FromJSON (Cardano.Wallet.Api.Types.ApiT Cardano.Wallet.Primitive.Types.StakePoolMetadata)
 instance Data.Aeson.Types.ToJSON.ToJSON (Cardano.Wallet.Api.Types.ApiT Cardano.Wallet.Primitive.Types.StakePoolMetadata)
+instance Data.Aeson.Types.FromJSON.FromJSON (Cardano.Wallet.Api.Types.ApiT Cardano.Wallet.Primitive.Types.StakePoolOffChainMetadata)
+instance Data.Aeson.Types.ToJSON.ToJSON (Cardano.Wallet.Api.Types.ApiT Cardano.Wallet.Primitive.Types.StakePoolOffChainMetadata)
 instance Data.Aeson.Types.FromJSON.FromJSON (Cardano.Wallet.Api.Types.ApiT Cardano.Wallet.Primitive.Types.StartTime)
 instance Data.Aeson.Types.ToJSON.ToJSON (Cardano.Wallet.Api.Types.ApiT Cardano.Wallet.Primitive.Types.StartTime)
 instance Data.Aeson.Types.FromJSON.FromJSON (Cardano.Wallet.Api.Types.ApiT Cardano.Wallet.Primitive.Types.SlotLength)
@@ -5376,6 +5401,37 @@ withDBLayer :: Tracer IO DBLog -> Maybe FilePath -> (DBLayer IO -> IO a) -> IO a
 defaultFilePath :: FilePath -> FilePath
 
 
+-- | API and corresponding client for dealing with a metadata aggregation
+--   server in Shelley. Such servers follow an OpenAPI specification, and
+--   on existing implementation written in Haskell is available at:
+--   
+--   <ul>
+--   <li><a>https://github.com/input-output-hk/smash</a></li>
+--   </ul>
+module Cardano.Pool.Metadata
+type Api = "api" :> "v1" :> "metadata" :> Capture "hash" (ApiT PoolId) :> Get '[JSON] (ApiT StakePoolOffChainMetadata)
+
+-- | A client for fetching metadata from an Aggregation server.
+--   
+--   See also <tt>newClient</tt> to construct a client.
+newtype Client api
+Client :: (PoolId -> IO (Either ClientError StakePoolOffChainMetadata)) -> Client api
+[getStakePoolMetadata] :: Client api -> PoolId -> IO (Either ClientError StakePoolOffChainMetadata)
+mkClient :: Manager -> BaseUrl -> Client Api
+data BaseUrl
+BaseUrl :: Scheme -> String -> Int -> String -> BaseUrl
+[baseUrlScheme] :: BaseUrl -> Scheme
+[baseUrlHost] :: BaseUrl -> String
+[baseUrlPort] :: BaseUrl -> Int
+[baseUrlPath] :: BaseUrl -> String
+data Scheme
+Http :: Scheme
+Https :: Scheme
+data Manager
+defaultManagerSettings :: ManagerSettings
+newManager :: ManagerSettings -> IO Manager
+
+
 -- | Utility functions for manipulating time values.
 module Data.Time.Utils
 
@@ -5398,7 +5454,7 @@ module Data.Vector.Shuffle
 shuffle :: [a] -> IO [a]
 
 -- | Generate a random generator seed from a text string
-mkSeed :: Text -> StdGen
+mkSeed :: Text -> Int
 
 -- | Like <a>shuffle</a>, but from a given seed. <a>shuffle</a> will use a
 --   randomly generate seed using <a>newStdGen</a> from
