@@ -76,6 +76,18 @@ pattern Cursor :: () => Point ByronBlock -> TQueue m (ChainSyncCmd m) -> Cursor 
 -- | Create an instance of the network layer
 withNetworkLayer :: Tracer IO NetworkLayerLog -> GenesisBlockParameters -> FilePath -> (NodeToClientVersionData, CodecCBORTerm Text NodeToClientVersionData) -> (NetworkLayer IO (IO Byron) ByronBlock -> IO a) -> IO a
 data NetworkLayerLog
+MsgCouldntConnect :: Int -> NetworkLayerLog
+MsgConnectionLost :: Maybe IOException -> NetworkLayerLog
+MsgTxSubmission :: TraceSendRecv (LocalTxSubmission (GenTx ByronBlock) ApplyMempoolPayloadErr) -> NetworkLayerLog
+MsgLocalStateQuery :: TraceSendRecv (LocalStateQuery ByronBlock (Query ByronBlock)) -> NetworkLayerLog
+MsgHandshakeTracer :: WithMuxBearer (ConnectionId LocalAddress) HandshakeTrace -> NetworkLayerLog
+MsgFindIntersection :: [BlockHeader] -> NetworkLayerLog
+MsgIntersectionFound :: Hash "BlockHeader" -> NetworkLayerLog
+MsgFindIntersectionTimeout :: NetworkLayerLog
+MsgPostSealedTx :: SealedTx -> NetworkLayerLog
+MsgNodeTip :: Tip ByronBlock -> NetworkLayerLog
+MsgTxParameters :: TxParameters -> NetworkLayerLog
+MsgLocalStateQueryError :: String -> NetworkLayerLog
 instance Data.Text.Class.ToText Cardano.Wallet.Byron.Network.NetworkLayerLog
 instance Cardano.BM.Data.Tracer.HasPrivacyAnnotation Cardano.Wallet.Byron.Network.NetworkLayerLog
 instance Cardano.BM.Data.Tracer.HasSeverityAnnotation Cardano.Wallet.Byron.Network.NetworkLayerLog
