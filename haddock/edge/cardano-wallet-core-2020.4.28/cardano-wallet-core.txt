@@ -5408,16 +5408,59 @@ defaultFilePath :: FilePath -> FilePath
 --   <ul>
 --   <li><a>https://github.com/input-output-hk/smash</a></li>
 --   </ul>
+--   
+--   This module is expected to be mostly used qualified as
+--   <tt>Metadata</tt> to give context to the exposed functions and
+--   data-types.
 module Cardano.Pool.Metadata
 type Api = "api" :> "v1" :> "metadata" :> Capture "hash" (ApiT PoolId) :> Get '[JSON] (ApiT StakePoolOffChainMetadata)
 
 -- | A client for fetching metadata from an Aggregation server.
 --   
---   See also <tt>newClient</tt> to construct a client.
-newtype Client api
-Client :: (PoolId -> IO (Either ClientError StakePoolOffChainMetadata)) -> Client api
-[getStakePoolMetadata] :: Client api -> PoolId -> IO (Either ClientError StakePoolOffChainMetadata)
-mkClient :: Manager -> BaseUrl -> Client Api
+--   See also <a>newClient</a> to construct a client.
+newtype Client api m
+Client :: (PoolId -> m (Maybe StakePoolOffChainMetadata)) -> Client api m
+[getStakePoolMetadata] :: Client api m -> PoolId -> m (Maybe StakePoolOffChainMetadata)
+
+-- | A configuration for managing metadata with the aggregation server.
+--   Callbacks and parameterized effects allows for easier testing while a
+--   real specialization would wire a database connector in here.
+data ClientConfig
+ClientConfig :: Manager -> BaseUrl -> NominalDiffTime -> ClientConfig
+
+-- | An HTTP connection manager.
+[manager] :: ClientConfig -> Manager
+
+-- | Url for reaching out to the metadata aggregation server.
+[baseUrl] :: ClientConfig -> BaseUrl
+
+-- | A constant for the maximum age of cached registry metadatabefore it's
+--   considered to be stale.
+[cacheTTL] :: ClientConfig -> NominalDiffTime
+
+-- | Callbacks interfaces allowing the client to cache and manage cached
+--   entities. These would typically be hooked up with a database.
+data ClientCallbacks (m :: * -> *)
+ClientCallbacks :: (PoolId -> (Maybe StakePoolOffChainMetadata, UTCTime) -> m ()) -> (PoolId -> m (Maybe (Maybe StakePoolOffChainMetadata, UTCTime))) -> ClientCallbacks
+
+-- | A callback action for storing an off-chain metadata. The callback may
+--   be called with <a>Nothing</a> to store that no metadata were found for
+--   a particular 'PoolId; this allows for not constantly re-fetching data
+--   for pools that are known to have no metadata.
+[saveMetadata] :: ClientCallbacks -> PoolId -> (Maybe StakePoolOffChainMetadata, UTCTime) -> m ()
+
+-- | Action for fetching the last modification time of a cached result.
+--   <a>Nothing</a> is expected when there's no cached result.
+[getCachedMetadata] :: ClientCallbacks -> PoolId -> m (Maybe (Maybe StakePoolOffChainMetadata, UTCTime))
+
+-- | Create a new HTTP <a>Client</a> in IO with caching support.
+newClient :: Tracer IO MetadataRegistryLog -> ClientConfig -> ClientCallbacks IO -> Client Api IO
+
+-- | Capture log events for the Client.
+data MetadataRegistryLog
+MsgUsingCached :: PoolId -> UTCTime -> MetadataRegistryLog
+MsgRefreshingMetadata :: PoolId -> (Maybe StakePoolOffChainMetadata, UTCTime) -> MetadataRegistryLog
+MsgUnexpectedError :: ClientError -> MetadataRegistryLog
 data BaseUrl
 BaseUrl :: Scheme -> String -> Int -> String -> BaseUrl
 [baseUrlScheme] :: BaseUrl -> Scheme
@@ -5430,6 +5473,12 @@ Https :: Scheme
 data Manager
 defaultManagerSettings :: ManagerSettings
 newManager :: ManagerSettings -> IO Manager
+instance GHC.Classes.Eq Cardano.Pool.Metadata.MetadataRegistryLog
+instance GHC.Show.Show Cardano.Pool.Metadata.MetadataRegistryLog
+instance GHC.Generics.Generic Cardano.Pool.Metadata.MetadataRegistryLog
+instance Cardano.BM.Data.Tracer.HasPrivacyAnnotation Cardano.Pool.Metadata.MetadataRegistryLog
+instance Cardano.BM.Data.Tracer.HasSeverityAnnotation Cardano.Pool.Metadata.MetadataRegistryLog
+instance Data.Text.Class.ToText Cardano.Pool.Metadata.MetadataRegistryLog
 
 
 -- | Utility functions for manipulating time values.

@@ -104,6 +104,31 @@ withLogging :: ((Tracer IO msg, IO [msg]) -> IO a) -> IO a
 --   along with the result of the action.
 captureLogging :: (Tracer IO msg -> IO a) -> IO ([msg], a)
 
+-- | Count elements in the list matching the given Prism. Handy for
+--   counting log messages which are typically constructed as sum types
+--   with many constructors.
+--   
+--   A Prism look scary but can be obtained very easily if the target type
+--   is deriving <tt>Generic</tt>. From there, use
+--   
+--   `Data.Generics.Sum.Constructor#_Ctor` from `generic-lens`.
+--   
+--   <b>Example:</b>
+--   
+--   <pre>
+--   &gt;&gt;&gt; data MySumType = MyConstructor | MyOtherConstructor deriving Generic
+--   </pre>
+--   
+--   <pre>
+--   &gt;&gt;&gt; xs = [ MyConstructor, MyOtherConstructor, MyConstructor ]
+--   </pre>
+--   
+--   <pre>
+--   &gt;&gt;&gt; count (_Ctor @"MyConstructor") xs
+--   2
+--   </pre>
+countMsg :: Prism' s a -> [s] -> Int
+
 
 -- | Utility function for making test suites pass on Windows.
 module Test.Utils.Windows
