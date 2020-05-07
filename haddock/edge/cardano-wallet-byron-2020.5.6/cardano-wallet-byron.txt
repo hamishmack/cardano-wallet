@@ -85,7 +85,7 @@ MsgFindIntersection :: [BlockHeader] -> NetworkLayerLog
 MsgIntersectionFound :: Hash "BlockHeader" -> NetworkLayerLog
 MsgFindIntersectionTimeout :: NetworkLayerLog
 MsgPostSealedTx :: SealedTx -> NetworkLayerLog
-MsgNodeTip :: Tip ByronBlock -> NetworkLayerLog
+MsgNodeTip :: BlockHeader -> NetworkLayerLog
 MsgTxParameters :: TxParameters -> NetworkLayerLog
 MsgLocalStateQueryError :: String -> NetworkLayerLog
 instance Data.Text.Class.ToText Cardano.Wallet.Byron.Network.NetworkLayerLog
