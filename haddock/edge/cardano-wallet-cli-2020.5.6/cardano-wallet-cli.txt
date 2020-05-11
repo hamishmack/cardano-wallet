@@ -169,6 +169,7 @@ hPutErrLn :: Handle -> Text -> IO ()
 --   function will achieve nothing, and the ANSI control characters will be
 --   printed in grey (too bad).
 enableWindowsANSI :: IO ()
+markCharsRedAtIndices :: Integral i => [i] -> String -> String
 
 -- | Like <a>hGetLine</a> but with default handles
 getLine :: Text -> (Text -> Either String a) -> IO (a, Text)
