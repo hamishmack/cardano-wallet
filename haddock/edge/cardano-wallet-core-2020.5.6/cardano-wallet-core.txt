@@ -4980,6 +4980,7 @@ newtype ApiMnemonicT (sizes :: [Nat])
 ApiMnemonicT :: SomeMnemonic -> ApiMnemonicT
 [$sel:getApiMnemonicT:ApiMnemonicT] :: ApiMnemonicT -> SomeMnemonic
 type family ApiAddressT (n :: k) :: *
+type family ApiAddressIdT (n :: k) :: *
 type family ApiCoinSelectionT (n :: k) :: *
 type family ApiSelectCoinsDataT (n :: k) :: *
 type family ApiTransactionT (n :: k) :: *
@@ -5144,6 +5145,7 @@ instance GHC.Enum.Bounded Cardano.Wallet.Api.Types.ByronWalletStyle
 instance GHC.Classes.Eq Cardano.Wallet.Api.Types.ByronWalletStyle
 instance GHC.Generics.Generic Cardano.Wallet.Api.Types.ByronWalletStyle
 instance GHC.Show.Show Cardano.Wallet.Api.Types.ByronWalletStyle
+instance Cardano.Wallet.Api.Types.DecodeAddress n => Web.Internal.HttpApiData.FromHttpApiData (Cardano.Wallet.Api.Types.ApiT Cardano.Wallet.Primitive.Types.Address, Data.Proxy.Proxy n)
 instance Cardano.Wallet.Api.Types.DecodeAddress n => Data.Aeson.Types.FromJSON.FromJSON (Cardano.Wallet.Api.Types.ApiAddress n)
 instance Cardano.Wallet.Api.Types.DecodeAddress n => Data.Aeson.Types.FromJSON.FromJSON (Cardano.Wallet.Api.Types.ApiSelectCoinsData n)
 instance Cardano.Wallet.Api.Types.DecodeAddress n => Data.Aeson.Types.FromJSON.FromJSON (Cardano.Wallet.Api.Types.ApiCoinSelection n)
@@ -5155,6 +5157,7 @@ instance Cardano.Wallet.Api.Types.DecodeAddress n => Data.Aeson.Types.FromJSON.F
 instance Cardano.Wallet.Api.Types.DecodeAddress n => Data.Aeson.Types.FromJSON.FromJSON (Cardano.Wallet.Api.Types.ApiTxInput n)
 instance Cardano.Wallet.Api.Types.DecodeAddress 'Cardano.Wallet.Primitive.AddressDerivation.Mainnet
 instance GHC.TypeNats.KnownNat pm => Cardano.Wallet.Api.Types.DecodeAddress ('Cardano.Wallet.Primitive.AddressDerivation.Testnet pm)
+instance Cardano.Wallet.Api.Types.EncodeAddress n => Web.Internal.HttpApiData.ToHttpApiData (Cardano.Wallet.Api.Types.ApiT Cardano.Wallet.Primitive.Types.Address, Data.Proxy.Proxy n)
 instance Cardano.Wallet.Api.Types.EncodeAddress n => Data.Aeson.Types.ToJSON.ToJSON (Cardano.Wallet.Api.Types.ApiAddress n)
 instance Cardano.Wallet.Api.Types.EncodeAddress n => Data.Aeson.Types.ToJSON.ToJSON (Cardano.Wallet.Api.Types.ApiSelectCoinsData n)
 instance Cardano.Wallet.Api.Types.EncodeAddress n => Data.Aeson.Types.ToJSON.ToJSON (Cardano.Wallet.Api.Types.ApiCoinSelection n)
@@ -5646,6 +5649,7 @@ ErrCheckIntegrityDifferentGenesis :: Hash "Genesis" -> Hash "Genesis" -> ErrChec
 newtype ErrWalletNotResponding
 ErrWalletNotResponding :: WalletId -> ErrWalletNotResponding
 createRandomAddress :: forall ctx s k n. (HasDBLayer s k ctx, PaymentAddress n ByronKey, s ~ RndState n, k ~ ByronKey) => ctx -> WalletId -> Passphrase "raw" -> Maybe (Index  'Hardened  'AddressK) -> ExceptT ErrCreateRandomAddress IO Address
+importRandomAddress :: forall ctx s k n. (HasDBLayer s k ctx, PaymentAddress n ByronKey, s ~ RndState n, k ~ ByronKey) => ctx -> WalletId -> Address -> ExceptT ErrImportRandomAddress IO ()
 
 -- | List all addresses of a wallet with their metadata. Addresses are
 --   ordered from the most-recently-discovered to the oldest known.
@@ -5656,6 +5660,10 @@ ErrIndexAlreadyExists :: Index  'Hardened  'AddressK -> ErrCreateRandomAddress
 ErrCreateAddrNoSuchWallet :: ErrNoSuchWallet -> ErrCreateRandomAddress
 ErrCreateAddrWithRootKey :: ErrWithRootKey -> ErrCreateRandomAddress
 ErrCreateAddressNotAByronWallet :: ErrCreateRandomAddress
+data ErrImportRandomAddress
+ErrImportAddrNoSuchWallet :: ErrNoSuchWallet -> ErrImportRandomAddress
+ErrImportAddrDoesNotBelong :: ErrImportRandomAddress
+ErrImportAddressNotAByronWallet :: ErrImportRandomAddress
 
 -- | Makes a fully-resolved coin selection for the given set of payments.
 selectCoinsExternal :: forall ctx s t k e. (GenChange s, HasDBLayer s k ctx, HasLogger WalletLog ctx, HasTransactionLayer t k ctx, IsOwned s k, NFData s, Show s, e ~ ErrValidateSelection t) => ctx -> WalletId -> ArgGenChange s -> NonEmpty TxOut -> ExceptT (ErrSelectCoinsExternal e) IO UnsignedTx
@@ -5913,6 +5921,9 @@ MsgPaymentCoinSelectionAdjusted :: CoinSelection -> WalletLog
 instance GHC.Generics.Generic (Cardano.Wallet.WalletLayer s t k)
 instance GHC.Classes.Eq Cardano.Wallet.WalletLog
 instance GHC.Show.Show Cardano.Wallet.WalletLog
+instance GHC.Show.Show Cardano.Wallet.ErrImportRandomAddress
+instance GHC.Classes.Eq Cardano.Wallet.ErrImportRandomAddress
+instance GHC.Generics.Generic Cardano.Wallet.ErrImportRandomAddress
 instance GHC.Show.Show Cardano.Wallet.ErrCreateRandomAddress
 instance GHC.Classes.Eq Cardano.Wallet.ErrCreateRandomAddress
 instance GHC.Generics.Generic Cardano.Wallet.ErrCreateRandomAddress
@@ -6143,10 +6154,10 @@ type GetByronUTxOsStatistics = "byron-wallets" :> Capture "walletId" (ApiT Walle
 -- | 
 --   <a>https://input-output-hk.github.io/cardano-wallet/api/#operation/putByronWalletPassphrase</a>
 type PutByronWalletPassphrase = "byron-wallets" :> Capture "walletId" (ApiT WalletId) :> "passphrase" :> ReqBody '[JSON] ByronWalletPutPassphraseData :> PutNoContent
-type ByronAddresses n = PostByronAddress n :<|> ListByronAddresses n
+type ByronAddresses n = PostByronAddress n :<|> PutByronAddress n :<|> ListByronAddresses n
 
 -- | 
---   <a>https://input-output-hk.github.io/cardano-wallet/api/#operation/postByronAddress</a>
+--   <a>https://input-output-hk.github.io/cardano-wallet/api/#operation/createAddress</a>
 type PostByronAddress n = "byron-wallets" :> Capture "walletId" (ApiT WalletId) :> "addresses" :> ReqBody '[JSON] ApiPostRandomAddressData :> PostCreated '[JSON] (ApiAddressT n)
 
 -- | 
@@ -6309,9 +6320,10 @@ transactionClient :: TransactionClient
 --   API.
 byronTransactionClient :: TransactionClient
 data AddressClient
-AddressClient :: (ApiT WalletId -> Maybe (ApiT AddressState) -> ClientM [Value]) -> (ApiT WalletId -> ApiPostRandomAddressData -> ClientM (ApiAddressT Value)) -> AddressClient
+AddressClient :: (ApiT WalletId -> Maybe (ApiT AddressState) -> ClientM [Value]) -> (ApiT WalletId -> ApiPostRandomAddressData -> ClientM (ApiAddressT Value)) -> (ApiT WalletId -> ApiAddressIdT Value -> ClientM NoContent) -> AddressClient
 [$sel:listAddresses:AddressClient] :: AddressClient -> ApiT WalletId -> Maybe (ApiT AddressState) -> ClientM [Value]
 [$sel:postRandomAddress:AddressClient] :: AddressClient -> ApiT WalletId -> ApiPostRandomAddressData -> ClientM (ApiAddressT Value)
+[$sel:putRandomAddress:AddressClient] :: AddressClient -> ApiT WalletId -> ApiAddressIdT Value -> ClientM NoContent
 
 -- | Produces an 'AddressClient n' working against the /wallets API
 addressClient :: AddressClient
@@ -6515,6 +6527,7 @@ postTransactionFee :: forall ctx s t k n. (Buildable (ErrValidateSelection t), c
 postTrezorWallet :: forall ctx s t k n. (ctx ~ ApiLayer s t k, s ~ SeqState n k, k ~ IcarusKey, HasWorkerRegistry s k ctx, PaymentAddress n IcarusKey) => ctx -> ByronWalletPostData '[12, 15, 18, 21, 24] -> Handler ApiByronWallet
 postWallet :: forall ctx s t k n. (s ~ SeqState n k, k ~ ShelleyKey, ctx ~ ApiLayer s t k, HasDBFactory s k ctx, HasWorkerRegistry s k ctx) => ctx -> WalletOrAccountPostData -> Handler ApiWallet
 putByronWalletPassphrase :: forall ctx s t k. (WalletKey k, ctx ~ ApiLayer s t k) => ctx -> ApiT WalletId -> ByronWalletPutPassphraseData -> Handler NoContent
+putRandomAddress :: forall ctx s t k n. (s ~ RndState n, k ~ ByronKey, ctx ~ ApiLayer s t k, PaymentAddress n ByronKey) => ctx -> ApiT WalletId -> (ApiT Address, Proxy n) -> Handler NoContent
 putWallet :: forall ctx s t k apiWallet. ctx ~ ApiLayer s t k => ctx -> MkApiWallet ctx s apiWallet -> ApiT WalletId -> WalletPutData -> Handler apiWallet
 putWalletPassphrase :: forall ctx s t k. (WalletKey k, ctx ~ ApiLayer s t k) => ctx -> ApiT WalletId -> WalletPutPassphraseData -> Handler NoContent
 quitStakePool :: forall ctx s t n k. (DelegationAddress n k, s ~ SeqState n k, k ~ ShelleyKey, HardDerivation k, ctx ~ ApiLayer s t k) => ctx -> ApiT WalletId -> ApiWalletPassphrase -> Handler (ApiTransaction n)
@@ -6582,6 +6595,7 @@ instance Cardano.Wallet.Api.Server.LiftHandler Cardano.Wallet.ErrFetchRewards
 instance Cardano.Wallet.Api.Server.LiftHandler Cardano.Wallet.ErrQuitStakePool
 instance Cardano.Wallet.Api.Server.LiftHandler Cardano.Wallet.Api.Server.ErrNoSuchEpoch
 instance Cardano.Wallet.Api.Server.LiftHandler Cardano.Wallet.ErrCreateRandomAddress
+instance Cardano.Wallet.Api.Server.LiftHandler Cardano.Wallet.ErrImportRandomAddress
 instance Cardano.Wallet.Api.Server.LiftHandler (Network.Wai.Internal.Request, Servant.Server.Internal.ServerError.ServerError)
 
 

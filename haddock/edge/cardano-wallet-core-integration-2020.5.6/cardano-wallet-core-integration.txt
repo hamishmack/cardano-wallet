@@ -226,8 +226,10 @@ infixl 9 !!
 
 -- | Create an empty wallet
 emptyRandomWallet :: Context t -> IO ApiByronWallet
+emptyRandomWalletMws :: Context t -> IO (ApiByronWallet, Mnemonic 12)
 emptyRandomWalletWithPasswd :: Context t -> Text -> IO ApiByronWallet
 emptyIcarusWallet :: Context t -> IO ApiByronWallet
+emptyIcarusWalletMws :: Context t -> IO (ApiByronWallet, Mnemonic 15)
 emptyByronWalletWith :: forall t. () => Context t -> String -> (Text, [Text], Text) -> IO ApiByronWallet
 
 -- | Create an empty wallet
@@ -389,6 +391,7 @@ deleteWalletViaCLI :: forall t r s. (CmdResult r, KnownCommand t, HasType (Port 
 getWalletUtxoStatisticsViaCLI :: forall t r s. (CmdResult r, KnownCommand t, HasType (Port "wallet") s) => s -> String -> IO r
 getWalletViaCLI :: forall t r s. (CmdResult r, KnownCommand t, HasType (Port "wallet") s) => s -> String -> IO r
 createAddressViaCLI :: forall t s. (KnownCommand t, HasType (Port "wallet") s) => s -> [String] -> String -> IO (ExitCode, Text, Text)
+importAddressViaCLI :: forall t r s. (CmdResult r, KnownCommand t, HasType (Port "wallet") s) => s -> [String] -> IO r
 listAddressesViaCLI :: forall t r s. (CmdResult r, KnownCommand t, HasType (Port "wallet") s) => s -> [String] -> IO r
 listStakePoolsViaCLI :: forall t r s. (CmdResult r, KnownCommand t, HasType (Port "wallet") s) => s -> IO r
 listWalletsViaCLI :: forall t r s. (CmdResult r, KnownCommand t, HasType (Port "wallet") s) => s -> IO r
