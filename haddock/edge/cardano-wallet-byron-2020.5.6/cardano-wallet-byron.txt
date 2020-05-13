@@ -71,7 +71,7 @@ txParametersFromUpdateState :: State -> TxParameters
 --   <li>In particular sections 4.1, 4.2, 4.6 and 4.8</li>
 --   </ul>
 module Cardano.Wallet.Byron.Network
-pattern Cursor :: () => Point ByronBlock -> TQueue m (ChainSyncCmd m) -> Cursor (m Byron)
+pattern Cursor :: () => Point ByronBlock -> TQueue m (ChainSyncCmd ByronBlock m) -> Cursor (m Byron)
 
 -- | Create an instance of the network layer
 withNetworkLayer :: Tracer IO NetworkLayerLog -> GenesisBlockParameters -> FilePath -> (NodeToClientVersionData, CodecCBORTerm Text NodeToClientVersionData) -> (NetworkLayer IO (IO Byron) ByronBlock -> IO a) -> IO a

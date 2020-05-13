@@ -6599,6 +6599,146 @@ instance Cardano.Wallet.Api.Server.LiftHandler Cardano.Wallet.ErrImportRandomAdd
 instance Cardano.Wallet.Api.Server.LiftHandler (Network.Wai.Internal.Request, Servant.Server.Internal.ServerError.ServerError)
 
 
+-- | Ouroboros mini-protocols clients for implementing cardano-wallet.
+--   These clients implement the logic and lift away concerns related to
+--   concrete data-type representation so that the code can be re-used /
+--   shared between Byron and Shelley.
+module Ouroboros.Network.Client.Wallet
+
+-- | Client for the 'Chain Sync' mini-protocol, which provides
+--   notifications when the node tip changes.
+--   
+--   This is used in the same way as <a>chainSyncWithBlocks</a>, except
+--   that only one of these clients is necessary, rather than one client
+--   per wallet.
+chainSyncFollowTip :: forall m block. Monad m => (Tip block -> m ()) -> ChainSyncClient (Serialised block) (Tip (Serialised block)) m Void
+
+-- | We interact with the <tt>NetworkClient</tt> via a commands
+--   instrumenting the client to move within the state-machine protocol.
+--   Commands are sent from a parent thread via a shared <a>TQueue</a>.
+--   
+--   MAIN THREAD | NETWORK CLIENT THREAD | *---------------* | | | | |
+--   Wallet Engine | | | | | *---------------* | | ^ | v | |
+--   *---------------* | *----------------* | | | | | | Network Layer
+--   |<a>TQueue ]===</a>| Network Client | | | | | | *---------------* |
+--   *----------------* | | ^ | v | | (ChainSync + TxSubmission)
+--   
+--   The NetworkClient is idling most of the time and blocking on the
+--   TQueue while waiting for commands. Upon receiving a command, it
+--   interprets it by sending the corresponding instruction to the node and
+--   responding via a given callback.
+--   
+--   See also <a>send</a> for invoking commands.
+data ChainSyncCmd block (m :: * -> *)
+CmdFindIntersection :: [Point block] -> (Maybe (Point block) -> m ()) -> ChainSyncCmd block
+CmdNextBlocks :: (NextBlocksResult (Point block) block -> m ()) -> ChainSyncCmd block
+
+-- | Client for the 'Chain Sync' mini-protocol.
+--   
+--   A corresponding <tt>Channel</tt> can be obtained using a
+--   <tt>MuxInitiatorApplication</tt> constructor. Once started, the client
+--   simply runs ad-infinitum but one may interact with it via a
+--   <a>TQueue</a> of commands / messages used to move inside the
+--   state-machine.
+--   
+--   In a typical usage, <a>chainSyncWithBlocks</a> would be executed in a
+--   forked thread and given a <a>TQueue</a> over which the parent thread
+--   as control.
+--   
+--   <pre>
+--   &gt;&gt;&gt; forkIO $ void $ chainSyncWithBlocks tr queue channel
+--   ()
+--   
+--   &gt;&gt;&gt; writeTQueue queue ...
+--   </pre>
+--   
+--   Agency
+--   -------------------------------------------------------------------------
+--   Client has agency* | Idle Server has agency* | Intersect, Next
+--   
+--   <ul>
+--   <li>A peer has agency if it is expected to send the next message.</li>
+--   <li>-----------* | Intersect |◀══════════════════════════════╗</li>
+--   <li>-----------* FindIntersect ║ │ ║ │ *---------* *------* │
+--   Intersect.{Found,NotFound} | |═════════════▶| Done |
+--   └───────────────────────────────╼| | MsgDone *------* | Idle |
+--   ╔═══════════════════════════════════| | ║ RequestNext | |⇦ START ║
+--   *---------* ▼ ╿</li>
+--   <li>------* Roll.{Backward,Forward} │ | Next
+--   |────────────────────────────────────┘</li>
+--   <li>------*</li>
+--   </ul>
+chainSyncWithBlocks :: forall m block. (Monad m, MonadSTM m, HasHeader block) => Quantity "block" Word32 -> (Tip block -> BlockHeader) -> TQueue m (ChainSyncCmd block m) -> ChainSyncClientPipelined block (Tip block) m Void
+
+-- | Sending command to the localTxSubmission client. See also
+--   <a>ChainSyncCmd</a>.
+data LocalTxSubmissionCmd tx err (m :: * -> *)
+CmdSubmitTx :: tx -> (Maybe err -> m ()) -> LocalTxSubmissionCmd tx err
+
+-- | Client for the 'Local Tx Submission' mini-protocol.
+--   
+--   A corresponding <tt>Channel</tt> can be obtained using a
+--   <tt>MuxInitiatorApplication</tt> constructor.
+--   
+--   Agency
+--   -------------------------------------------------------------------------
+--   Client has agency* | Idle Server has agency* | Busy * A peer has
+--   agency if it is expected to send the next message.
+--   
+--   <ul>
+--   <li>-----------* | Busy |◀══════════════════════════════╗</li>
+--   <li>-----------* SubmitTx ║ │ │ ║ │ │ *---------* *------* │ │
+--   AcceptTx | |═════════════▶| Done | │ └────────────────────────────╼| |
+--   MsgDone *------* │ RejectTx | Idle |
+--   └──────────────────────────────────╼| | | |⇦ START</li>
+--   <li>---------*</li>
+--   </ul>
+localTxSubmission :: forall m tx err. (MonadThrow m, MonadTimer m) => TQueue m (LocalTxSubmissionCmd tx err m) -> LocalTxSubmissionClient tx err m Void
+
+-- | Command to send to the localStateQuery client. See also
+--   <a>ChainSyncCmd</a>.
+data LocalStateQueryCmd block state (m :: * -> *)
+CmdQueryLocalState :: Point block -> Query block state -> (LocalStateQueryResult state -> m ()) -> LocalStateQueryCmd block state
+
+-- | Shorthand for the possible outcomes of acquiring local state
+--   parameters.
+type LocalStateQueryResult state = Either AcquireFailure state
+
+-- | Client for the 'Local State Query' mini-protocol.
+--   
+--   A corresponding <tt>Channel</tt> can be obtained using a
+--   <tt>MuxInitiatorApplication</tt> constructor.
+--   
+--   Agency
+--   -------------------------------------------------------------------------
+--   Client has agency* | Idle, Acquired Server has agency* | Acquiring,
+--   Querying * A peer has agency if it is expected to send the next
+--   message.
+--   
+--   ┌───────────────┐ Done ┌───────────────┐ ┌──────▶│ Idle
+--   ├─────────────▶│ Done │ │ └───┬───────────┘ └───────────────┘ │ │ ▲ │
+--   Acquire │ │ │ │ │ Failure │ ▼ │ │ ┌───────────┴───┐ Result │ │
+--   Acquiring │◀─────────────────────┐ │ └───┬───────────┘ │ Release│ │ ▲
+--   │ │ │ │ │ │ Acquired ▼ │ ReAcquire │ │ ┌───────────┴───┐
+--   ┌────────┴───────┐ └───────┤ Acquired │────────────&gt;│ Querying │
+--   └───────────────┘ └────────────────┘
+localStateQuery :: forall m block state. (MonadThrow m, MonadTimer m) => TQueue m (LocalStateQueryCmd block state m) -> LocalStateQueryClient block (Query block) m Void
+
+-- | Helper function to easily send commands to the node's client and read
+--   responses back.
+--   
+--   <pre>
+--   &gt;&gt;&gt; queue `send` CmdNextBlocks
+--   RollForward cursor nodeTip blocks
+--   </pre>
+--   
+--   <pre>
+--   &gt;&gt;&gt; queue `send` CmdNextBlocks
+--   AwaitReply
+--   </pre>
+send :: (MonadSTM m, MonadAsync m, MonadTimer m) => TQueue m (cmd m) -> ((a -> m ()) -> cmd m) -> m (Either ErrNetworkUnavailable a)
+
+
 -- | Provides the package version and git revision which this was compiled
 --   from.
 --   
