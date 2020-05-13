@@ -1,0 +1,29 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script></head><body><pre><span class="hs-comment">-- |</span><span>
+</span><a name="line-2"></a><span class="hs-comment">-- Copyright: &#169; 2018-2020 IOHK</span><span>
+</span><a name="line-3"></a><span class="hs-comment">-- License: Apache-2.0</span><span>
+</span><a name="line-4"></a><span class="hs-comment">--</span><span>
+</span><a name="line-5"></a><span class="hs-comment">-- High-level interface for dealing with stake pools.</span><span>
+</span><a name="line-6"></a><span class="hs-keyword">module</span><span> </span><span class="hs-identifier">Cardano.Pool</span><span>
+</span><a name="line-7"></a><span>    </span><span class="hs-special">(</span><span> </span><a href="Cardano.Pool.html#StakePoolLayer"><span class="hs-identifier hs-type">StakePoolLayer</span></a><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span>
+</span><a name="line-8"></a><span>    </span><span class="hs-special">)</span><span> </span><span class="hs-keyword">where</span><span>
+</span><a name="line-9"></a><span>
+</span><a name="line-10"></a><span class="hs-keyword">import</span><span> </span><span class="hs-identifier">Prelude</span><span>
+</span><a name="line-11"></a><span>
+</span><a name="line-12"></a><span class="hs-keyword">import</span><span> </span><a href="Cardano.Wallet.Primitive.Types.html"><span class="hs-identifier">Cardano.Wallet.Primitive.Types</span></a><span>
+</span><a name="line-13"></a><span>    </span><span class="hs-special">(</span><span> </span><a href="Cardano.Wallet.Primitive.Types.html#PoolId"><span class="hs-identifier hs-type">PoolId</span></a><span class="hs-special">,</span><span> </span><a href="Cardano.Wallet.Primitive.Types.html#StakePool"><span class="hs-identifier hs-type">StakePool</span></a><span class="hs-special">,</span><span> </span><a href="Cardano.Wallet.Primitive.Types.html#StakePoolMetadata"><span class="hs-identifier hs-type">StakePoolMetadata</span></a><span> </span><span class="hs-special">)</span><span>
+</span><a name="line-14"></a><span class="hs-keyword">import</span><span> </span><span class="hs-identifier">Control.Monad.Trans.Except</span><span>
+</span><a name="line-15"></a><span>    </span><span class="hs-special">(</span><span> </span><span class="hs-identifier hs-type">ExceptT</span><span> </span><span class="hs-special">)</span><span>
+</span><a name="line-16"></a><span>
+</span><a name="line-17"></a><span class="hs-comment">-- | @StakePoolLayer@ is a thin layer ontop of the DB. It is /one/ value that</span><span>
+</span><a name="line-18"></a><span class="hs-comment">-- can easily be passed to the API-server, where it can be used in a simple way.</span><span>
+</span><a name="line-19"></a><span class="hs-keyword">data</span><span> </span><a name="StakePoolLayer"><a href="Cardano.Pool.html#StakePoolLayer"><span class="hs-identifier">StakePoolLayer</span></a></a><span> </span><a name="local-6989586621680458062"><a href="#local-6989586621680458062"><span class="hs-identifier">e</span></a></a><span> </span><a name="local-6989586621680458063"><a href="#local-6989586621680458063"><span class="hs-identifier">m</span></a></a><span> </span><span class="hs-glyph">=</span><span> </span><a name="StakePoolLayer"><a href="Cardano.Pool.html#StakePoolLayer"><span class="hs-identifier">StakePoolLayer</span></a></a><span>
+</span><a name="line-20"></a><span>    </span><span class="hs-special">{</span><span> </span><a name="listStakePools"><a href="Cardano.Pool.html#listStakePools"><span class="hs-identifier">listStakePools</span></a></a><span>
+</span><a name="line-21"></a><span>        </span><span class="hs-glyph">::</span><span> </span><span class="hs-identifier hs-type">ExceptT</span><span> </span><a href="#local-6989586621680458062"><span class="hs-identifier hs-type">e</span></a><span> </span><a href="#local-6989586621680458063"><span class="hs-identifier hs-type">m</span></a><span> </span><span class="hs-special">[</span><span class="hs-special">(</span><a href="Cardano.Wallet.Primitive.Types.html#StakePool"><span class="hs-identifier hs-type">StakePool</span></a><span class="hs-special">,</span><span> </span><span class="hs-identifier hs-type">Maybe</span><span> </span><a href="Cardano.Wallet.Primitive.Types.html#StakePoolMetadata"><span class="hs-identifier hs-type">StakePoolMetadata</span></a><span class="hs-special">)</span><span class="hs-special">]</span><span>
+</span><a name="line-22"></a><span>
+</span><a name="line-23"></a><span>    </span><span class="hs-special">,</span><span> </span><a name="knownStakePools"><a href="Cardano.Pool.html#knownStakePools"><span class="hs-identifier">knownStakePools</span></a></a><span>
+</span><a name="line-24"></a><span>        </span><span class="hs-glyph">::</span><span> </span><a href="#local-6989586621680458063"><span class="hs-identifier hs-type">m</span></a><span> </span><span class="hs-special">[</span><a href="Cardano.Wallet.Primitive.Types.html#PoolId"><span class="hs-identifier hs-type">PoolId</span></a><span class="hs-special">]</span><span>
+</span><a name="line-25"></a><span>        </span><span class="hs-comment">-- ^ Get a list of known pools that doesn't require fetching things from</span><span>
+</span><a name="line-26"></a><span>        </span><span class="hs-comment">-- any registry. This list comes from the registration certificates</span><span>
+</span><a name="line-27"></a><span>        </span><span class="hs-comment">-- that have been seen on chain.</span><span>
+</span><a name="line-28"></a><span>    </span><span class="hs-special">}</span><span>
+</span><a name="line-29"></a></pre></body></html>
