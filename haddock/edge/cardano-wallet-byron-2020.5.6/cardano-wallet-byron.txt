@@ -118,8 +118,12 @@ instance Cardano.Wallet.Byron.Transaction.Size.MaxSizeOf Cardano.Wallet.Primitiv
 module Cardano.Wallet.Byron.Transaction
 newTransactionLayer :: forall (n :: NetworkDiscriminant) k t. (t ~ IO Byron, WalletKey k, MaxSizeOf Address n k) => Proxy n -> ProtocolMagic -> TransactionLayer t k
 
--- | Construct an initial genesis block from a genesis UTxO.
-fromGenesisTxOut :: BlockchainParameters -> [TxOut] -> Block
+-- | Construct a ("fake") genesis block from genesis transaction outputs.
+--   
+--   The genesis data on haskell nodes is not a block at all, unlike the
+--   block0 on jormungandr. This function is a method to deal with the
+--   discrepancy.
+genesisBlockFromTxOuts :: BlockchainParameters -> [TxOut] -> Block
 instance Formatting.Buildable.Buildable Cardano.Wallet.Byron.Transaction.ErrInvalidTxOutAmount
 
 

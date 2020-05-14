@@ -6611,7 +6611,7 @@ module Ouroboros.Network.Client.Wallet
 --   This is used in the same way as <a>chainSyncWithBlocks</a>, except
 --   that only one of these clients is necessary, rather than one client
 --   per wallet.
-chainSyncFollowTip :: forall m block. Monad m => (Tip block -> m ()) -> ChainSyncClient (Serialised block) (Tip (Serialised block)) m Void
+chainSyncFollowTip :: forall m block. Monad m => (Tip block -> m ()) -> ChainSyncClient (Serialised block) (Tip block) m Void
 
 -- | We interact with the <tt>NetworkClient</tt> via a commands
 --   instrumenting the client to move within the state-machine protocol.

@@ -472,6 +472,9 @@ errMsg400NumberOfWords :: String
 errMsgNotInDictionary :: String
 errMsg403RejectedTip :: String
 
+module Test.Integration.Scenario.API.Byron.Addresses
+spec :: forall n t. (DecodeAddress n, EncodeAddress n, PaymentAddress n ByronKey, PaymentAddress n IcarusKey) => SpecWith (Context t)
+
 module Test.Integration.Scenario.API.Byron.Transactions
 spec :: forall n t. DecodeAddress n => SpecWith (Context t)
 
@@ -492,6 +495,12 @@ spec :: forall n t. (DecodeAddress n, EncodeAddress n) => SpecWith (Context t)
 
 module Test.Integration.Scenario.API.Shelley.Wallets
 spec :: forall n t. (DecodeAddress n, EncodeAddress n) => SpecWith (Context t)
+
+module Test.Integration.Scenario.CLI.Byron.Addresses
+spec :: forall n t. (DecodeAddress n, EncodeAddress n, PaymentAddress n ByronKey, PaymentAddress n IcarusKey, KnownCommand t) => SpecWith (Context t)
+
+module Test.Integration.Scenario.CLI.Byron.Wallets
+spec :: forall n t. (DecodeAddress n, KnownCommand t) => SpecWith (Context t)
 
 module Test.Integration.Scenario.CLI.Keys
 spec :: forall t. KnownCommand t => Spec
