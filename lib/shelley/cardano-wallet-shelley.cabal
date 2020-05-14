@@ -36,7 +36,10 @@ library
     , cardano-binary
     , cardano-slotting
     , cardano-wallet-cli
+    , cardano-addresses
+    , cardano-crypto
     , cardano-wallet-core
+    , cardano-api
     , cardano-config
     , cardano-wallet-launcher
     , cborg
@@ -45,6 +48,7 @@ library
     , cryptonite
     , directory
     , exceptions
+    , ed25519
     , filepath
     , fmt
     , generic-lens

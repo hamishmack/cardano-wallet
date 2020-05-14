@@ -6,6 +6,7 @@
 {-# LANGUAGE NumericUnderscores #-}
 {-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE TupleSections #-}
+{-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 
 -- |
@@ -48,10 +49,15 @@ module Cardano.Wallet.Shelley.Compatibility
     , fromSlotNo
     , fromTip
     , fromPParams
+
+    , toCardanoTxId
+    , toCardanoTxIn
+    , toCardanoTxOut
+    , toCardanoLovelace
+    , toSealed
     ) where
 
 import Prelude
-
 
 import Cardano.Binary
     ( fromCBOR, serialize' )
@@ -65,6 +71,8 @@ import Data.Coerce
     ( coerce )
 import Data.Foldable
     ( toList )
+import Data.Maybe
+    ( fromMaybe )
 import Data.Quantity
     ( Quantity (..) )
 import Data.Text
@@ -107,6 +115,7 @@ import Ouroboros.Network.NodeToClient
 import Ouroboros.Network.Point
     ( WithOrigin (..) )
 
+import qualified Cardano.Api as Cardano
 import qualified Cardano.Wallet.Primitive.Types as W
 import qualified Data.ByteString as BS
 import qualified Data.ByteString.Lazy as BL
@@ -114,6 +123,7 @@ import qualified Data.Map.Strict as Map
 import qualified Ouroboros.Consensus.Shelley.Ledger as O
 import qualified Ouroboros.Network.Block as O
 import qualified Ouroboros.Network.Point as Point
+import qualified Shelley.Spec.Ledger.Address as SL
 import qualified Shelley.Spec.Ledger.BlockChain as SL
 import qualified Shelley.Spec.Ledger.Coin as SL
 import qualified Shelley.Spec.Ledger.PParams as SL
@@ -444,3 +454,38 @@ fromShelleyTx (SL.Tx bod@(SL.TxBody ins outs _ _ _ _ _ _) _ _ _) = W.Tx
     (fromShelleyTxId $ SL.txid bod)
     (map ((,W.Coin 0) . fromShelleyTxIn) (toList ins))
     (map fromShelleyTxOut (toList outs))
+
+-- NOTE: Arguably breaks naming conventions. Perhaps fromCardanoSignedTx instead
+toSealed :: SL.Tx TPraosStandardCrypto -> (W.Tx, W.SealedTx)
+toSealed tx =
+    let
+        wtx = fromShelleyTx tx
+        sealed = W.SealedTx $ serialize' tx
+    in (wtx, sealed)
+
+toCardanoTxId :: W.Hash "Tx" -> Cardano.TxId
+toCardanoTxId (W.Hash h) = Cardano.TxId $ UnsafeHash h
+
+toCardanoTxIn :: W.TxIn -> Cardano.TxIn
+toCardanoTxIn (W.TxIn tid ix) =
+    Cardano.TxIn (toCardanoTxId tid) (fromIntegral ix)
+
+-- TODO: Is this a good idea?
+--
+-- NOTE: Only creates Shelely addresses.
+toCardanoAddress :: W.Address -> Cardano.Address
+toCardanoAddress (W.Address bytes) =
+    Cardano.AddressShelley
+        . fromMaybe (error "toCardanoAddress: invalid address")
+        . SL.deserialiseAddr @TPraosStandardCrypto
+        $ bytes
+
+toCardanoLovelace :: W.Coin -> Cardano.Lovelace
+toCardanoLovelace (W.Coin c) = Cardano.Lovelace $ safeCast c
+  where
+    safeCast :: Word64 -> Integer
+    safeCast = fromIntegral
+
+toCardanoTxOut :: W.TxOut -> Cardano.TxOut
+toCardanoTxOut (W.TxOut addr coin) =
+    Cardano.TxOut (toCardanoAddress addr) (toCardanoLovelace coin)

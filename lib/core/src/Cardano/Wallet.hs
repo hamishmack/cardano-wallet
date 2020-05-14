@@ -1179,6 +1179,7 @@ signPayment
     :: forall ctx s t k.
         ( HasTransactionLayer t k ctx
         , HasDBLayer s k ctx
+        , HasNetworkLayer t ctx
         , Show s
         , NFData s
         , IsOwned s k
@@ -1192,6 +1193,7 @@ signPayment
     -> ExceptT ErrSignPayment IO (Tx, TxMeta, UTCTime, SealedTx)
 signPayment ctx wid argGenChange pwd (CoinSelection ins outs chgs) = db & \DBLayer{..} -> do
     withRootKey @_ @s ctx wid pwd ErrSignPaymentWithRootKey $ \xprv scheme -> do
+        nodeTip <- withExceptT (error "todo") $ currentNodeTip nl
         mapExceptT atomically $ do
             cp <- withExceptT ErrSignPaymentNoSuchWallet $ withNoSuchWallet wid $
                 readCheckpoint (PrimaryKey wid)
@@ -1202,7 +1204,7 @@ signPayment ctx wid argGenChange pwd (CoinSelection ins outs chgs) = db & \DBLay
 
             let keyFrom = isOwned (getState cp) (xprv, preparePassphrase scheme pwd)
             (tx, sealedTx) <- withExceptT ErrSignPaymentMkTx $ ExceptT $ pure $
-                mkStdTx tl keyFrom ins allOuts
+                mkStdTx tl keyFrom (nodeTip ^. #slotId) ins allOuts
 
             let bp = blockchainParameters cp
             let (time, meta) = mkTxMeta bp (currentTip cp) s' ins allOuts
@@ -1210,12 +1212,14 @@ signPayment ctx wid argGenChange pwd (CoinSelection ins outs chgs) = db & \DBLay
   where
     db = ctx ^. dbLayer @s @k
     tl = ctx ^. transactionLayer @t @k
+    nl = ctx ^. networkLayer @t
 
 -- | Very much like 'signPayment', but doesn't not generate change addresses.
 signTx
     :: forall ctx s t k.
         ( HasTransactionLayer t k ctx
         , HasDBLayer s k ctx
+        , HasNetworkLayer t ctx
         , Show s
         , NFData s
         , IsOwned s k
@@ -1227,13 +1231,15 @@ signTx
     -> ExceptT ErrSignPayment IO (Tx, TxMeta, UTCTime, SealedTx)
 signTx ctx wid pwd (UnsignedTx inpsNE outsNE) = db & \DBLayer{..} -> do
     withRootKey @_ @s ctx wid pwd ErrSignPaymentWithRootKey $ \xprv scheme -> do
+        -- TODO: Should we actually use the cp tip?
+        nodeTip <- withExceptT (error "todo") $ currentNodeTip nl
         mapExceptT atomically $ do
             cp <- withExceptT ErrSignPaymentNoSuchWallet $ withNoSuchWallet wid $
                 readCheckpoint (PrimaryKey wid)
 
             let keyFrom = isOwned (getState cp) (xprv, preparePassphrase scheme pwd)
             (tx, sealedTx) <- withExceptT ErrSignPaymentMkTx $ ExceptT $ pure $
-                mkStdTx tl keyFrom inps outs
+                mkStdTx tl keyFrom (nodeTip ^. #slotId) inps outs
 
             let bp = blockchainParameters cp
             let (time, meta) = mkTxMeta bp (currentTip cp) (getState cp) inps outs
@@ -1241,6 +1247,7 @@ signTx ctx wid pwd (UnsignedTx inpsNE outsNE) = db & \DBLayer{..} -> do
   where
     db = ctx ^. dbLayer @s @k
     tl = ctx ^. transactionLayer @t @k
+    nl = ctx ^. networkLayer @t
     inps = NE.toList inpsNE
     outs = NE.toList outsNE
 
