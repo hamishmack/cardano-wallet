@@ -6635,11 +6635,9 @@ CmdNextBlocks :: (NextBlocksResult (Point block) block -> m ()) -> ChainSyncCmd 
 
 -- | Client for the 'Chain Sync' mini-protocol.
 --   
---   A corresponding <tt>Channel</tt> can be obtained using a
---   <tt>MuxInitiatorApplication</tt> constructor. Once started, the client
---   simply runs ad-infinitum but one may interact with it via a
---   <a>TQueue</a> of commands / messages used to move inside the
---   state-machine.
+--   Once started, the client simply runs ad-infinitum but one may interact
+--   with it via a <a>TQueue</a> of commands / messages used to move inside
+--   the state-machine.
 --   
 --   In a typical usage, <a>chainSyncWithBlocks</a> would be executed in a
 --   forked thread and given a <a>TQueue</a> over which the parent thread
@@ -6668,7 +6666,7 @@ CmdNextBlocks :: (NextBlocksResult (Point block) block -> m ()) -> ChainSyncCmd 
 --   |────────────────────────────────────┘</li>
 --   <li>------*</li>
 --   </ul>
-chainSyncWithBlocks :: forall m block. (Monad m, MonadSTM m, HasHeader block) => Quantity "block" Word32 -> (Tip block -> BlockHeader) -> TQueue m (ChainSyncCmd block m) -> ChainSyncClientPipelined block (Tip block) m Void
+chainSyncWithBlocks :: forall m block. (Monad m, MonadSTM m, HasHeader block) => (Tip block -> BlockHeader) -> TQueue m (ChainSyncCmd block m) -> TQueue m (NextBlocksResult (Point block) block) -> ChainSyncClientPipelined block (Tip block) m Void
 
 -- | Sending command to the localTxSubmission client. See also
 --   <a>ChainSyncCmd</a>.
@@ -6676,9 +6674,6 @@ data LocalTxSubmissionCmd tx err (m :: * -> *)
 CmdSubmitTx :: tx -> (Maybe err -> m ()) -> LocalTxSubmissionCmd tx err
 
 -- | Client for the 'Local Tx Submission' mini-protocol.
---   
---   A corresponding <tt>Channel</tt> can be obtained using a
---   <tt>MuxInitiatorApplication</tt> constructor.
 --   
 --   Agency
 --   -------------------------------------------------------------------------
@@ -6705,9 +6700,6 @@ CmdQueryLocalState :: Point block -> Query block state -> (LocalStateQueryResult
 type LocalStateQueryResult state = Either AcquireFailure state
 
 -- | Client for the 'Local State Query' mini-protocol.
---   
---   A corresponding <tt>Channel</tt> can be obtained using a
---   <tt>MuxInitiatorApplication</tt> constructor.
 --   
 --   Agency
 --   -------------------------------------------------------------------------
