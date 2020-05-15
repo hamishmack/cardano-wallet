@@ -6650,7 +6650,7 @@ CmdSubmitTx :: tx -> (Maybe err -> m ()) -> LocalTxSubmissionCmd tx err
 --   └──────────────────────────────────╼| | | |⇦ START</li>
 --   <li>---------*</li>
 --   </ul>
-localTxSubmission :: forall m tx err. (MonadThrow m, MonadTimer m) => TQueue m (LocalTxSubmissionCmd tx err m) -> LocalTxSubmissionClient tx err m Void
+localTxSubmission :: forall m tx err. (MonadThrow m, MonadSTM m) => TQueue m (LocalTxSubmissionCmd tx err m) -> LocalTxSubmissionClient tx err m Void
 
 -- | Command to send to the localStateQuery client. See also
 --   <a>ChainSyncCmd</a>.
@@ -6676,7 +6676,7 @@ type LocalStateQueryResult state = Either AcquireFailure state
 --   │ │ │ │ │ │ Acquired ▼ │ ReAcquire │ │ ┌───────────┴───┐
 --   ┌────────┴───────┐ └───────┤ Acquired │────────────&gt;│ Querying │
 --   └───────────────┘ └────────────────┘
-localStateQuery :: forall m block state. (MonadThrow m, MonadTimer m) => TQueue m (LocalStateQueryCmd block state m) -> LocalStateQueryClient block (Query block) m Void
+localStateQuery :: forall m block state. (MonadThrow m, MonadSTM m) => TQueue m (LocalStateQueryCmd block state m) -> LocalStateQueryClient block (Query block) m Void
 
 -- | Helper function to easily send commands to the node's client and read
 --   responses back.
@@ -6690,7 +6690,7 @@ localStateQuery :: forall m block state. (MonadThrow m, MonadTimer m) => TQueue 
 --   &gt;&gt;&gt; queue `send` CmdNextBlocks
 --   AwaitReply
 --   </pre>
-send :: (MonadSTM m, MonadAsync m, MonadTimer m) => TQueue m (cmd m) -> ((a -> m ()) -> cmd m) -> m (Either ErrNetworkUnavailable a)
+send :: MonadSTM m => TQueue m (cmd m) -> ((a -> m ()) -> cmd m) -> m a
 
 
 -- | Provides the package version and git revision which this was compiled
