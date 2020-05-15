@@ -1717,37 +1717,12 @@ deriveRewardAccount :: (HardDerivation k, Bounded (Index (AddressIndexDerivation
 -- | Construct a <a>ChimericAccount</a> by extracting the public key from
 --   the extended public key.
 toChimericAccount :: WalletKey k => k  'AddressK XPub -> ChimericAccount
-data XPub
-XPub :: !ByteString -> !ChainCode -> XPub
-[xpubPublicKey] :: XPub -> !ByteString
-[xpubChaincode] :: XPub -> !ChainCode
-newtype ChainCode
-ChainCode :: ByteString -> ChainCode
-data XPrv
-unXPub :: XPub -> ByteString
-unXPrv :: XPrv -> ByteString
-xprv :: ByteArrayAccess bin => bin -> Either String XPrv
-xpub :: ByteString -> Either String XPub
 
 -- | Encode a <a>ByteString</a> in base16
 hex :: ByteArrayAccess bin => bin -> ByteString
 
 -- | Decode a <a>ByteString</a> from base16
 fromHex :: ByteArray bout => ByteString -> Either String bout
-
--- | Convert a <tt>XPrv</tt> to a 96-byte long extended private key that
---   does <i>not</i> include the public key.
---   
---   The format is:
---   
---   <pre>
---   Extended Private Key (64 bytes) &lt;&gt; ChainCode (32 bytes)
---   </pre>
---   
---   Does <i>not</i> guarantee that <tt>xPrvFromStrippedPubXPrv</tt> will
---   be able to reconstruct the same <tt>XPrv</tt> from the resulting
---   <tt>ByteString</tt>.
-unXPrvStripPub :: XPrv -> ByteString
 
 -- | Like <tt>unXPrvStripPub</tt>, but also checks that the result
 --   roundtrips.
@@ -1757,19 +1732,6 @@ unXPrvStripPub :: XPrv -> ByteString
 unXPrvStripPubCheckRoundtrip :: XPrv -> Either ErrUnXPrvStripPub ByteString
 
 -- | Create a <tt>XPrv</tt> from a 96-byte long extended private key
---   
---   The format is:
---   
---   <pre>
---   Extended Private Key (64 bytes) &lt;&gt; ChainCode (32 bytes)
---   </pre>
---   
---   This function uses
---   <tt>cardano-crypto:encryptedCreateDirectWithTweak</tt> which will
---   modify the key if certain bits are not cleared / set. Byron keys are
---   likely not to have the correct tweak.
---   
---   Byron keys would be silently modified.
 xPrvFromStrippedPubXPrv :: ByteString -> Either ErrXPrvFromStrippedPubXPrv XPrv
 
 -- | Like <tt>xPrvFromStrippedPubXPrv</tt>, but also checks that the result
@@ -4590,7 +4552,7 @@ newtype DefaultFieldValues
 DefaultFieldValues :: ActiveSlotCoefficient -> DefaultFieldValues
 [$sel:defaultActiveSlotCoefficient:DefaultFieldValues] :: DefaultFieldValues -> ActiveSlotCoefficient
 instance GHC.Show.Show Cardano.Wallet.DB.Sqlite.ErrRollbackTo
-instance (GHC.Classes.Eq (k 'Cardano.Wallet.Primitive.AddressDerivation.AccountK Cardano.Crypto.Wallet.XPub), Cardano.Wallet.Primitive.AddressDerivation.PersistPublicKey (k 'Cardano.Wallet.Primitive.AddressDerivation.AccountK), Cardano.Wallet.Primitive.AddressDerivation.PersistPublicKey (k 'Cardano.Wallet.Primitive.AddressDerivation.AddressK), Cardano.Wallet.Primitive.AddressDerivation.MkKeyFingerprint k (Data.Proxy.Proxy n, k 'Cardano.Wallet.Primitive.AddressDerivation.AddressK Cardano.Crypto.Wallet.XPub), Cardano.Wallet.Primitive.AddressDerivation.PaymentAddress n k, Cardano.Wallet.Primitive.AddressDerivation.SoftDerivation k) => Cardano.Wallet.DB.Sqlite.PersistState (Cardano.Wallet.Primitive.AddressDiscovery.Sequential.SeqState n k)
+instance (GHC.Classes.Eq (k 'Cardano.Wallet.Primitive.AddressDerivation.AccountK Cardano.Address.Derivation.XPub), Cardano.Wallet.Primitive.AddressDerivation.PersistPublicKey (k 'Cardano.Wallet.Primitive.AddressDerivation.AccountK), Cardano.Wallet.Primitive.AddressDerivation.PersistPublicKey (k 'Cardano.Wallet.Primitive.AddressDerivation.AddressK), Cardano.Wallet.Primitive.AddressDerivation.MkKeyFingerprint k (Data.Proxy.Proxy n, k 'Cardano.Wallet.Primitive.AddressDerivation.AddressK Cardano.Address.Derivation.XPub), Cardano.Wallet.Primitive.AddressDerivation.PaymentAddress n k, Cardano.Wallet.Primitive.AddressDerivation.SoftDerivation k) => Cardano.Wallet.DB.Sqlite.PersistState (Cardano.Wallet.Primitive.AddressDiscovery.Sequential.SeqState n k)
 instance Cardano.Wallet.DB.Sqlite.PersistState (Cardano.Wallet.Primitive.AddressDiscovery.Random.RndState t)
 instance GHC.Exception.Type.Exception Cardano.Wallet.DB.Sqlite.ErrRollbackTo
 
@@ -5226,17 +5188,17 @@ instance Data.Aeson.Types.FromJSON.FromJSON Cardano.Wallet.Api.Types.ApiNetworkT
 instance Data.Aeson.Types.ToJSON.ToJSON Cardano.Wallet.Api.Types.ApiNetworkTip
 instance Data.Aeson.Types.FromJSON.FromJSON Cardano.Wallet.Api.Types.ApiPostRandomAddressData
 instance Data.Aeson.Types.ToJSON.ToJSON Cardano.Wallet.Api.Types.ApiPostRandomAddressData
-instance Data.Text.Class.FromText (Cardano.Wallet.Api.Types.ApiT Cardano.Crypto.Wallet.XPrv)
-instance GHC.Show.Show (Cardano.Wallet.Api.Types.ApiT Cardano.Crypto.Wallet.XPrv)
-instance GHC.Classes.Eq (Cardano.Wallet.Api.Types.ApiT Cardano.Crypto.Wallet.XPrv)
-instance Data.Text.Class.ToText (Cardano.Wallet.Api.Types.ApiT Cardano.Crypto.Wallet.XPrv)
+instance Data.Text.Class.FromText (Cardano.Wallet.Api.Types.ApiT Cardano.Address.Derivation.XPrv)
+instance GHC.Show.Show (Cardano.Wallet.Api.Types.ApiT Cardano.Address.Derivation.XPrv)
+instance GHC.Classes.Eq (Cardano.Wallet.Api.Types.ApiT Cardano.Address.Derivation.XPrv)
+instance Data.Text.Class.ToText (Cardano.Wallet.Api.Types.ApiT Cardano.Address.Derivation.XPrv)
 instance Data.Text.Class.FromText (Cardano.Wallet.Api.Types.ApiT (Cardano.Wallet.Primitive.Types.Hash "encryption"))
 instance Data.Aeson.Types.FromJSON.FromJSON (Cardano.Wallet.Api.Types.ApiT Cardano.Wallet.Primitive.Types.AddressState)
 instance Data.Aeson.Types.ToJSON.ToJSON (Cardano.Wallet.Api.Types.ApiT Cardano.Wallet.Primitive.Types.AddressState)
 instance Data.Aeson.Types.FromJSON.FromJSON (Cardano.Wallet.Api.Types.ApiT (Cardano.Wallet.Primitive.Types.Hash "encryption"))
 instance Data.Aeson.Types.ToJSON.ToJSON (Cardano.Wallet.Api.Types.ApiT (Cardano.Wallet.Primitive.Types.Hash "encryption"))
-instance Data.Aeson.Types.FromJSON.FromJSON (Cardano.Wallet.Api.Types.ApiT Cardano.Crypto.Wallet.XPrv)
-instance Data.Aeson.Types.ToJSON.ToJSON (Cardano.Wallet.Api.Types.ApiT Cardano.Crypto.Wallet.XPrv)
+instance Data.Aeson.Types.FromJSON.FromJSON (Cardano.Wallet.Api.Types.ApiT Cardano.Address.Derivation.XPrv)
+instance Data.Aeson.Types.ToJSON.ToJSON (Cardano.Wallet.Api.Types.ApiT Cardano.Address.Derivation.XPrv)
 instance (Cardano.Wallet.Primitive.AddressDerivation.PassphraseMaxLength purpose, Cardano.Wallet.Primitive.AddressDerivation.PassphraseMinLength purpose) => Data.Aeson.Types.FromJSON.FromJSON (Cardano.Wallet.Api.Types.ApiT (Cardano.Wallet.Primitive.AddressDerivation.Passphrase purpose))
 instance Data.Aeson.Types.ToJSON.ToJSON (Cardano.Wallet.Api.Types.ApiT (Cardano.Wallet.Primitive.AddressDerivation.Passphrase purpose))
 instance Data.Aeson.Types.FromJSON.FromJSON (Cardano.Wallet.Api.Types.ApiT Cardano.Wallet.Primitive.Types.WalletId)
