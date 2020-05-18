@@ -1724,34 +1724,6 @@ hex :: ByteArrayAccess bin => bin -> ByteString
 -- | Decode a <a>ByteString</a> from base16
 fromHex :: ByteArray bout => ByteString -> Either String bout
 
--- | Like <tt>unXPrvStripPub</tt>, but also checks that the result
---   roundtrips.
---   
---   Roundtrip may fail if: - the key is encrypted - the key is an old
---   byron key
-unXPrvStripPubCheckRoundtrip :: XPrv -> Either ErrUnXPrvStripPub ByteString
-
--- | Create a <tt>XPrv</tt> from a 96-byte long extended private key
-xPrvFromStrippedPubXPrv :: ByteString -> Either ErrXPrvFromStrippedPubXPrv XPrv
-
--- | Like <tt>xPrvFromStrippedPubXPrv</tt>, but also checks that the result
---   roundtrips.
---   
---   Roundtrip may fail if: - the key is encrypted - the key is an old
---   byron key
-xPrvFromStrippedPubXPrvCheckRoundtrip :: ByteString -> Either ErrXPrvFromStrippedPubXPrv XPrv
-data ErrXPrvFromStrippedPubXPrv
-
--- | Expected, Actual
-ErrInputLengthMismatch :: Int -> Int -> ErrXPrvFromStrippedPubXPrv
-ErrCannotRoundtripToSameBytes :: ErrXPrvFromStrippedPubXPrv
-data ErrUnXPrvStripPub
-
--- | The resulting bytestring would have been unable to roundtrip using
---   <tt>xPrvFromStrippedPubXPrv</tt>. Most likely because the input
---   <tt>XPrv</tt> was encrypted, or because it was an old (Byron) key.
-ErrCannotRoundtripToSameXPrv :: ErrUnXPrvStripPub
-
 -- | Available network options.
 data NetworkDiscriminant
 Mainnet :: NetworkDiscriminant
@@ -1897,10 +1869,6 @@ checkPassphrase :: PassphraseScheme -> Passphrase "raw" -> Hash "encryption" -> 
 
 -- | Manipulation done on legacy passphrases before getting encrypted.
 preparePassphrase :: PassphraseScheme -> Passphrase "raw" -> Passphrase "encryption"
-instance GHC.Show.Show Cardano.Wallet.Primitive.AddressDerivation.ErrXPrvFromStrippedPubXPrv
-instance GHC.Classes.Eq Cardano.Wallet.Primitive.AddressDerivation.ErrXPrvFromStrippedPubXPrv
-instance GHC.Show.Show Cardano.Wallet.Primitive.AddressDerivation.ErrUnXPrvStripPub
-instance GHC.Classes.Eq Cardano.Wallet.Primitive.AddressDerivation.ErrUnXPrvStripPub
 instance forall k (key :: k) from. GHC.Classes.Eq from => GHC.Classes.Eq (Cardano.Wallet.Primitive.AddressDerivation.ErrMkKeyFingerprint key from)
 instance forall k (key :: k) from. GHC.Show.Show from => GHC.Show.Show (Cardano.Wallet.Primitive.AddressDerivation.ErrMkKeyFingerprint key from)
 instance forall (s :: GHC.Types.Symbol) k (key :: k). GHC.Classes.Ord (Cardano.Wallet.Primitive.AddressDerivation.KeyFingerprint s key)
