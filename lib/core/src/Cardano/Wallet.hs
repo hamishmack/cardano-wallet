@@ -754,6 +754,8 @@ restoreBlocks ctx wid blocks nodeTip = db & \DBLayer{..} -> mapExceptT atomicall
         , pretty (header (NE.head blocks))
         ]
 
+    liftIO $ print $ (NE.toList blocks) >>= transactions
+
     let (filteredBlocks, cps) = NE.unzip $ applyBlocks @s blocks cp
     let slotPoolDelegations =
             [ (slotId, cert)

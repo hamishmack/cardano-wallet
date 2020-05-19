@@ -1,0 +1,78 @@
+- txids:
+  - "25ea567beb08f9b82127c8d535af85d00e52adaaf981d034eef499f950b1e800"
+  - "742c45b1a7cf72a1d5a6cad15af664a25735f0fd0e78d589ad9b616742814178"
+  - "a88d29efeda1cfc80f9433659f1df46b179bcd47044f9a58c54598c7af57e0e7"
+  - "688d82d952a2181a85f8535a82afe9b303be8de866d9133de25d4900f0a8bfce"
+- coins:
+  - 1
+  - 1000
+  - 1000000 # 1 ada
+  - 44000000000000000  # 44 billion ada
+
+
+# 15 words
+- mnemonic: [ "art", "forum", "devote", "street", "sure", "rather", "head", "chuckle", "guard", "poverty", "release", "quote", "oak", "craft", "enemy"]
+  keys:
+    m:
+      "root_xprv1hretan5mml3tq2p0twkhq4tz4jvka7m2l94kfr6yghkyfar6
+      m9wppc7h9unw6p65y23kakzct3695rs32z7vaw3r2lg9scmfj8ec5du3ufy
+      du5yuquxcz24jlkjhsc9vsa4ufzge9s00fn398svhacse5sw90vp2"
+
+    m/1852'/1815'/0':
+      "acct_xprv1crpfhmtv5vdjx9rsqre7z025gartudsanenhart5nh3muqnm
+       m9wvu7jr0c2neykydr3r85rw6vht8sg0u4dffts2klnadgk9rt8zh23kfq
+       wxrlk3feq0dvvfvd8htlpnhmpu2fpklpl09th296pm7sdc6qafmpwv"
+
+    m/1852'/1815'/1':
+      "acct_xprv1jpfm7zhl6cwr4gkeuhtau603xv898ydam77d7c64xatjcptm
+       m9wr5sn95u3a9vudl08q9lwzl4qltal70ddl9qvl3nhcmjkxlan652vgpp
+       y8uf42h4y279nxfazumh0hd8hdhkdrlp06qcwe6t69qt236qkr8sxx"
+
+    m/1852'/1815'/0'/0/0:
+      "addr_xprv1fzgcl9km0mve2jwe8qxve364w6te9vpddhwpw5g8wnjlupmm
+       m9wxpdda6jaglx7smwl6qd5xuzjcweeq8ykp0wg9hng4pg6eumwx2t90sw
+       aed7ehsa6j86qsw3fnl4thtemsng6vukmz6ddf3cnd4sfkzuqvwsgp"
+
+    M/1852'/1815'/0'/0/0:
+      "addr_xpub1fz009r4f0aceaemksezlca9cz8p8rewhaurvyvgg2ndnq9vw
+       j3w6lqamjman0pm4y05pqazn8l2hwhnhpx35eedk9566nr3xmtqnv9clhn
+       w7d"
+
+    m/1852'/1815'/0'/0/1:
+      "addr_xprv1lq2ylz7fhsn0dfmul2pe833cdwvjnvux9uaxuzaz50gs7pnm
+       m9wq343uh5cpfs87tgh9saa86un8e2l266rsge0c5qsmtaud5r64ctndwk
+       yth8q07fgusyr3fldhn6lgd5tat5cmcdzvfzhtd0cpsleuxg0f45l9"
+
+    M/1852'/1815'/0'/0/1:
+      "addr_xpub1y3r70ejyadsaplez83p7uhy8p6l08a5sjl860kszevxu0jax
+       cwmx6avghwwqluj3eqg8zn7m0847smgh6hf3hs6ycj9wk6lsrplncvspv5
+       k5u"
+
+    m/1852'/1815'/0'/0/1442:
+      "addr_xprv14r6s3v6xu2j33mjlq2ugxf9345sz658rxs9csldztegazrrm
+       m9wdsyv8k3df6q2t32ngnvlgvyw8vjy6g5540ap3sxajcrm04ruq9wvgxq
+       kej8z8xkt06guqj7wtafqgrstdeukd5pnn8azvhpm2taczzgpnkuuu"
+
+    M/1852'/1815'/0'/0/1442:
+      "addr_xpub1fqtu4wksrftpdxg5ayacthraykm8eflvnym7lgc4xlzz479d
+       ve5csvpdnywywdvkl53cp9uuh6jqs8qkmnevmgr8x06yewrk5hmsyysvsf
+       ywe"
+
+  addresses:
+    base:
+      # NETWORK=0 | M/1852'/1815'/1'/0/0 | M/1852'/1815'/1'/2/0
+      network0: "addr1qpu5vlrf4xkxv2qpwngf6cjhtw542ayty80v8dyr49rf5ewvxwdrt70qlcpeeagscasafhffqsxy36t90ldv06wqrk2qwmnp2v"
+      # NETWORK=3 | M/1852'/1815'/1'/0/0 | M/1852'/1815'/1'/2/0
+      network3: "addr1qdu5vlrf4xkxv2qpwngf6cjhtw542ayty80v8dyr49rf5ewvxwdrt70qlcpeeagscasafhffqsxy36t90ldv06wqrk2q5ggg4z"
+
+    enterprise:
+      # NETWORK=0 | M/1852'/1815'/1'/0/0
+      network0: "addr1vpu5vlrf4xkxv2qpwngf6cjhtw542ayty80v8dyr49rf5eg0yu80w"
+      # NETWORK=3 | M/1852'/1815'/1'/0/0
+      network3: "addr1vdu5vlrf4xkxv2qpwngf6cjhtw542ayty80v8dyr49rf5eg0m9a08"
+
+    pointer:
+      # NETWORK=0 | M/1852'/1815'/1'/0/0 | #(1,2,3)
+      network0: "addr1gpu5vlrf4xkxv2qpwngf6cjhtw542ayty80v8dyr49rf5egpqgpsjej5ck"
+      # NETWORK=3 | M/1852'/1815'/1'/0/0 | #(24157,177,42)
+      network3: "addr1gdu5vlrf4xkxv2qpwngf6cjhtw542ayty80v8dyr49rf5evph3wczvf27l8yfx"

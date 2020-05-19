@@ -136,7 +136,7 @@ newTransactionLayer _proxy _protocolMagic = TransactionLayer
         let stx = SL.Tx
                 unsigned
                 (Set.fromList keyWits)
-                Map.empty         -- script witnesses
+                Map.empty    -- script witnesses
                 SL.SNothing  -- metadata
         return $ toSealed stx
       where

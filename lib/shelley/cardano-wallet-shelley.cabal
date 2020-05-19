@@ -130,7 +130,10 @@ test-suite unit
   build-depends:
       base
     , bytestring
+    , bech32
     , cardano-wallet-core
+    , cardano-addresses
+    , text
     , cardano-crypto-class
     , ouroboros-consensus-shelley
     , cardano-wallet-shelley
@@ -147,6 +150,7 @@ test-suite unit
       Main.hs
   other-modules:
       Cardano.Wallet.Shelley.CompatibilitySpec
+      Cardano.Wallet.Shelley.TransactionGoldens
 
 test-suite integration
   default-language:
