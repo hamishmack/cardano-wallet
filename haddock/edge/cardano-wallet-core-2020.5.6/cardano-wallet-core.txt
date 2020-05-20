@@ -4733,9 +4733,10 @@ ApiTransaction :: !ApiT (Hash "Tx") -> !Quantity "lovelace" Natural -> !Maybe Ap
 [$sel:inputs:ApiTransaction] :: ApiTransaction -> ![ApiTxInput n]
 [$sel:outputs:ApiTransaction] :: ApiTransaction -> ![AddressAmount (ApiT Address, Proxy n)]
 [$sel:status:ApiTransaction] :: ApiTransaction -> !ApiT TxStatus
-newtype ApiFee
-ApiFee :: Quantity "lovelace" Natural -> ApiFee
-[$sel:amount:ApiFee] :: ApiFee -> Quantity "lovelace" Natural
+data ApiFee
+ApiFee :: !Quantity "lovelace" Natural -> !Quantity "lovelace" Natural -> ApiFee
+[$sel:estimatedMin:ApiFee] :: ApiFee -> !Quantity "lovelace" Natural
+[$sel:estimatedMax:ApiFee] :: ApiFee -> !Quantity "lovelace" Natural
 newtype ApiTxId
 ApiTxId :: ApiT (Hash "Tx") -> ApiTxId
 [$sel:id:ApiTxId] :: ApiTxId -> ApiT (Hash "Tx")
@@ -5661,6 +5662,9 @@ selectCoinsExternal :: forall ctx s t k e. (GenChange s, HasDBLayer s k ctx, Has
 --   actual transaction, use <a>signPayment</a>.
 selectCoinsForPayment :: forall ctx s t k e. (HasTransactionLayer t k ctx, HasLogger WalletLog ctx, HasDBLayer s k ctx, e ~ ErrValidateSelection t) => ctx -> WalletId -> NonEmpty TxOut -> ExceptT (ErrSelectForPayment e) IO CoinSelection
 
+-- | Estimate fee for <a>selectCoinsForPayment</a>.
+estimateFeeForPayment :: forall ctx s t k e. (HasTransactionLayer t k ctx, HasLogger WalletLog ctx, HasDBLayer s k ctx, e ~ ErrValidateSelection t) => ctx -> WalletId -> NonEmpty TxOut -> ExceptT (ErrSelectForPayment e) IO FeeEstimation
+
 -- | Produce witnesses and construct a transaction from a given selection.
 --   Requires the encryption passphrase in order to decrypt the root
 --   private key. Note that this doesn't broadcast the transaction to the
@@ -5744,6 +5748,9 @@ quitStakePool :: forall ctx s t k. (HasDBLayer s k ctx, HasLogger WalletLog ctx,
 -- | Select necessary coins to cover for a single delegation request
 --   (including one certificate).
 selectCoinsForDelegation :: forall ctx s t k. (HasTransactionLayer t k ctx, HasLogger WalletLog ctx, HasDBLayer s k ctx) => ctx -> WalletId -> ExceptT ErrSelectForDelegation IO CoinSelection
+
+-- | Estimate fee for <a>selectCoinsForDelegation</a>.
+estimateFeeForDelegation :: forall ctx s t k. (HasTransactionLayer t k ctx, HasLogger WalletLog ctx, HasDBLayer s k ctx) => ctx -> WalletId -> ExceptT ErrSelectForDelegation IO FeeEstimation
 signDelegation :: forall ctx s t k. (HasTransactionLayer t k ctx, HasDBLayer s k ctx, IsOwned s k, GenChange s, HardDerivation k, AddressIndexDerivationType k ~  'Soft) => ctx -> WalletId -> ArgGenChange s -> Passphrase "raw" -> CoinSelection -> DelegationAction -> ExceptT ErrSignDelegation IO (Tx, TxMeta, UTCTime, SealedTx)
 guardJoin :: [PoolId] -> WalletDelegation -> PoolId -> Either ErrCannotJoin ()
 guardQuit :: WalletDelegation -> Either ErrCannotQuit ()
@@ -5776,6 +5783,23 @@ data ErrSignDelegation
 ErrSignDelegationNoSuchWallet :: ErrNoSuchWallet -> ErrSignDelegation
 ErrSignDelegationWithRootKey :: ErrWithRootKey -> ErrSignDelegation
 ErrSignDelegationMkTx :: ErrMkTx -> ErrSignDelegation
+
+-- | Result of a fee estimation process given a wallet and payment order.
+data FeeEstimation
+FeeEstimation :: Word64 -> Word64 -> FeeEstimation
+
+-- | Most coin selections will result in a fee higher than this.
+[$sel:estMinFee:FeeEstimation] :: FeeEstimation -> Word64
+
+-- | Most coin selections will result in a fee lower than this.
+[$sel:estMaxFee:FeeEstimation] :: FeeEstimation -> Word64
+
+-- | Estimate the transaction fee for a given coin selection algorithm by
+--   repeatedly running it (100 times) and collecting the results. In the
+--   returned <a>FeeEstimation</a>, the minimum fee is that which 90% of
+--   the sampled fees are greater than. The maximum fee is the highest fee
+--   observed in the samples.
+estimateFeeForCoinSelection :: forall m err. Monad m => ExceptT err m CoinSelection -> ExceptT err m FeeEstimation
 
 -- | Forget pending transaction.
 forgetPendingTx :: forall ctx s k. HasDBLayer s k ctx => ctx -> WalletId -> Hash "Tx" -> ExceptT ErrRemovePendingTx IO ()
@@ -5944,6 +5968,8 @@ instance GHC.Show.Show e => GHC.Show.Show (Cardano.Wallet.ErrSelectCoinsExternal
 instance GHC.Classes.Eq e => GHC.Classes.Eq (Cardano.Wallet.ErrSelectCoinsExternal e)
 instance GHC.Classes.Eq e => GHC.Classes.Eq (Cardano.Wallet.ErrSelectForPayment e)
 instance GHC.Show.Show e => GHC.Show.Show (Cardano.Wallet.ErrSelectForPayment e)
+instance GHC.Classes.Eq Cardano.Wallet.FeeEstimation
+instance GHC.Show.Show Cardano.Wallet.FeeEstimation
 instance Data.Text.Class.ToText Cardano.Wallet.WalletLog
 instance Cardano.BM.Data.Tracer.HasPrivacyAnnotation Cardano.Wallet.WalletLog
 instance Cardano.BM.Data.Tracer.HasSeverityAnnotation Cardano.Wallet.WalletLog
