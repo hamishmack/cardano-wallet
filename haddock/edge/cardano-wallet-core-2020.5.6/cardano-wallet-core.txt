@@ -4848,6 +4848,13 @@ ApiWalletDelegationNext :: !ApiWalletDelegationStatus -> !Maybe (ApiT PoolId) ->
 data ApiPoolId
 ApiPoolIdPlaceholder :: ApiPoolId
 ApiPoolId :: PoolId -> ApiPoolId
+data ApiWalletMigrationPostData (n :: NetworkDiscriminant)
+ApiWalletMigrationPostData :: !ApiT (Passphrase "lenient") -> ![(ApiT Address, Proxy n)] -> ApiWalletMigrationPostData
+[$sel:passphrase:ApiWalletMigrationPostData] :: ApiWalletMigrationPostData -> !ApiT (Passphrase "lenient")
+[$sel:addresses:ApiWalletMigrationPostData] :: ApiWalletMigrationPostData -> ![(ApiT Address, Proxy n)]
+newtype ApiWalletMigrationInfo
+ApiWalletMigrationInfo :: Quantity "lovelace" Natural -> ApiWalletMigrationInfo
+[$sel:migrationCost:ApiWalletMigrationInfo] :: ApiWalletMigrationInfo -> Quantity "lovelace" Natural
 data ApiByronWallet
 ApiByronWallet :: !ApiT WalletId -> !ApiByronWalletBalance -> !ApiWalletDiscovery -> !ApiT WalletName -> !Maybe ApiWalletPassphraseInfo -> !ApiT SyncProgress -> !ApiBlockReference -> ApiByronWallet
 [$sel:id:ApiByronWallet] :: ApiByronWallet -> !ApiT WalletId
@@ -4861,9 +4868,6 @@ data ApiByronWalletBalance
 ApiByronWalletBalance :: !Quantity "lovelace" Natural -> !Quantity "lovelace" Natural -> ApiByronWalletBalance
 [$sel:available:ApiByronWalletBalance] :: ApiByronWalletBalance -> !Quantity "lovelace" Natural
 [$sel:total:ApiByronWalletBalance] :: ApiByronWalletBalance -> !Quantity "lovelace" Natural
-newtype ApiByronWalletMigrationInfo
-ApiByronWalletMigrationInfo :: Quantity "lovelace" Natural -> ApiByronWalletMigrationInfo
-[$sel:migrationCost:ApiByronWalletMigrationInfo] :: ApiByronWalletMigrationInfo -> Quantity "lovelace" Natural
 data ByronWalletPostData mw
 ByronWalletPostData :: !ApiMnemonicT mw -> !ApiT WalletName -> !ApiT (Passphrase "raw") -> ByronWalletPostData mw
 [$sel:mnemonicSentence:ByronWalletPostData] :: ByronWalletPostData mw -> !ApiMnemonicT mw
@@ -4963,6 +4967,7 @@ type family ApiSelectCoinsDataT (n :: k) :: *
 type family ApiTransactionT (n :: k) :: *
 type family PostTransactionDataT (n :: k) :: *
 type family PostTransactionFeeDataT (n :: k) :: *
+type family ApiWalletMigrationPostDataT (n :: k) :: *
 instance GHC.Show.Show Cardano.Wallet.Api.Types.ApiByronWallet
 instance GHC.Generics.Generic Cardano.Wallet.Api.Types.ApiByronWallet
 instance GHC.Classes.Eq Cardano.Wallet.Api.Types.ApiByronWallet
@@ -5068,6 +5073,9 @@ instance GHC.Classes.Eq Cardano.Wallet.Api.Types.ApiNetworkTip
 instance GHC.Show.Show Cardano.Wallet.Api.Types.ApiPostRandomAddressData
 instance GHC.Generics.Generic Cardano.Wallet.Api.Types.ApiPostRandomAddressData
 instance GHC.Classes.Eq Cardano.Wallet.Api.Types.ApiPostRandomAddressData
+instance GHC.Show.Show (Cardano.Wallet.Api.Types.ApiWalletMigrationPostData n)
+instance GHC.Generics.Generic (Cardano.Wallet.Api.Types.ApiWalletMigrationPostData n)
+instance GHC.Classes.Eq (Cardano.Wallet.Api.Types.ApiWalletMigrationPostData n)
 instance GHC.Base.Functor Cardano.Wallet.Api.Types.ApiT
 instance GHC.Classes.Eq a => GHC.Classes.Eq (Cardano.Wallet.Api.Types.ApiT a)
 instance GHC.Show.Show a => GHC.Show.Show (Cardano.Wallet.Api.Types.ApiT a)
@@ -5075,9 +5083,6 @@ instance GHC.Generics.Generic (Cardano.Wallet.Api.Types.ApiT a)
 instance GHC.Show.Show Cardano.Wallet.Api.Types.ApiWalletDiscovery
 instance GHC.Generics.Generic Cardano.Wallet.Api.Types.ApiWalletDiscovery
 instance GHC.Classes.Eq Cardano.Wallet.Api.Types.ApiWalletDiscovery
-instance GHC.Show.Show Cardano.Wallet.Api.Types.ApiByronWalletMigrationInfo
-instance GHC.Generics.Generic Cardano.Wallet.Api.Types.ApiByronWalletMigrationInfo
-instance GHC.Classes.Eq Cardano.Wallet.Api.Types.ApiByronWalletMigrationInfo
 instance GHC.Show.Show Cardano.Wallet.Api.Types.ApiPoolId
 instance GHC.Generics.Generic Cardano.Wallet.Api.Types.ApiPoolId
 instance GHC.Classes.Eq Cardano.Wallet.Api.Types.ApiPoolId
@@ -5087,6 +5092,9 @@ instance GHC.Classes.Eq Cardano.Wallet.Api.Types.Iso8601Time
 instance GHC.Show.Show Cardano.Wallet.Api.Types.ApiErrorCode
 instance GHC.Generics.Generic Cardano.Wallet.Api.Types.ApiErrorCode
 instance GHC.Classes.Eq Cardano.Wallet.Api.Types.ApiErrorCode
+instance GHC.Show.Show Cardano.Wallet.Api.Types.ApiWalletMigrationInfo
+instance GHC.Generics.Generic Cardano.Wallet.Api.Types.ApiWalletMigrationInfo
+instance GHC.Classes.Eq Cardano.Wallet.Api.Types.ApiWalletMigrationInfo
 instance GHC.Show.Show Cardano.Wallet.Api.Types.ApiNetworkClock
 instance GHC.Generics.Generic Cardano.Wallet.Api.Types.ApiNetworkClock
 instance GHC.Classes.Eq Cardano.Wallet.Api.Types.ApiNetworkClock
@@ -5131,6 +5139,7 @@ instance Cardano.Wallet.Api.Types.DecodeAddress n => Data.Aeson.Types.FromJSON.F
 instance Cardano.Wallet.Api.Types.DecodeAddress t => Data.Aeson.Types.FromJSON.FromJSON (Cardano.Wallet.Api.Types.PostTransactionData t)
 instance Cardano.Wallet.Api.Types.DecodeAddress t => Data.Aeson.Types.FromJSON.FromJSON (Cardano.Wallet.Api.Types.PostTransactionFeeData t)
 instance Cardano.Wallet.Api.Types.DecodeAddress n => Data.Aeson.Types.FromJSON.FromJSON (Cardano.Wallet.Api.Types.ApiTransaction n)
+instance Cardano.Wallet.Api.Types.DecodeAddress n => Data.Aeson.Types.FromJSON.FromJSON (Cardano.Wallet.Api.Types.ApiWalletMigrationPostData n)
 instance Cardano.Wallet.Api.Types.DecodeAddress n => Data.Aeson.Types.FromJSON.FromJSON (Cardano.Wallet.Api.Types.ApiTxInput n)
 instance Cardano.Wallet.Api.Types.DecodeAddress 'Cardano.Wallet.Primitive.AddressDerivation.Mainnet
 instance GHC.TypeNats.KnownNat pm => Cardano.Wallet.Api.Types.DecodeAddress ('Cardano.Wallet.Primitive.AddressDerivation.Testnet pm)
@@ -5143,6 +5152,7 @@ instance Cardano.Wallet.Api.Types.EncodeAddress n => Data.Aeson.Types.ToJSON.ToJ
 instance Cardano.Wallet.Api.Types.EncodeAddress t => Data.Aeson.Types.ToJSON.ToJSON (Cardano.Wallet.Api.Types.PostTransactionData t)
 instance Cardano.Wallet.Api.Types.EncodeAddress t => Data.Aeson.Types.ToJSON.ToJSON (Cardano.Wallet.Api.Types.PostTransactionFeeData t)
 instance Cardano.Wallet.Api.Types.EncodeAddress n => Data.Aeson.Types.ToJSON.ToJSON (Cardano.Wallet.Api.Types.ApiTransaction n)
+instance Cardano.Wallet.Api.Types.EncodeAddress n => Data.Aeson.Types.ToJSON.ToJSON (Cardano.Wallet.Api.Types.ApiWalletMigrationPostData n)
 instance Cardano.Wallet.Api.Types.EncodeAddress n => Data.Aeson.Types.ToJSON.ToJSON (Cardano.Wallet.Api.Types.ApiTxInput n)
 instance Cardano.Wallet.Api.Types.EncodeAddress 'Cardano.Wallet.Primitive.AddressDerivation.Mainnet
 instance Cardano.Wallet.Api.Types.EncodeAddress ('Cardano.Wallet.Primitive.AddressDerivation.Testnet pm)
@@ -5264,8 +5274,6 @@ instance Cardano.Wallet.Api.Types.KnownDiscovery (Cardano.Wallet.Primitive.Addre
 instance Cardano.Wallet.Api.Types.KnownDiscovery (Cardano.Wallet.Primitive.AddressDiscovery.Sequential.SeqState network key)
 instance Data.Aeson.Types.FromJSON.FromJSON Cardano.Wallet.Api.Types.ApiWalletDiscovery
 instance Data.Aeson.Types.ToJSON.ToJSON Cardano.Wallet.Api.Types.ApiWalletDiscovery
-instance Data.Aeson.Types.FromJSON.FromJSON Cardano.Wallet.Api.Types.ApiByronWalletMigrationInfo
-instance Data.Aeson.Types.ToJSON.ToJSON Cardano.Wallet.Api.Types.ApiByronWalletMigrationInfo
 instance Web.Internal.HttpApiData.FromHttpApiData Cardano.Wallet.Api.Types.ApiPoolId
 instance Web.Internal.HttpApiData.ToHttpApiData Cardano.Wallet.Api.Types.ApiPoolId
 instance Data.Text.Class.ToText Cardano.Wallet.Api.Types.Iso8601Time
@@ -5273,6 +5281,8 @@ instance Data.Text.Class.FromText Cardano.Wallet.Api.Types.Iso8601Time
 instance Web.Internal.HttpApiData.FromHttpApiData Cardano.Wallet.Api.Types.Iso8601Time
 instance Web.Internal.HttpApiData.ToHttpApiData Cardano.Wallet.Api.Types.Iso8601Time
 instance Data.Aeson.Types.ToJSON.ToJSON Cardano.Wallet.Api.Types.ApiErrorCode
+instance Data.Aeson.Types.FromJSON.FromJSON Cardano.Wallet.Api.Types.ApiWalletMigrationInfo
+instance Data.Aeson.Types.ToJSON.ToJSON Cardano.Wallet.Api.Types.ApiWalletMigrationInfo
 instance Data.Aeson.Types.FromJSON.FromJSON Cardano.Wallet.Api.Types.ApiNetworkClock
 instance Data.Aeson.Types.ToJSON.ToJSON Cardano.Wallet.Api.Types.ApiNetworkClock
 instance Data.Aeson.Types.FromJSON.FromJSON Cardano.Wallet.Api.Types.ApiNtpStatus
@@ -5719,18 +5729,6 @@ type family ErrValidateSelection t
 --   transactions will have the effect of migrating all funds from the
 --   given source wallet to the specified target wallet.
 selectCoinsForMigration :: forall ctx s t k. (HasTransactionLayer t k ctx, HasDBLayer s k ctx) => ctx -> WalletId -> ExceptT ErrSelectForMigration IO [CoinSelection]
-
--- | Transform the given set of migration coin selections (for a source
---   wallet) into a set of coin selections that will migrate funds to the
---   specified target wallet.
---   
---   Each change entry in the specified set of coin selections is replaced
---   with a corresponding output entry in the returned set, where the
---   output entry has a address corresponding to the target wallet.
---   
---   All addresses generated by this function are also registered as
---   pending change addresses for the target wallet.
-assignMigrationTargetAddresses :: forall ctx s k. (HasDBLayer s k ctx, GenChange s) => ctx -> WalletId -> ArgGenChange s -> [CoinSelection] -> ExceptT ErrNoSuchWallet IO [UnsignedTx]
 data ErrSelectForMigration
 ErrSelectForMigrationNoSuchWallet :: ErrNoSuchWallet -> ErrSelectForMigration
 
@@ -6161,11 +6159,11 @@ type ByronMigrations n = GetByronWalletMigrationInfo :<|> MigrateByronWallet n
 
 -- | 
 --   <a>https://input-output-hk.github.io/cardano-wallet/api/#operation/migrateByronWallet</a>
-type MigrateByronWallet n = "byron-wallets" :> Capture "sourceWalletId" (ApiT WalletId) :> "migrations" :> Capture "targetWalletId" (ApiT WalletId) :> ReqBody '[JSON] ApiWalletPassphrase :> PostAccepted '[JSON] [ApiTransactionT n]
+type MigrateByronWallet n = "byron-wallets" :> Capture "walletId" (ApiT WalletId) :> "migrations" :> ReqBody '[JSON] (ApiWalletMigrationPostDataT n) :> PostAccepted '[JSON] [ApiTransactionT n]
 
 -- | 
 --   <a>https://input-output-hk.github.io/cardano-wallet/api/#operation/getByronWalletMigrationInfo</a>
-type GetByronWalletMigrationInfo = "byron-wallets" :> Capture "walletId" (ApiT WalletId) :> "migrations" :> Get '[JSON] ApiByronWalletMigrationInfo
+type GetByronWalletMigrationInfo = "byron-wallets" :> Capture "walletId" (ApiT WalletId) :> "migrations" :> Get '[JSON] ApiWalletMigrationInfo
 type Network = GetNetworkInformation :<|> GetNetworkParameters :<|> GetNetworkClock
 type GetNetworkInformation = "network" :> "information" :> Get '[JSON] ApiNetworkInformation
 type GetNetworkParameters = "network" :> "parameters" :> Capture "epochId" ApiEpochNumber :> Get '[JSON] ApiNetworkParameters
@@ -6223,7 +6221,7 @@ putWallet :: forall (style :: WalletStyle) w. (Discriminate style, HasType (ApiT
 putWalletPassphrase :: forall (style :: WalletStyle) w. (Discriminate style, HasType (ApiT WalletId) w) => w -> (Method, Text)
 getUTxOsStatistics :: forall (style :: WalletStyle) w. (Discriminate style, HasType (ApiT WalletId) w) => w -> (Method, Text)
 getMigrationInfo :: forall w. HasType (ApiT WalletId) w => w -> (Method, Text)
-migrateWallet :: forall from to. (HasType (ApiT WalletId) from, HasType (ApiT WalletId) to) => from -> to -> (Method, Text)
+migrateWallet :: forall w. HasType (ApiT WalletId) w => w -> (Method, Text)
 postRandomAddress :: forall w. HasType (ApiT WalletId) w => w -> (Method, Text)
 listAddresses :: forall style w. (HasType (ApiT WalletId) w, Discriminate style) => w -> (Method, Text)
 listAddresses' :: forall style w. (HasType (ApiT WalletId) w, Discriminate style) => w -> Maybe AddressState -> (Method, Text)
@@ -6481,7 +6479,7 @@ newApiLayer :: forall ctx s t k. (ctx ~ ApiLayer s t k, IsOurs s ChimericAccount
 delegationFee :: forall ctx s t n k. (s ~ SeqState n k, ctx ~ ApiLayer s t k) => ctx -> ApiT WalletId -> Handler ApiFee
 deleteTransaction :: forall ctx s t k. ctx ~ ApiLayer s t k => ctx -> ApiT WalletId -> ApiTxId -> Handler NoContent
 deleteWallet :: forall ctx s t k. ctx ~ ApiLayer s t k => ctx -> ApiT WalletId -> Handler NoContent
-getMigrationInfo :: forall s t k. () => ApiLayer s t k -> ApiT WalletId -> Handler ApiByronWalletMigrationInfo
+getMigrationInfo :: forall s t k. () => ApiLayer s t k -> ApiT WalletId -> Handler ApiWalletMigrationInfo
 getNetworkClock :: NtpClient -> Bool -> Handler ApiNetworkClock
 getNetworkInformation :: forall t. () => (Block, GenesisBlockParameters, SyncTolerance) -> NetworkLayer IO t Block -> Handler ApiNetworkInformation
 getNetworkParameters :: (Block, GenesisBlockParameters, SyncTolerance) -> ApiEpochNumber -> Handler ApiNetworkParameters
@@ -6492,7 +6490,7 @@ listAddresses :: forall ctx s t k n. (ctx ~ ApiLayer s t k, IsOurs s Address, Co
 listPools :: LiftHandler e => StakePoolLayer e IO -> Handler [ApiStakePool]
 listTransactions :: forall ctx s t k n. ctx ~ ApiLayer s t k => ctx -> ApiT WalletId -> Maybe Iso8601Time -> Maybe Iso8601Time -> Maybe (ApiT SortOrder) -> Handler [ApiTransaction n]
 listWallets :: forall ctx s t k apiWallet. ctx ~ ApiLayer s t k => ctx -> MkApiWallet ctx s apiWallet -> Handler [(apiWallet, UTCTime)]
-migrateWallet :: forall s t k k' n. (IsOwned s k, SoftDerivation k', DelegationAddress n k') => ApiLayer s t k -> ApiLayer (SeqState n k') t k' -> ApiT WalletId -> ApiT WalletId -> ApiWalletPassphrase -> Handler [ApiTransaction n]
+migrateWallet :: forall s t k n. IsOwned s k => ApiLayer s t k -> ApiT WalletId -> ApiWalletMigrationPostData n -> Handler [ApiTransaction n]
 postExternalTransaction :: forall ctx s t k. ctx ~ ApiLayer s t k => ctx -> PostExternalTransactionData -> Handler ApiTxId
 postIcarusWallet :: forall ctx s t k n. (ctx ~ ApiLayer s t k, s ~ SeqState n k, k ~ IcarusKey, HasWorkerRegistry s k ctx, PaymentAddress n IcarusKey) => ctx -> ByronWalletPostData '[15] -> Handler ApiByronWallet
 postLedgerWallet :: forall ctx s t k n. (ctx ~ ApiLayer s t k, s ~ SeqState n k, k ~ IcarusKey, HasWorkerRegistry s k ctx, PaymentAddress n IcarusKey) => ctx -> ByronWalletPostData '[12, 15, 18, 21, 24] -> Handler ApiByronWallet
@@ -6528,6 +6526,19 @@ withLegacyLayer' :: forall byron icarus t n a. (byron ~ ApiLayer (RndState n) t 
 -- | Handler for fetching the <a>ArgGenChange</a> for the <a>RndState</a>
 --   (i.e. the root XPrv), necessary to derive new change addresses.
 rndStateChange :: forall ctx s t k n. (ctx ~ ApiLayer s t k, s ~ RndState n, k ~ ByronKey) => ctx -> ApiT WalletId -> Passphrase "raw" -> Handler (ArgGenChange s)
+
+-- | Transform the given set of migration coin selections (for a source
+--   wallet) into a set of coin selections that will migrate funds to the
+--   specified target addresses.
+--   
+--   Each change entry in the specified set of coin selections is replaced
+--   with a corresponding output entry in the returned set, where the
+--   output entry has a address from specified addresses.
+--   
+--   If the number of outputs in the specified coin selection is greater
+--   than the number of addresses in the specified address list, addresses
+--   will be recycled in order of their appearance in the original list.
+assignMigrationAddresses :: [Address] -> [CoinSelection] -> [UnsignedTx]
 instance GHC.Show.Show Cardano.Wallet.Api.Server.ErrRejectedTip
 instance GHC.Classes.Eq Cardano.Wallet.Api.Server.ErrRejectedTip
 instance GHC.Show.Show Cardano.Wallet.Api.Server.ErrCreateWallet
