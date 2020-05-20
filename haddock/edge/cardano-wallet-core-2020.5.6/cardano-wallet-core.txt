@@ -2267,7 +2267,6 @@ instance GHC.Enum.Enum Cardano.Wallet.Primitive.AddressDiscovery.Sequential.Addr
 
 
 -- | Implementation of address derivation for <tt>Shelley</tt> Keys.
---   Shelley really means Jörmungandr here.
 module Cardano.Wallet.Primitive.AddressDerivation.Shelley
 
 -- | A cryptographic key for Shelley address derivation, with phantom-types
@@ -2281,6 +2280,54 @@ module Cardano.Wallet.Primitive.AddressDerivation.Shelley
 newtype ShelleyKey (depth :: Depth) key
 ShelleyKey :: key -> ShelleyKey key
 [getKey] :: ShelleyKey key -> key
+
+-- | The minimum seed length for <a>generateKeyFromSeed</a> and
+--   <a>unsafeGenerateKeyFromSeed</a>.
+minSeedLengthBytes :: Int
+
+-- | Generate a root key from a corresponding seed. The seed should be at
+--   least 16 bytes.
+generateKeyFromSeed :: (SomeMnemonic, Maybe SomeMnemonic) -> Passphrase "encryption" -> ShelleyKey  'RootK XPrv
+
+-- | Generate a new key from seed. Note that the <tt>depth</tt> is left
+--   open so that the caller gets to decide what type of key this is. This
+--   is mostly for testing, in practice, seeds are used to represent root
+--   keys, and one should use <a>generateKeyFromSeed</a>.
+unsafeGenerateKeyFromSeed :: (SomeMnemonic, Maybe SomeMnemonic) -> Passphrase "encryption" -> ShelleyKey depth XPrv
+
+-- | Verify the structure of a payload decoded from a Bech32 text string
+decodeShelleyAddress :: ByteString -> Either TextDecodingError Address
+instance GHC.Classes.Eq key => GHC.Classes.Eq (Cardano.Wallet.Primitive.AddressDerivation.Shelley.ShelleyKey depth key)
+instance GHC.Show.Show key => GHC.Show.Show (Cardano.Wallet.Primitive.AddressDerivation.Shelley.ShelleyKey depth key)
+instance GHC.Generics.Generic (Cardano.Wallet.Primitive.AddressDerivation.Shelley.ShelleyKey depth key)
+instance Control.DeepSeq.NFData key => Control.DeepSeq.NFData (Cardano.Wallet.Primitive.AddressDerivation.Shelley.ShelleyKey depth key)
+instance Cardano.Wallet.Primitive.AddressDerivation.HardDerivation Cardano.Wallet.Primitive.AddressDerivation.Shelley.ShelleyKey
+instance Cardano.Wallet.Primitive.AddressDerivation.SoftDerivation Cardano.Wallet.Primitive.AddressDerivation.Shelley.ShelleyKey
+instance Cardano.Wallet.Primitive.AddressDerivation.WalletKey Cardano.Wallet.Primitive.AddressDerivation.Shelley.ShelleyKey
+instance Cardano.Wallet.Primitive.AddressDerivation.PaymentAddress 'Cardano.Wallet.Primitive.AddressDerivation.Mainnet Cardano.Wallet.Primitive.AddressDerivation.Shelley.ShelleyKey
+instance Cardano.Wallet.Primitive.AddressDerivation.PaymentAddress ('Cardano.Wallet.Primitive.AddressDerivation.Testnet pm) Cardano.Wallet.Primitive.AddressDerivation.Shelley.ShelleyKey
+instance Cardano.Wallet.Primitive.AddressDerivation.DelegationAddress 'Cardano.Wallet.Primitive.AddressDerivation.Mainnet Cardano.Wallet.Primitive.AddressDerivation.Shelley.ShelleyKey
+instance Cardano.Wallet.Primitive.AddressDerivation.DelegationAddress ('Cardano.Wallet.Primitive.AddressDerivation.Testnet pm) Cardano.Wallet.Primitive.AddressDerivation.Shelley.ShelleyKey
+instance Cardano.Wallet.Primitive.AddressDerivation.MkKeyFingerprint Cardano.Wallet.Primitive.AddressDerivation.Shelley.ShelleyKey Cardano.Wallet.Primitive.Types.Address
+instance Cardano.Wallet.Primitive.AddressDerivation.MkKeyFingerprint Cardano.Wallet.Primitive.AddressDerivation.Shelley.ShelleyKey (Data.Proxy.Proxy n, Cardano.Wallet.Primitive.AddressDerivation.Shelley.ShelleyKey 'Cardano.Wallet.Primitive.AddressDerivation.AddressK Cardano.Crypto.Wallet.XPub)
+instance Cardano.Wallet.Primitive.AddressDerivation.PersistPrivateKey (Cardano.Wallet.Primitive.AddressDerivation.Shelley.ShelleyKey 'Cardano.Wallet.Primitive.AddressDerivation.RootK)
+instance Cardano.Wallet.Primitive.AddressDerivation.PersistPublicKey (Cardano.Wallet.Primitive.AddressDerivation.Shelley.ShelleyKey depth)
+
+
+-- | Implementation of address derivation for <tt>Jormungandr</tt> Keys.
+module Cardano.Wallet.Primitive.AddressDerivation.Jormungandr
+
+-- | A cryptographic key for Jormungandr address derivation, with
+--   phantom-types to disambiguate derivation paths
+--   
+--   <pre>
+--   let rootPrivateKey = JormungandrKey 'RootK XPrv
+--   let accountPubKey = JormungandrKey 'AccountK XPub
+--   let addressPubKey = JormungandrKey 'AddressK XPub
+--   </pre>
+newtype JormungandrKey (depth :: Depth) key
+JormungandrKey :: key -> JormungandrKey key
+[getKey] :: JormungandrKey key -> key
 
 -- | The minimum seed length for <a>generateKeyFromSeed</a> and
 --   <a>unsafeGenerateKeyFromSeed</a>.
@@ -2300,34 +2347,34 @@ knownDiscriminants :: KnownNetwork n => [Word8]
 
 -- | Generate a root key from a corresponding seed. The seed should be at
 --   least 16 bytes.
-generateKeyFromSeed :: (SomeMnemonic, Maybe SomeMnemonic) -> Passphrase "encryption" -> ShelleyKey  'RootK XPrv
+generateKeyFromSeed :: (SomeMnemonic, Maybe SomeMnemonic) -> Passphrase "encryption" -> JormungandrKey  'RootK XPrv
 
 -- | Generate a new key from seed. Note that the <tt>depth</tt> is left
 --   open so that the caller gets to decide what type of key this is. This
 --   is mostly for testing, in practice, seeds are used to represent root
 --   keys, and one should use <a>generateKeyFromSeed</a>.
-unsafeGenerateKeyFromSeed :: (SomeMnemonic, Maybe SomeMnemonic) -> Passphrase "encryption" -> ShelleyKey depth XPrv
+unsafeGenerateKeyFromSeed :: (SomeMnemonic, Maybe SomeMnemonic) -> Passphrase "encryption" -> JormungandrKey depth XPrv
 xpubFromText :: ByteString -> Either String XPub
 
 -- | Verify the structure of a payload decoded from a Bech32 text string
-decodeShelleyAddress :: forall n. (KnownNetwork n, NetworkDiscriminantVal n) => ByteString -> Either TextDecodingError Address
-instance GHC.Classes.Eq key => GHC.Classes.Eq (Cardano.Wallet.Primitive.AddressDerivation.Shelley.ShelleyKey depth key)
-instance GHC.Show.Show key => GHC.Show.Show (Cardano.Wallet.Primitive.AddressDerivation.Shelley.ShelleyKey depth key)
-instance GHC.Generics.Generic (Cardano.Wallet.Primitive.AddressDerivation.Shelley.ShelleyKey depth key)
-instance Cardano.Wallet.Primitive.AddressDerivation.PaymentAddress 'Cardano.Wallet.Primitive.AddressDerivation.Mainnet Cardano.Wallet.Primitive.AddressDerivation.Shelley.ShelleyKey
-instance Cardano.Wallet.Primitive.AddressDerivation.PaymentAddress ('Cardano.Wallet.Primitive.AddressDerivation.Testnet pm) Cardano.Wallet.Primitive.AddressDerivation.Shelley.ShelleyKey
-instance Cardano.Wallet.Primitive.AddressDerivation.DelegationAddress 'Cardano.Wallet.Primitive.AddressDerivation.Mainnet Cardano.Wallet.Primitive.AddressDerivation.Shelley.ShelleyKey
-instance Cardano.Wallet.Primitive.AddressDerivation.DelegationAddress ('Cardano.Wallet.Primitive.AddressDerivation.Testnet pm) Cardano.Wallet.Primitive.AddressDerivation.Shelley.ShelleyKey
-instance Cardano.Wallet.Primitive.AddressDerivation.Shelley.KnownNetwork 'Cardano.Wallet.Primitive.AddressDerivation.Mainnet
-instance Cardano.Wallet.Primitive.AddressDerivation.Shelley.KnownNetwork ('Cardano.Wallet.Primitive.AddressDerivation.Testnet pm)
-instance Control.DeepSeq.NFData key => Control.DeepSeq.NFData (Cardano.Wallet.Primitive.AddressDerivation.Shelley.ShelleyKey depth key)
-instance Cardano.Wallet.Primitive.AddressDerivation.HardDerivation Cardano.Wallet.Primitive.AddressDerivation.Shelley.ShelleyKey
-instance Cardano.Wallet.Primitive.AddressDerivation.SoftDerivation Cardano.Wallet.Primitive.AddressDerivation.Shelley.ShelleyKey
-instance Cardano.Wallet.Primitive.AddressDerivation.WalletKey Cardano.Wallet.Primitive.AddressDerivation.Shelley.ShelleyKey
-instance Cardano.Wallet.Primitive.AddressDerivation.MkKeyFingerprint Cardano.Wallet.Primitive.AddressDerivation.Shelley.ShelleyKey Cardano.Wallet.Primitive.Types.Address
-instance Cardano.Wallet.Primitive.AddressDerivation.MkKeyFingerprint Cardano.Wallet.Primitive.AddressDerivation.Shelley.ShelleyKey (Data.Proxy.Proxy n, Cardano.Wallet.Primitive.AddressDerivation.Shelley.ShelleyKey 'Cardano.Wallet.Primitive.AddressDerivation.AddressK Cardano.Crypto.Wallet.XPub)
-instance Cardano.Wallet.Primitive.AddressDerivation.PersistPrivateKey (Cardano.Wallet.Primitive.AddressDerivation.Shelley.ShelleyKey 'Cardano.Wallet.Primitive.AddressDerivation.RootK)
-instance Cardano.Wallet.Primitive.AddressDerivation.PersistPublicKey (Cardano.Wallet.Primitive.AddressDerivation.Shelley.ShelleyKey depth)
+decodeJormungandrAddress :: forall n. (KnownNetwork n, NetworkDiscriminantVal n) => ByteString -> Either TextDecodingError Address
+instance GHC.Classes.Eq key => GHC.Classes.Eq (Cardano.Wallet.Primitive.AddressDerivation.Jormungandr.JormungandrKey depth key)
+instance GHC.Show.Show key => GHC.Show.Show (Cardano.Wallet.Primitive.AddressDerivation.Jormungandr.JormungandrKey depth key)
+instance GHC.Generics.Generic (Cardano.Wallet.Primitive.AddressDerivation.Jormungandr.JormungandrKey depth key)
+instance Cardano.Wallet.Primitive.AddressDerivation.PaymentAddress 'Cardano.Wallet.Primitive.AddressDerivation.Mainnet Cardano.Wallet.Primitive.AddressDerivation.Jormungandr.JormungandrKey
+instance Cardano.Wallet.Primitive.AddressDerivation.PaymentAddress ('Cardano.Wallet.Primitive.AddressDerivation.Testnet pm) Cardano.Wallet.Primitive.AddressDerivation.Jormungandr.JormungandrKey
+instance Cardano.Wallet.Primitive.AddressDerivation.DelegationAddress 'Cardano.Wallet.Primitive.AddressDerivation.Mainnet Cardano.Wallet.Primitive.AddressDerivation.Jormungandr.JormungandrKey
+instance Cardano.Wallet.Primitive.AddressDerivation.DelegationAddress ('Cardano.Wallet.Primitive.AddressDerivation.Testnet pm) Cardano.Wallet.Primitive.AddressDerivation.Jormungandr.JormungandrKey
+instance Cardano.Wallet.Primitive.AddressDerivation.Jormungandr.KnownNetwork 'Cardano.Wallet.Primitive.AddressDerivation.Mainnet
+instance Cardano.Wallet.Primitive.AddressDerivation.Jormungandr.KnownNetwork ('Cardano.Wallet.Primitive.AddressDerivation.Testnet pm)
+instance Control.DeepSeq.NFData key => Control.DeepSeq.NFData (Cardano.Wallet.Primitive.AddressDerivation.Jormungandr.JormungandrKey depth key)
+instance Cardano.Wallet.Primitive.AddressDerivation.HardDerivation Cardano.Wallet.Primitive.AddressDerivation.Jormungandr.JormungandrKey
+instance Cardano.Wallet.Primitive.AddressDerivation.SoftDerivation Cardano.Wallet.Primitive.AddressDerivation.Jormungandr.JormungandrKey
+instance Cardano.Wallet.Primitive.AddressDerivation.WalletKey Cardano.Wallet.Primitive.AddressDerivation.Jormungandr.JormungandrKey
+instance Cardano.Wallet.Primitive.AddressDerivation.MkKeyFingerprint Cardano.Wallet.Primitive.AddressDerivation.Jormungandr.JormungandrKey Cardano.Wallet.Primitive.Types.Address
+instance Cardano.Wallet.Primitive.AddressDerivation.MkKeyFingerprint Cardano.Wallet.Primitive.AddressDerivation.Jormungandr.JormungandrKey (Data.Proxy.Proxy n, Cardano.Wallet.Primitive.AddressDerivation.Jormungandr.JormungandrKey 'Cardano.Wallet.Primitive.AddressDerivation.AddressK Cardano.Crypto.Wallet.XPub)
+instance Cardano.Wallet.Primitive.AddressDerivation.PersistPrivateKey (Cardano.Wallet.Primitive.AddressDerivation.Jormungandr.JormungandrKey 'Cardano.Wallet.Primitive.AddressDerivation.RootK)
+instance Cardano.Wallet.Primitive.AddressDerivation.PersistPublicKey (Cardano.Wallet.Primitive.AddressDerivation.Jormungandr.JormungandrKey depth)
 
 
 -- | This module contains instances and types necessary for storing wallets
@@ -4859,8 +4906,8 @@ AccountPostData :: !ApiT WalletName -> !ApiAccountPublicKey -> !Maybe (ApiT Addr
 [$sel:accountPublicKey:AccountPostData] :: AccountPostData -> !ApiAccountPublicKey
 [$sel:addressPoolGap:AccountPostData] :: AccountPostData -> !Maybe (ApiT AddressPoolGap)
 newtype ApiAccountPublicKey
-ApiAccountPublicKey :: ApiT (ShelleyKey  'AccountK XPub) -> ApiAccountPublicKey
-[$sel:key:ApiAccountPublicKey] :: ApiAccountPublicKey -> ApiT (ShelleyKey  'AccountK XPub)
+ApiAccountPublicKey :: ApiT XPub -> ApiAccountPublicKey
+[$sel:key:ApiAccountPublicKey] :: ApiAccountPublicKey -> ApiT XPub
 newtype WalletOrAccountPostData
 WalletOrAccountPostData :: Either WalletPostData AccountPostData -> WalletOrAccountPostData
 [$sel:postData:WalletOrAccountPostData] :: WalletOrAccountPostData -> Either WalletPostData AccountPostData
@@ -5492,7 +5539,7 @@ type HasGenesisData = HasType (Block, GenesisBlockParameters, SyncTolerance)
 genesisData :: forall ctx. HasGenesisData ctx => Lens' ctx (Block, GenesisBlockParameters, SyncTolerance)
 
 -- | Initialise and store a new wallet, returning its ID.
-createWallet :: forall ctx s k. (HasGenesisData ctx, HasDBLayer s k ctx, Show s, NFData s, IsOurs s Address, IsOurs s ChimericAccount) => ctx -> WalletId -> WalletName -> s -> ExceptT ErrWalletAlreadyExists IO WalletId
+createWallet :: forall ctx s k. (HasGenesisData ctx, HasDBLayer s k ctx, IsOurs s Address, IsOurs s ChimericAccount) => ctx -> WalletId -> WalletName -> s -> ExceptT ErrWalletAlreadyExists IO WalletId
 
 -- | Initialise and store a new legacy Icarus wallet. These wallets are
 --   intrinsically sequential, but, in the incentivized testnet, we only
@@ -5579,12 +5626,12 @@ ErrCheckIntegrityDifferentGenesis :: Hash "Genesis" -> Hash "Genesis" -> ErrChec
 newtype ErrWalletNotResponding
 ErrWalletNotResponding :: WalletId -> ErrWalletNotResponding
 createRandomAddress :: forall ctx s k n. (HasDBLayer s k ctx, PaymentAddress n ByronKey, s ~ RndState n, k ~ ByronKey) => ctx -> WalletId -> Passphrase "raw" -> Maybe (Index  'Hardened  'AddressK) -> ExceptT ErrCreateRandomAddress IO Address
-importRandomAddress :: forall ctx s k n. (HasDBLayer s k ctx, PaymentAddress n ByronKey, s ~ RndState n, k ~ ByronKey) => ctx -> WalletId -> Address -> ExceptT ErrImportRandomAddress IO ()
+importRandomAddress :: forall ctx s k n. (HasDBLayer s k ctx, s ~ RndState n, k ~ ByronKey) => ctx -> WalletId -> Address -> ExceptT ErrImportRandomAddress IO ()
 
 -- | List all addresses of a wallet with their metadata. Addresses are
 --   ordered from the most-recently-discovered to the oldest known.
-listAddresses :: forall ctx s k. (HasDBLayer s k ctx, IsOurs s Address, IsOurs s ChimericAccount, CompareDiscovery s, KnownAddresses s) => ctx -> WalletId -> (s -> Address -> Maybe Address) -> ExceptT ErrNoSuchWallet IO [(Address, AddressState)]
-normalizeDelegationAddress :: forall s k n. (MkKeyFingerprint k Address, DelegationAddress n k, HasRewardAccount s, k ~ RewardAccountKey s) => s -> Address -> Maybe Address
+listAddresses :: forall ctx s k. (HasDBLayer s k ctx, IsOurs s Address, CompareDiscovery s, KnownAddresses s) => ctx -> WalletId -> (s -> Address -> Maybe Address) -> ExceptT ErrNoSuchWallet IO [(Address, AddressState)]
+normalizeDelegationAddress :: forall s k n. (DelegationAddress n k, HasRewardAccount s, k ~ RewardAccountKey s) => s -> Address -> Maybe Address
 data ErrCreateRandomAddress
 ErrIndexAlreadyExists :: Index  'Hardened  'AddressK -> ErrCreateRandomAddress
 ErrCreateAddrNoSuchWallet :: ErrNoSuchWallet -> ErrCreateRandomAddress
@@ -5596,7 +5643,7 @@ ErrImportAddrDoesNotBelong :: ErrImportRandomAddress
 ErrImportAddressNotAByronWallet :: ErrImportRandomAddress
 
 -- | Makes a fully-resolved coin selection for the given set of payments.
-selectCoinsExternal :: forall ctx s t k e. (GenChange s, HasDBLayer s k ctx, HasLogger WalletLog ctx, HasTransactionLayer t k ctx, IsOwned s k, NFData s, Show s, e ~ ErrValidateSelection t) => ctx -> WalletId -> ArgGenChange s -> NonEmpty TxOut -> ExceptT (ErrSelectCoinsExternal e) IO UnsignedTx
+selectCoinsExternal :: forall ctx s t k e. (GenChange s, HasDBLayer s k ctx, HasLogger WalletLog ctx, HasTransactionLayer t k ctx, e ~ ErrValidateSelection t) => ctx -> WalletId -> ArgGenChange s -> NonEmpty TxOut -> ExceptT (ErrSelectCoinsExternal e) IO UnsignedTx
 
 -- | Prepare a transaction and automatically select inputs from the wallet
 --   to cover the requested outputs. Note that this only runs coin
@@ -5608,7 +5655,7 @@ selectCoinsForPayment :: forall ctx s t k e. (HasTransactionLayer t k ctx, HasLo
 --   Requires the encryption passphrase in order to decrypt the root
 --   private key. Note that this doesn't broadcast the transaction to the
 --   network. In order to do so, use <a>submitTx</a>.
-signPayment :: forall ctx s t k. (HasTransactionLayer t k ctx, HasDBLayer s k ctx, Show s, NFData s, IsOwned s k, GenChange s) => ctx -> WalletId -> ArgGenChange s -> Passphrase "raw" -> CoinSelection -> ExceptT ErrSignPayment IO (Tx, TxMeta, UTCTime, SealedTx)
+signPayment :: forall ctx s t k. (HasTransactionLayer t k ctx, HasDBLayer s k ctx, IsOwned s k, GenChange s) => ctx -> WalletId -> ArgGenChange s -> Passphrase "raw" -> CoinSelection -> ExceptT ErrSignPayment IO (Tx, TxMeta, UTCTime, SealedTx)
 data ErrSelectCoinsExternal e
 ErrSelectCoinsExternalNoSuchWallet :: ErrNoSuchWallet -> ErrSelectCoinsExternal e
 ErrSelectCoinsExternalUnableToMakeSelection :: ErrSelectForPayment e -> ErrSelectCoinsExternal e
@@ -5683,7 +5730,7 @@ selectCoinsForMigration :: forall ctx s t k. (HasTransactionLayer t k ctx, HasDB
 --   
 --   All addresses generated by this function are also registered as
 --   pending change addresses for the target wallet.
-assignMigrationTargetAddresses :: forall ctx s k. (HasDBLayer s k ctx, GenChange s, IsOurs s Address, NFData s, Show s) => ctx -> WalletId -> ArgGenChange s -> [CoinSelection] -> ExceptT ErrNoSuchWallet IO [UnsignedTx]
+assignMigrationTargetAddresses :: forall ctx s k. (HasDBLayer s k ctx, GenChange s) => ctx -> WalletId -> ArgGenChange s -> [CoinSelection] -> ExceptT ErrNoSuchWallet IO [UnsignedTx]
 data ErrSelectForMigration
 ErrSelectForMigrationNoSuchWallet :: ErrNoSuchWallet -> ErrSelectForMigration
 
@@ -5691,15 +5738,15 @@ ErrSelectForMigrationNoSuchWallet :: ErrNoSuchWallet -> ErrSelectForMigration
 ErrSelectForMigrationEmptyWallet :: WalletId -> ErrSelectForMigration
 
 -- | Helper function to factor necessary logic for joining a stake pool.
-joinStakePool :: forall ctx s t k. (HasDBLayer s k ctx, HasLogger WalletLog ctx, HasNetworkLayer t ctx, HasTransactionLayer t k ctx, Show s, NFData s, IsOwned s k, GenChange s, HardDerivation k, AddressIndexDerivationType k ~  'Soft) => ctx -> WalletId -> (PoolId, [PoolId]) -> ArgGenChange s -> Passphrase "raw" -> ExceptT ErrJoinStakePool IO (Tx, TxMeta, UTCTime)
+joinStakePool :: forall ctx s t k. (HasDBLayer s k ctx, HasLogger WalletLog ctx, HasNetworkLayer t ctx, HasTransactionLayer t k ctx, IsOwned s k, GenChange s, HardDerivation k, AddressIndexDerivationType k ~  'Soft) => ctx -> WalletId -> (PoolId, [PoolId]) -> ArgGenChange s -> Passphrase "raw" -> ExceptT ErrJoinStakePool IO (Tx, TxMeta, UTCTime)
 
 -- | Helper function to factor necessary logic for quitting a stake pool.
-quitStakePool :: forall ctx s t k. (HasDBLayer s k ctx, HasLogger WalletLog ctx, HasNetworkLayer t ctx, HasTransactionLayer t k ctx, Show s, NFData s, IsOwned s k, GenChange s, HardDerivation k, AddressIndexDerivationType k ~  'Soft) => ctx -> WalletId -> ArgGenChange s -> Passphrase "raw" -> ExceptT ErrQuitStakePool IO (Tx, TxMeta, UTCTime)
+quitStakePool :: forall ctx s t k. (HasDBLayer s k ctx, HasLogger WalletLog ctx, HasNetworkLayer t ctx, HasTransactionLayer t k ctx, IsOwned s k, GenChange s, HardDerivation k, AddressIndexDerivationType k ~  'Soft) => ctx -> WalletId -> ArgGenChange s -> Passphrase "raw" -> ExceptT ErrQuitStakePool IO (Tx, TxMeta, UTCTime)
 
 -- | Select necessary coins to cover for a single delegation request
 --   (including one certificate).
 selectCoinsForDelegation :: forall ctx s t k. (HasTransactionLayer t k ctx, HasLogger WalletLog ctx, HasDBLayer s k ctx) => ctx -> WalletId -> ExceptT ErrSelectForDelegation IO CoinSelection
-signDelegation :: forall ctx s t k. (HasTransactionLayer t k ctx, HasDBLayer s k ctx, Show s, NFData s, IsOwned s k, GenChange s, HardDerivation k, AddressIndexDerivationType k ~  'Soft) => ctx -> WalletId -> ArgGenChange s -> Passphrase "raw" -> CoinSelection -> DelegationAction -> ExceptT ErrSignDelegation IO (Tx, TxMeta, UTCTime, SealedTx)
+signDelegation :: forall ctx s t k. (HasTransactionLayer t k ctx, HasDBLayer s k ctx, IsOwned s k, GenChange s, HardDerivation k, AddressIndexDerivationType k ~  'Soft) => ctx -> WalletId -> ArgGenChange s -> Passphrase "raw" -> CoinSelection -> DelegationAction -> ExceptT ErrSignDelegation IO (Tx, TxMeta, UTCTime, SealedTx)
 guardJoin :: [PoolId] -> WalletDelegation -> PoolId -> Either ErrCannotJoin ()
 guardQuit :: WalletDelegation -> Either ErrCannotQuit ()
 data ErrJoinStakePool
@@ -5743,7 +5790,7 @@ submitExternalTx :: forall ctx t k. (HasNetworkLayer t ctx, HasTransactionLayer 
 
 -- | Very much like <a>signPayment</a>, but doesn't not generate change
 --   addresses.
-signTx :: forall ctx s t k. (HasTransactionLayer t k ctx, HasDBLayer s k ctx, Show s, NFData s, IsOwned s k) => ctx -> WalletId -> Passphrase "raw" -> UnsignedTx -> ExceptT ErrSignPayment IO (Tx, TxMeta, UTCTime, SealedTx)
+signTx :: forall ctx s t k. (HasTransactionLayer t k ctx, HasDBLayer s k ctx, IsOwned s k) => ctx -> WalletId -> Passphrase "raw" -> UnsignedTx -> ExceptT ErrSignPayment IO (Tx, TxMeta, UTCTime, SealedTx)
 
 -- | Broadcast a (signed) transaction to the network.
 submitTx :: forall ctx s t k. (HasNetworkLayer t ctx, HasDBLayer s k ctx) => ctx -> WalletId -> (Tx, TxMeta, SealedTx) -> ExceptT ErrSubmitTx IO ()
@@ -6431,7 +6478,7 @@ withListeningSocket :: HostPreference -> Listen -> (Either ListenError (Port, So
 
 -- | Create a new instance of the wallet layer.
 newApiLayer :: forall ctx s t k. (ctx ~ ApiLayer s t k, IsOurs s ChimericAccount, IsOurs s Address) => Tracer IO (WorkerLog WalletId WalletLog) -> (Block, GenesisBlockParameters, SyncTolerance) -> NetworkLayer IO t Block -> TransactionLayer t k -> DBFactory IO s k -> IO ctx
-delegationFee :: forall ctx s t n k. (s ~ SeqState n k, k ~ ShelleyKey, ctx ~ ApiLayer s t k) => ctx -> ApiT WalletId -> Handler ApiFee
+delegationFee :: forall ctx s t n k. (s ~ SeqState n k, ctx ~ ApiLayer s t k) => ctx -> ApiT WalletId -> Handler ApiFee
 deleteTransaction :: forall ctx s t k. ctx ~ ApiLayer s t k => ctx -> ApiT WalletId -> ApiTxId -> Handler NoContent
 deleteWallet :: forall ctx s t k. ctx ~ ApiLayer s t k => ctx -> ApiT WalletId -> Handler NoContent
 getMigrationInfo :: forall s t k. () => ApiLayer s t k -> ApiT WalletId -> Handler ApiByronWalletMigrationInfo
@@ -6440,28 +6487,28 @@ getNetworkInformation :: forall t. () => (Block, GenesisBlockParameters, SyncTol
 getNetworkParameters :: (Block, GenesisBlockParameters, SyncTolerance) -> ApiEpochNumber -> Handler ApiNetworkParameters
 getUTxOsStatistics :: forall ctx s t k. ctx ~ ApiLayer s t k => ctx -> ApiT WalletId -> Handler ApiUtxoStatistics
 getWallet :: forall ctx s t k apiWallet. (ctx ~ ApiLayer s t k, HasWorkerRegistry s k ctx, HasDBFactory s k ctx) => ctx -> MkApiWallet ctx s apiWallet -> ApiT WalletId -> Handler (apiWallet, UTCTime)
-joinStakePool :: forall ctx s t n k e. (DelegationAddress n k, s ~ SeqState n k, k ~ ShelleyKey, HardDerivation k, ctx ~ ApiLayer s t k) => ctx -> StakePoolLayer e IO -> ApiPoolId -> ApiT WalletId -> ApiWalletPassphrase -> Handler (ApiTransaction n)
-listAddresses :: forall ctx s t k n. (ctx ~ ApiLayer s t k, IsOurs s Address, CompareDiscovery s, KnownAddresses s, IsOurs s ChimericAccount) => ctx -> (s -> Address -> Maybe Address) -> ApiT WalletId -> Maybe (ApiT AddressState) -> Handler [ApiAddress n]
+joinStakePool :: forall ctx s t n k e. (DelegationAddress n k, s ~ SeqState n k, IsOwned s k, GenChange s, HardDerivation k, AddressIndexDerivationType k ~  'Soft, ctx ~ ApiLayer s t k) => ctx -> StakePoolLayer e IO -> ApiPoolId -> ApiT WalletId -> ApiWalletPassphrase -> Handler (ApiTransaction n)
+listAddresses :: forall ctx s t k n. (ctx ~ ApiLayer s t k, IsOurs s Address, CompareDiscovery s, KnownAddresses s) => ctx -> (s -> Address -> Maybe Address) -> ApiT WalletId -> Maybe (ApiT AddressState) -> Handler [ApiAddress n]
 listPools :: LiftHandler e => StakePoolLayer e IO -> Handler [ApiStakePool]
 listTransactions :: forall ctx s t k n. ctx ~ ApiLayer s t k => ctx -> ApiT WalletId -> Maybe Iso8601Time -> Maybe Iso8601Time -> Maybe (ApiT SortOrder) -> Handler [ApiTransaction n]
 listWallets :: forall ctx s t k apiWallet. ctx ~ ApiLayer s t k => ctx -> MkApiWallet ctx s apiWallet -> Handler [(apiWallet, UTCTime)]
-migrateWallet :: forall s t k n. (Show s, NFData s, IsOwned s k, DelegationAddress n ShelleyKey) => ApiLayer s t k -> ApiLayer (SeqState n ShelleyKey) t ShelleyKey -> ApiT WalletId -> ApiT WalletId -> ApiWalletPassphrase -> Handler [ApiTransaction n]
+migrateWallet :: forall s t k k' n. (IsOwned s k, SoftDerivation k', DelegationAddress n k') => ApiLayer s t k -> ApiLayer (SeqState n k') t k' -> ApiT WalletId -> ApiT WalletId -> ApiWalletPassphrase -> Handler [ApiTransaction n]
 postExternalTransaction :: forall ctx s t k. ctx ~ ApiLayer s t k => ctx -> PostExternalTransactionData -> Handler ApiTxId
 postIcarusWallet :: forall ctx s t k n. (ctx ~ ApiLayer s t k, s ~ SeqState n k, k ~ IcarusKey, HasWorkerRegistry s k ctx, PaymentAddress n IcarusKey) => ctx -> ByronWalletPostData '[15] -> Handler ApiByronWallet
 postLedgerWallet :: forall ctx s t k n. (ctx ~ ApiLayer s t k, s ~ SeqState n k, k ~ IcarusKey, HasWorkerRegistry s k ctx, PaymentAddress n IcarusKey) => ctx -> ByronWalletPostData '[12, 15, 18, 21, 24] -> Handler ApiByronWallet
 postRandomAddress :: forall ctx s t k n. (s ~ RndState n, k ~ ByronKey, ctx ~ ApiLayer s t k, PaymentAddress n ByronKey) => ctx -> ApiT WalletId -> ApiPostRandomAddressData -> Handler (ApiAddress n)
 postRandomWallet :: forall ctx s t k n. (ctx ~ ApiLayer s t k, s ~ RndState n, k ~ ByronKey) => ctx -> ByronWalletPostData '[12] -> Handler ApiByronWallet
 postRandomWalletFromXPrv :: forall ctx s t k n. (ctx ~ ApiLayer s t k, s ~ RndState n, k ~ ByronKey) => ctx -> ByronWalletFromXPrvPostData -> Handler ApiByronWallet
-postTransaction :: forall ctx s t k n. (Buildable (ErrValidateSelection t), GenChange s, IsOwned s k, NFData s, Show s, ctx ~ ApiLayer s t k) => ctx -> ArgGenChange s -> ApiT WalletId -> PostTransactionData n -> Handler (ApiTransaction n)
+postTransaction :: forall ctx s t k n. (Buildable (ErrValidateSelection t), GenChange s, IsOwned s k, ctx ~ ApiLayer s t k) => ctx -> ArgGenChange s -> ApiT WalletId -> PostTransactionData n -> Handler (ApiTransaction n)
 postTransactionFee :: forall ctx s t k n. (Buildable (ErrValidateSelection t), ctx ~ ApiLayer s t k) => ctx -> ApiT WalletId -> PostTransactionFeeData n -> Handler ApiFee
 postTrezorWallet :: forall ctx s t k n. (ctx ~ ApiLayer s t k, s ~ SeqState n k, k ~ IcarusKey, HasWorkerRegistry s k ctx, PaymentAddress n IcarusKey) => ctx -> ByronWalletPostData '[12, 15, 18, 21, 24] -> Handler ApiByronWallet
-postWallet :: forall ctx s t k n. (s ~ SeqState n k, k ~ ShelleyKey, ctx ~ ApiLayer s t k, HasDBFactory s k ctx, HasWorkerRegistry s k ctx) => ctx -> WalletOrAccountPostData -> Handler ApiWallet
+postWallet :: forall ctx s t k n. (s ~ SeqState n k, ctx ~ ApiLayer s t k, SoftDerivation k, MkKeyFingerprint k (Proxy n, k  'AddressK XPub), MkKeyFingerprint k Address, WalletKey k, Bounded (Index (AddressIndexDerivationType k)  'AddressK), HasDBFactory s k ctx, HasWorkerRegistry s k ctx) => ctx -> ((SomeMnemonic, Maybe SomeMnemonic) -> Passphrase "encryption" -> k  'RootK XPrv) -> (XPub -> k  'AccountK XPub) -> WalletOrAccountPostData -> Handler ApiWallet
 putByronWalletPassphrase :: forall ctx s t k. (WalletKey k, ctx ~ ApiLayer s t k) => ctx -> ApiT WalletId -> ByronWalletPutPassphraseData -> Handler NoContent
-putRandomAddress :: forall ctx s t k n. (s ~ RndState n, k ~ ByronKey, ctx ~ ApiLayer s t k, PaymentAddress n ByronKey) => ctx -> ApiT WalletId -> (ApiT Address, Proxy n) -> Handler NoContent
+putRandomAddress :: forall ctx s t k n. (s ~ RndState n, k ~ ByronKey, ctx ~ ApiLayer s t k) => ctx -> ApiT WalletId -> (ApiT Address, Proxy n) -> Handler NoContent
 putWallet :: forall ctx s t k apiWallet. ctx ~ ApiLayer s t k => ctx -> MkApiWallet ctx s apiWallet -> ApiT WalletId -> WalletPutData -> Handler apiWallet
 putWalletPassphrase :: forall ctx s t k. (WalletKey k, ctx ~ ApiLayer s t k) => ctx -> ApiT WalletId -> WalletPutPassphraseData -> Handler NoContent
-quitStakePool :: forall ctx s t n k. (DelegationAddress n k, s ~ SeqState n k, k ~ ShelleyKey, HardDerivation k, ctx ~ ApiLayer s t k) => ctx -> ApiT WalletId -> ApiWalletPassphrase -> Handler (ApiTransaction n)
-selectCoins :: forall ctx s t k n. (Buildable (ErrValidateSelection t), DelegationAddress n k, k ~ ShelleyKey, s ~ SeqState n k, ctx ~ ApiLayer s t k) => ctx -> ApiT WalletId -> ApiSelectCoinsData n -> Handler (ApiCoinSelection n)
+quitStakePool :: forall ctx s t n k. (DelegationAddress n k, s ~ SeqState n k, IsOwned s k, GenChange s, HardDerivation k, AddressIndexDerivationType k ~  'Soft, ctx ~ ApiLayer s t k) => ctx -> ApiT WalletId -> ApiWalletPassphrase -> Handler (ApiTransaction n)
+selectCoins :: forall ctx s t k n. (Buildable (ErrValidateSelection t), s ~ SeqState n k, DelegationAddress n k, SoftDerivation k, ctx ~ ApiLayer s t k) => ctx -> ApiT WalletId -> ApiSelectCoinsData n -> Handler (ApiCoinSelection n)
 
 -- | Lift our wallet layer into servant <a>Handler</a>, by mapping each
 --   error to a corresponding servant error.

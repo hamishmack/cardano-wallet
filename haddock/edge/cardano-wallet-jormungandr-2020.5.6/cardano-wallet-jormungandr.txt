@@ -388,7 +388,7 @@ instance Data.Text.Class.ToText Cardano.Pool.Jormungandr.Metrics.StakePoolLog
 module Cardano.Wallet.Jormungandr.Api.Server
 
 -- | A Servant server for our wallet API
-server :: forall t n byron icarus shelley. (byron ~ ApiLayer (RndState  'Mainnet) t ByronKey, icarus ~ ApiLayer (SeqState  'Mainnet IcarusKey) t IcarusKey, shelley ~ ApiLayer (SeqState n ShelleyKey) t ShelleyKey, DelegationAddress n ShelleyKey, Buildable (ErrValidateSelection t)) => byron -> icarus -> shelley -> StakePoolLayer ErrListStakePools IO -> NtpClient -> Server (Api n)
+server :: forall t n byron icarus jormungandr. (byron ~ ApiLayer (RndState  'Mainnet) t ByronKey, icarus ~ ApiLayer (SeqState  'Mainnet IcarusKey) t IcarusKey, jormungandr ~ ApiLayer (SeqState n JormungandrKey) t JormungandrKey, DelegationAddress n JormungandrKey, Buildable (ErrValidateSelection t)) => byron -> icarus -> jormungandr -> StakePoolLayer ErrListStakePools IO -> NtpClient -> Server (Api n)
 instance Cardano.Wallet.Api.Server.LiftHandler Cardano.Pool.Jormungandr.Metrics.ErrListStakePools
 
 
@@ -1106,7 +1106,7 @@ instance Data.Text.Class.ToText Cardano.Wallet.Jormungandr.Network.JormungandrBa
 
 module Cardano.Wallet.Jormungandr.Transaction
 
--- | Construct a <a>TransactionLayer</a> compatible with Shelley and
+-- | Construct a <a>TransactionLayer</a> compatible with Jormungandr and
 --   <tt>Jörmungandr</tt>
 newTransactionLayer :: forall k t. (t ~ Jormungandr, TxWitnessTagFor k, WalletKey k) => Hash "Genesis" -> TransactionLayer t k
 
@@ -1116,7 +1116,7 @@ ErrExceededInpsOrOuts :: ErrExceededInpsOrOuts
 instance GHC.Show.Show Cardano.Wallet.Jormungandr.Transaction.ErrExceededInpsOrOuts
 instance GHC.Classes.Eq Cardano.Wallet.Jormungandr.Transaction.ErrExceededInpsOrOuts
 instance Formatting.Buildable.Buildable Cardano.Wallet.Jormungandr.Transaction.ErrExceededInpsOrOuts
-instance Cardano.Wallet.Jormungandr.Transaction.TxWitnessTagFor Cardano.Wallet.Primitive.AddressDerivation.Shelley.ShelleyKey
+instance Cardano.Wallet.Jormungandr.Transaction.TxWitnessTagFor Cardano.Wallet.Primitive.AddressDerivation.Jormungandr.JormungandrKey
 instance Cardano.Wallet.Jormungandr.Transaction.TxWitnessTagFor Cardano.Wallet.Primitive.AddressDerivation.Icarus.IcarusKey
 instance Cardano.Wallet.Jormungandr.Transaction.TxWitnessTagFor Cardano.Wallet.Primitive.AddressDerivation.Byron.ByronKey
 
@@ -1137,7 +1137,7 @@ module Cardano.Wallet.Jormungandr
 -- | The <tt>cardano-wallet-jormungandr</tt> main function. It takes the
 --   configuration which was passed from the CLI and environment and starts
 --   all components of the wallet.
-serveWallet :: forall (n :: NetworkDiscriminant) t. (t ~ Jormungandr, NetworkDiscriminantVal n, DecodeAddress n, EncodeAddress n, DelegationAddress n ShelleyKey) => Tracers IO -> SyncTolerance -> Maybe FilePath -> HostPreference -> Listen -> JormungandrBackend -> (SockAddr -> Port "node" -> GenesisBlockParameters -> IO ()) -> IO ExitCode
+serveWallet :: forall (n :: NetworkDiscriminant) t. (t ~ Jormungandr, NetworkDiscriminantVal n, DecodeAddress n, EncodeAddress n, DelegationAddress n JormungandrKey) => Tracers IO -> SyncTolerance -> Maybe FilePath -> HostPreference -> Listen -> JormungandrBackend -> (SockAddr -> Port "node" -> GenesisBlockParameters -> IO ()) -> IO ExitCode
 
 -- | Covert a raw block to one that the
 --   <a>Cardano.Pool.Jormungandr.Metrics</a> module accepts.
