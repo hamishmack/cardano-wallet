@@ -6685,7 +6685,7 @@ chainSyncWithBlocks :: forall m block. (Monad m, MonadSTM m, HasHeader block) =>
 -- | Sending command to the localTxSubmission client. See also
 --   <a>ChainSyncCmd</a>.
 data LocalTxSubmissionCmd tx err (m :: * -> *)
-CmdSubmitTx :: tx -> (Maybe err -> m ()) -> LocalTxSubmissionCmd tx err
+CmdSubmitTx :: tx -> (SubmitResult err -> m ()) -> LocalTxSubmissionCmd tx err
 
 -- | Client for the 'Local Tx Submission' mini-protocol.
 --   
