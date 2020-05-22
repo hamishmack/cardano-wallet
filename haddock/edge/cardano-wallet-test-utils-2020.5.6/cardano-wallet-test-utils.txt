@@ -55,6 +55,10 @@ getTestData :: Q Exp
 --   build (and not just a nix-shell).
 inNixBuild :: IO Bool
 
+module Test.Utils.Roundtrip
+jsonRoundtripAndGolden :: forall a. (Arbitrary a, ToJSON a, FromJSON a, Typeable a) => FilePath -> Proxy a -> Spec
+httpApiDataRoundtrip :: forall a. (Arbitrary a, FromHttpApiData a, ToHttpApiData a, Typeable a, Eq a, Show a) => Proxy a -> Spec
+
 
 -- | Provides a simple static files web server to be used as a fixture in
 --   tests which need a HTTP server.

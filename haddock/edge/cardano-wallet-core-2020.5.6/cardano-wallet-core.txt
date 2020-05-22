@@ -5142,8 +5142,6 @@ instance Cardano.Wallet.Api.Types.DecodeAddress t => Data.Aeson.Types.FromJSON.F
 instance Cardano.Wallet.Api.Types.DecodeAddress n => Data.Aeson.Types.FromJSON.FromJSON (Cardano.Wallet.Api.Types.ApiTransaction n)
 instance Cardano.Wallet.Api.Types.DecodeAddress n => Data.Aeson.Types.FromJSON.FromJSON (Cardano.Wallet.Api.Types.ApiWalletMigrationPostData n)
 instance Cardano.Wallet.Api.Types.DecodeAddress n => Data.Aeson.Types.FromJSON.FromJSON (Cardano.Wallet.Api.Types.ApiTxInput n)
-instance Cardano.Wallet.Api.Types.DecodeAddress 'Cardano.Wallet.Primitive.AddressDerivation.Mainnet
-instance GHC.TypeNats.KnownNat pm => Cardano.Wallet.Api.Types.DecodeAddress ('Cardano.Wallet.Primitive.AddressDerivation.Testnet pm)
 instance Cardano.Wallet.Api.Types.EncodeAddress n => Web.Internal.HttpApiData.ToHttpApiData (Cardano.Wallet.Api.Types.ApiT Cardano.Wallet.Primitive.Types.Address, Data.Proxy.Proxy n)
 instance Cardano.Wallet.Api.Types.EncodeAddress n => Data.Aeson.Types.ToJSON.ToJSON (Cardano.Wallet.Api.Types.ApiAddress n)
 instance Cardano.Wallet.Api.Types.EncodeAddress n => Data.Aeson.Types.ToJSON.ToJSON (Cardano.Wallet.Api.Types.ApiSelectCoinsData n)
@@ -5155,8 +5153,6 @@ instance Cardano.Wallet.Api.Types.EncodeAddress t => Data.Aeson.Types.ToJSON.ToJ
 instance Cardano.Wallet.Api.Types.EncodeAddress n => Data.Aeson.Types.ToJSON.ToJSON (Cardano.Wallet.Api.Types.ApiTransaction n)
 instance Cardano.Wallet.Api.Types.EncodeAddress n => Data.Aeson.Types.ToJSON.ToJSON (Cardano.Wallet.Api.Types.ApiWalletMigrationPostData n)
 instance Cardano.Wallet.Api.Types.EncodeAddress n => Data.Aeson.Types.ToJSON.ToJSON (Cardano.Wallet.Api.Types.ApiTxInput n)
-instance Cardano.Wallet.Api.Types.EncodeAddress 'Cardano.Wallet.Primitive.AddressDerivation.Mainnet
-instance Cardano.Wallet.Api.Types.EncodeAddress ('Cardano.Wallet.Primitive.AddressDerivation.Testnet pm)
 instance Data.Aeson.Types.FromJSON.FromJSON Cardano.Wallet.Api.Types.ApiByronWallet
 instance Data.Aeson.Types.ToJSON.ToJSON Cardano.Wallet.Api.Types.ApiByronWallet
 instance Data.Aeson.Types.FromJSON.FromJSON Cardano.Wallet.Api.Types.ApiByronWalletBalance

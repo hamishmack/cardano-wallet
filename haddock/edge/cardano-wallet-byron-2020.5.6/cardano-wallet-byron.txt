@@ -57,6 +57,10 @@ fromTxOut :: TxOut -> TxOut
 -- | Pluck the blockchain parameters relevant to creating transactions out
 --   of the cardano-chain update state record.
 txParametersFromUpdateState :: State -> TxParameters
+instance Cardano.Wallet.Api.Types.EncodeAddress 'Cardano.Wallet.Primitive.AddressDerivation.Mainnet
+instance Cardano.Wallet.Api.Types.EncodeAddress ('Cardano.Wallet.Primitive.AddressDerivation.Testnet pm)
+instance Cardano.Wallet.Api.Types.DecodeAddress 'Cardano.Wallet.Primitive.AddressDerivation.Mainnet
+instance GHC.TypeNats.KnownNat pm => Cardano.Wallet.Api.Types.DecodeAddress ('Cardano.Wallet.Primitive.AddressDerivation.Testnet pm)
 
 
 -- | Network Layer for talking to Haskell re-written nodes.
