@@ -4849,9 +4849,9 @@ ApiWalletDelegationNext :: !ApiWalletDelegationStatus -> !Maybe (ApiT PoolId) ->
 data ApiPoolId
 ApiPoolIdPlaceholder :: ApiPoolId
 ApiPoolId :: PoolId -> ApiPoolId
-data ApiWalletMigrationPostData (n :: NetworkDiscriminant)
-ApiWalletMigrationPostData :: !ApiT (Passphrase "lenient") -> ![(ApiT Address, Proxy n)] -> ApiWalletMigrationPostData
-[$sel:passphrase:ApiWalletMigrationPostData] :: ApiWalletMigrationPostData -> !ApiT (Passphrase "lenient")
+data ApiWalletMigrationPostData (n :: NetworkDiscriminant) (s :: Symbol)
+ApiWalletMigrationPostData :: !ApiT (Passphrase s) -> ![(ApiT Address, Proxy n)] -> ApiWalletMigrationPostData
+[$sel:passphrase:ApiWalletMigrationPostData] :: ApiWalletMigrationPostData -> !ApiT (Passphrase s)
 [$sel:addresses:ApiWalletMigrationPostData] :: ApiWalletMigrationPostData -> ![(ApiT Address, Proxy n)]
 newtype ApiWalletMigrationInfo
 ApiWalletMigrationInfo :: Quantity "lovelace" Natural -> ApiWalletMigrationInfo
@@ -4968,7 +4968,7 @@ type family ApiSelectCoinsDataT (n :: k) :: *
 type family ApiTransactionT (n :: k) :: *
 type family PostTransactionDataT (n :: k) :: *
 type family PostTransactionFeeDataT (n :: k) :: *
-type family ApiWalletMigrationPostDataT (n :: k) :: *
+type family ApiWalletMigrationPostDataT (n :: k1) (s :: k2) :: *
 instance GHC.Show.Show Cardano.Wallet.Api.Types.ApiByronWallet
 instance GHC.Generics.Generic Cardano.Wallet.Api.Types.ApiByronWallet
 instance GHC.Classes.Eq Cardano.Wallet.Api.Types.ApiByronWallet
@@ -5074,9 +5074,9 @@ instance GHC.Classes.Eq Cardano.Wallet.Api.Types.ApiNetworkTip
 instance GHC.Show.Show Cardano.Wallet.Api.Types.ApiPostRandomAddressData
 instance GHC.Generics.Generic Cardano.Wallet.Api.Types.ApiPostRandomAddressData
 instance GHC.Classes.Eq Cardano.Wallet.Api.Types.ApiPostRandomAddressData
-instance GHC.Show.Show (Cardano.Wallet.Api.Types.ApiWalletMigrationPostData n)
-instance GHC.Generics.Generic (Cardano.Wallet.Api.Types.ApiWalletMigrationPostData n)
-instance GHC.Classes.Eq (Cardano.Wallet.Api.Types.ApiWalletMigrationPostData n)
+instance GHC.Show.Show (Cardano.Wallet.Api.Types.ApiWalletMigrationPostData n s)
+instance GHC.Generics.Generic (Cardano.Wallet.Api.Types.ApiWalletMigrationPostData n s)
+instance GHC.Classes.Eq (Cardano.Wallet.Api.Types.ApiWalletMigrationPostData n s)
 instance GHC.Base.Functor Cardano.Wallet.Api.Types.ApiT
 instance GHC.Classes.Eq a => GHC.Classes.Eq (Cardano.Wallet.Api.Types.ApiT a)
 instance GHC.Show.Show a => GHC.Show.Show (Cardano.Wallet.Api.Types.ApiT a)
@@ -5140,7 +5140,7 @@ instance Cardano.Wallet.Api.Types.DecodeAddress n => Data.Aeson.Types.FromJSON.F
 instance Cardano.Wallet.Api.Types.DecodeAddress t => Data.Aeson.Types.FromJSON.FromJSON (Cardano.Wallet.Api.Types.PostTransactionData t)
 instance Cardano.Wallet.Api.Types.DecodeAddress t => Data.Aeson.Types.FromJSON.FromJSON (Cardano.Wallet.Api.Types.PostTransactionFeeData t)
 instance Cardano.Wallet.Api.Types.DecodeAddress n => Data.Aeson.Types.FromJSON.FromJSON (Cardano.Wallet.Api.Types.ApiTransaction n)
-instance Cardano.Wallet.Api.Types.DecodeAddress n => Data.Aeson.Types.FromJSON.FromJSON (Cardano.Wallet.Api.Types.ApiWalletMigrationPostData n)
+instance (Cardano.Wallet.Api.Types.DecodeAddress n, Cardano.Wallet.Primitive.AddressDerivation.PassphraseMaxLength s, Cardano.Wallet.Primitive.AddressDerivation.PassphraseMinLength s) => Data.Aeson.Types.FromJSON.FromJSON (Cardano.Wallet.Api.Types.ApiWalletMigrationPostData n s)
 instance Cardano.Wallet.Api.Types.DecodeAddress n => Data.Aeson.Types.FromJSON.FromJSON (Cardano.Wallet.Api.Types.ApiTxInput n)
 instance Cardano.Wallet.Api.Types.EncodeAddress n => Web.Internal.HttpApiData.ToHttpApiData (Cardano.Wallet.Api.Types.ApiT Cardano.Wallet.Primitive.Types.Address, Data.Proxy.Proxy n)
 instance Cardano.Wallet.Api.Types.EncodeAddress n => Data.Aeson.Types.ToJSON.ToJSON (Cardano.Wallet.Api.Types.ApiAddress n)
@@ -5151,7 +5151,7 @@ instance Cardano.Wallet.Api.Types.EncodeAddress n => Data.Aeson.Types.ToJSON.ToJ
 instance Cardano.Wallet.Api.Types.EncodeAddress t => Data.Aeson.Types.ToJSON.ToJSON (Cardano.Wallet.Api.Types.PostTransactionData t)
 instance Cardano.Wallet.Api.Types.EncodeAddress t => Data.Aeson.Types.ToJSON.ToJSON (Cardano.Wallet.Api.Types.PostTransactionFeeData t)
 instance Cardano.Wallet.Api.Types.EncodeAddress n => Data.Aeson.Types.ToJSON.ToJSON (Cardano.Wallet.Api.Types.ApiTransaction n)
-instance Cardano.Wallet.Api.Types.EncodeAddress n => Data.Aeson.Types.ToJSON.ToJSON (Cardano.Wallet.Api.Types.ApiWalletMigrationPostData n)
+instance Cardano.Wallet.Api.Types.EncodeAddress n => Data.Aeson.Types.ToJSON.ToJSON (Cardano.Wallet.Api.Types.ApiWalletMigrationPostData n s)
 instance Cardano.Wallet.Api.Types.EncodeAddress n => Data.Aeson.Types.ToJSON.ToJSON (Cardano.Wallet.Api.Types.ApiTxInput n)
 instance Data.Aeson.Types.FromJSON.FromJSON Cardano.Wallet.Api.Types.ApiByronWallet
 instance Data.Aeson.Types.ToJSON.ToJSON Cardano.Wallet.Api.Types.ApiByronWallet
@@ -6046,7 +6046,7 @@ instance Cardano.BM.Data.Tracer.HasPrivacyAnnotation (Cardano.Wallet.Registry.Wo
 instance Cardano.BM.Data.Tracer.HasSeverityAnnotation msg => Cardano.BM.Data.Tracer.HasSeverityAnnotation (Cardano.Wallet.Registry.WorkerLog key msg)
 
 module Cardano.Wallet.Api
-type Api n = Wallets :<|> Addresses n :<|> CoinSelections n :<|> Transactions n :<|> StakePools n :<|> ByronWallets :<|> ByronAddresses n :<|> ByronTransactions n :<|> ByronMigrations n :<|> Network :<|> Proxy_
+type Api n = Wallets :<|> Addresses n :<|> CoinSelections n :<|> Transactions n :<|> ShelleyMigrations n :<|> StakePools n :<|> ByronWallets :<|> ByronAddresses n :<|> ByronTransactions n :<|> ByronMigrations n :<|> Network :<|> Proxy_
 type ApiV2 n = "v2" :> Api n
 type family PostData wallet :: *
 type Wallets = DeleteWallet :<|> GetWallet :<|> ListWallets :<|> PostWallet :<|> PutWallet :<|> PutWalletPassphrase :<|> GetUTxOsStatistics
@@ -6122,6 +6122,15 @@ type QuitStakePool n = "stake-pools" :> "*" :> "wallets" :> Capture "walletId" (
 -- | 
 --   <a>https://input-output-hk.github.io/cardano-wallet/api/#operation/getDelegationFee</a>
 type DelegationFee = "wallets" :> Capture "walletId" (ApiT WalletId) :> "delegation-fees" :> Get '[JSON] ApiFee
+type ShelleyMigrations n = GetShelleyWalletMigrationInfo :<|> MigrateShelleyWallet n
+
+-- | 
+--   <a>https://input-output-hk.github.io/cardano-wallet/api/#operation/migrateShelleyWallet</a>
+type MigrateShelleyWallet n = "wallets" :> Capture "walletId" (ApiT WalletId) :> "migrations" :> ReqBody '[JSON] (ApiWalletMigrationPostDataT n "raw") :> PostAccepted '[JSON] [ApiTransactionT n]
+
+-- | 
+--   <a>https://input-output-hk.github.io/cardano-wallet/api/#operation/getShelleyWalletMigrationInfo</a>
+type GetShelleyWalletMigrationInfo = "wallets" :> Capture "walletId" (ApiT WalletId) :> "migrations" :> Get '[JSON] ApiWalletMigrationInfo
 type ByronWallets = PostByronWallet :<|> DeleteByronWallet :<|> GetByronWallet :<|> ListByronWallets :<|> PutByronWallet :<|> GetByronUTxOsStatistics :<|> PutByronWalletPassphrase
 
 -- | 
@@ -6181,7 +6190,7 @@ type ByronMigrations n = GetByronWalletMigrationInfo :<|> MigrateByronWallet n
 
 -- | 
 --   <a>https://input-output-hk.github.io/cardano-wallet/api/#operation/migrateByronWallet</a>
-type MigrateByronWallet n = "byron-wallets" :> Capture "walletId" (ApiT WalletId) :> "migrations" :> ReqBody '[JSON] (ApiWalletMigrationPostDataT n) :> PostAccepted '[JSON] [ApiTransactionT n]
+type MigrateByronWallet n = "byron-wallets" :> Capture "walletId" (ApiT WalletId) :> "migrations" :> ReqBody '[JSON] (ApiWalletMigrationPostDataT n "lenient") :> PostAccepted '[JSON] [ApiTransactionT n]
 
 -- | 
 --   <a>https://input-output-hk.github.io/cardano-wallet/api/#operation/getByronWalletMigrationInfo</a>
@@ -6512,7 +6521,7 @@ listAddresses :: forall ctx s t k n. (ctx ~ ApiLayer s t k, IsOurs s Address, Co
 listPools :: LiftHandler e => StakePoolLayer e IO -> Handler [ApiStakePool]
 listTransactions :: forall ctx s t k n. ctx ~ ApiLayer s t k => ctx -> ApiT WalletId -> Maybe Iso8601Time -> Maybe Iso8601Time -> Maybe (ApiT SortOrder) -> Handler [ApiTransaction n]
 listWallets :: forall ctx s t k apiWallet. ctx ~ ApiLayer s t k => ctx -> MkApiWallet ctx s apiWallet -> Handler [(apiWallet, UTCTime)]
-migrateWallet :: forall s t k n. IsOwned s k => ApiLayer s t k -> ApiT WalletId -> ApiWalletMigrationPostData n -> Handler [ApiTransaction n]
+migrateWallet :: forall s t k n p. IsOwned s k => ApiLayer s t k -> ApiT WalletId -> ApiWalletMigrationPostData n p -> Handler [ApiTransaction n]
 postExternalTransaction :: forall ctx s t k. ctx ~ ApiLayer s t k => ctx -> PostExternalTransactionData -> Handler ApiTxId
 postIcarusWallet :: forall ctx s t k n. (ctx ~ ApiLayer s t k, s ~ SeqState n k, k ~ IcarusKey, HasWorkerRegistry s k ctx, PaymentAddress n IcarusKey) => ctx -> ByronWalletPostData '[15] -> Handler ApiByronWallet
 postLedgerWallet :: forall ctx s t k n. (ctx ~ ApiLayer s t k, s ~ SeqState n k, k ~ IcarusKey, HasWorkerRegistry s k ctx, PaymentAddress n IcarusKey) => ctx -> ByronWalletPostData '[12, 15, 18, 21, 24] -> Handler ApiByronWallet

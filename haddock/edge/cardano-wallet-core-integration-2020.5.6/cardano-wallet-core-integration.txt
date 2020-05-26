@@ -479,7 +479,7 @@ module Test.Integration.Scenario.API.Byron.Transactions
 spec :: forall n t. DecodeAddress n => SpecWith (Context t)
 
 module Test.Integration.Scenario.API.Byron.Wallets
-spec :: forall n t. DecodeAddress n => SpecWith (Context t)
+spec :: forall n t. (DecodeAddress n, EncodeAddress n, PaymentAddress n ByronKey) => SpecWith (Context t)
 
 module Test.Integration.Scenario.API.Network
 spec :: forall t. SpecWith (Context t)

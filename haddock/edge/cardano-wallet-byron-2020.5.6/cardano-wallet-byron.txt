@@ -120,7 +120,7 @@ instance Cardano.Wallet.Byron.Transaction.Size.MaxSizeOf Cardano.Wallet.Primitiv
 
 -- | Working with Byron transactions.
 module Cardano.Wallet.Byron.Transaction
-newTransactionLayer :: forall (n :: NetworkDiscriminant) k t. (t ~ IO Byron, WalletKey k, MaxSizeOf Address n k) => Proxy n -> ProtocolMagic -> TransactionLayer t k
+newTransactionLayer :: forall (n :: NetworkDiscriminant) k t. (t ~ IO Byron, WalletKey k, MaxSizeOf Address n ByronKey) => Proxy n -> ProtocolMagic -> TransactionLayer t k
 
 -- | Construct a ("fake") genesis block from genesis transaction outputs.
 --   
