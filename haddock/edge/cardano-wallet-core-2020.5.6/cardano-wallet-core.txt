@@ -479,14 +479,14 @@ SealedTx :: ByteString -> SealedTx
 -- | Full expanded and resolved information about a transaction, suitable
 --   for presentation to the user.
 data TransactionInfo
-TransactionInfo :: !Hash "Tx" -> ![(TxIn, Maybe TxOut)] -> ![TxOut] -> !TxMeta -> Quantity "block" Natural -> UTCTime -> TransactionInfo
+TransactionInfo :: !Hash "Tx" -> ![(TxIn, Coin, Maybe TxOut)] -> ![TxOut] -> !TxMeta -> Quantity "block" Natural -> UTCTime -> TransactionInfo
 
 -- | Transaction ID of this transaction
 [$sel:txInfoId:TransactionInfo] :: TransactionInfo -> !Hash "Tx"
 
 -- | Transaction inputs and (maybe) corresponding outputs of the source.
 --   Source information can only be provided for outgoing payments.
-[$sel:txInfoInputs:TransactionInfo] :: TransactionInfo -> ![(TxIn, Maybe TxOut)]
+[$sel:txInfoInputs:TransactionInfo] :: TransactionInfo -> ![(TxIn, Coin, Maybe TxOut)]
 
 -- | Payment destination.
 [$sel:txInfoOutputs:TransactionInfo] :: TransactionInfo -> ![TxOut]
@@ -512,6 +512,12 @@ txIns :: Set Tx -> Set TxIn
 -- | True if the given tuple refers to a pending transaction
 isPending :: TxMeta -> Bool
 inputs :: Tx -> [TxIn]
+
+-- | Reconstruct a transaction info from a transaction.
+fromTransactionInfo :: TransactionInfo -> Tx
+
+-- | Drop time-specific information
+toTxHistory :: TransactionInfo -> (Tx, TxMeta)
 
 -- | Representation of Cardano addresses. Addresses are basically a
 --   human-friendly representation of public keys. Historically in Cardano,
@@ -1153,6 +1159,7 @@ instance GHC.Classes.Eq Cardano.Wallet.Primitive.Types.UnsignedTx
 instance GHC.Classes.Ord Cardano.Wallet.Primitive.Types.TransactionInfo
 instance GHC.Classes.Eq Cardano.Wallet.Primitive.Types.TransactionInfo
 instance GHC.Show.Show Cardano.Wallet.Primitive.Types.TransactionInfo
+instance GHC.Generics.Generic Cardano.Wallet.Primitive.Types.TransactionInfo
 instance GHC.Base.Monoid Cardano.Wallet.Primitive.Types.UTxO
 instance GHC.Base.Semigroup Cardano.Wallet.Primitive.Types.UTxO
 instance GHC.Classes.Ord Cardano.Wallet.Primitive.Types.UTxO
@@ -1364,6 +1371,7 @@ instance Control.DeepSeq.NFData Cardano.Wallet.Primitive.Types.BlockHeader
 instance Formatting.Buildable.Buildable Cardano.Wallet.Primitive.Types.BlockHeader
 instance Control.DeepSeq.NFData Cardano.Wallet.Primitive.Types.Tx
 instance Formatting.Buildable.Buildable Cardano.Wallet.Primitive.Types.Tx
+instance Control.DeepSeq.NFData Cardano.Wallet.Primitive.Types.TransactionInfo
 instance Control.DeepSeq.NFData Cardano.Wallet.Primitive.Types.UTxO
 instance Cardano.Wallet.Primitive.Types.Dom Cardano.Wallet.Primitive.Types.UTxO
 instance Formatting.Buildable.Buildable Cardano.Wallet.Primitive.Types.UTxO
@@ -3218,102 +3226,6 @@ instance Control.DeepSeq.NFData s => Control.DeepSeq.NFData (Cardano.Wallet.Prim
 instance Formatting.Buildable.Buildable s => Formatting.Buildable.Buildable (Cardano.Wallet.Primitive.Model.Wallet s)
 
 
--- | An implementation of the wallet database using only pure functions.
---   
---   These functions and types model the behaviour of the SQLite database
---   backend, and are used for QuickCheck state machine testing, and the
---   MVar database backend.
-module Cardano.Wallet.DB.Model
-
--- | Model database, parameterised by the wallet ID type, the wallet AD
---   state type, the target backend, and the private key type.
---   
---   Tne type parameters exist so that simpler mock types can be used in
---   place of actual wallet types.
-data Database wid s xprv
-Database :: !Map wid (WalletDatabase s xprv) -> Map (Hash "Tx") Tx -> Database wid s xprv
-
--- | Wallet-related information.
-[$sel:wallets:Database] :: Database wid s xprv -> !Map wid (WalletDatabase s xprv)
-
--- | In the database, transactions are global and not associated with any
---   particular wallet.
-[$sel:txs:Database] :: Database wid s xprv -> Map (Hash "Tx") Tx
-
--- | Model database record for a single wallet.
-data WalletDatabase s xprv
-WalletDatabase :: !Map SlotId (Wallet s) -> !Map SlotId (Maybe PoolId) -> !WalletMetadata -> !Map (Hash "Tx") TxMeta -> !Maybe xprv -> !TxParameters -> WalletDatabase s xprv
-[$sel:checkpoints:WalletDatabase] :: WalletDatabase s xprv -> !Map SlotId (Wallet s)
-[$sel:certificates:WalletDatabase] :: WalletDatabase s xprv -> !Map SlotId (Maybe PoolId)
-[$sel:metadata:WalletDatabase] :: WalletDatabase s xprv -> !WalletMetadata
-[$sel:txHistory:WalletDatabase] :: WalletDatabase s xprv -> !Map (Hash "Tx") TxMeta
-[$sel:xprv:WalletDatabase] :: WalletDatabase s xprv -> !Maybe xprv
-[$sel:txParameters:WalletDatabase] :: WalletDatabase s xprv -> !TxParameters
-
--- | Produces an empty model database.
-emptyDatabase :: Ord wid => Database wid s xprv
-
--- | Shorthand for the readTxHistory result type.
-type TxHistory = [(Tx, TxMeta)]
-
--- | Shorthand for the putTxHistory argument type.
-type TxHistoryMap = Map (Hash "Tx") (Tx, TxMeta)
-
--- | Apply optional filters on slotId and sort using the default sort order
---   (first time/slotId, then by TxId) to a <a>TxHistory</a>.
-filterTxHistory :: SortOrder -> Range SlotId -> TxHistory -> TxHistory
-
--- | A database model operation, which is a function that takes a database
---   and returns: * a value, which is a query of the database, or an error;
---   and * a (possibly) modified database.
-type ModelOp wid s xprv a = Database wid s xprv -> (Either (Err wid) a, Database wid s xprv)
-
--- | All of the possible errors that any of the model database functions
---   might return.
-data Err wid
-NoSuchWallet :: wid -> Err wid
-WalletAlreadyExists :: wid -> Err wid
-CannotRemovePendingTx :: ErrErasePendingTx wid -> Err wid
-data ErrErasePendingTx wid
-ErrErasePendingTxNoSuchWallet :: wid -> ErrErasePendingTx wid
-ErrErasePendingTxNoTx :: Hash "Tx" -> ErrErasePendingTx wid
-ErrErasePendingTxNoPendingTx :: Hash "Tx" -> ErrErasePendingTx wid
-mCleanDB :: Ord wid => ModelOp wid s xprv ()
-mInitializeWallet :: forall wid s xprv. Ord wid => wid -> Wallet s -> WalletMetadata -> TxHistory -> TxParameters -> ModelOp wid s xprv ()
-mRemoveWallet :: Ord wid => wid -> ModelOp wid s xprv ()
-mListWallets :: Ord wid => ModelOp wid s xprv [wid]
-mPutCheckpoint :: Ord wid => wid -> Wallet s -> ModelOp wid s xprv ()
-mReadCheckpoint :: Ord wid => wid -> ModelOp wid s xprv (Maybe (Wallet s))
-mListCheckpoints :: Ord wid => wid -> ModelOp wid s xprv [BlockHeader]
-mRollbackTo :: Ord wid => wid -> SlotId -> ModelOp wid s xprv SlotId
-mPutWalletMeta :: Ord wid => wid -> WalletMetadata -> ModelOp wid s xprv ()
-mReadWalletMeta :: Ord wid => wid -> ModelOp wid s xprv (Maybe WalletMetadata)
-mPutDelegationCertificate :: Ord wid => wid -> DelegationCertificate -> SlotId -> ModelOp wid s xprv ()
-mPutTxHistory :: forall wid s xprv. Ord wid => wid -> TxHistory -> ModelOp wid s xprv ()
-mReadTxHistory :: forall wid s xprv. Ord wid => wid -> SortOrder -> Range SlotId -> Maybe TxStatus -> ModelOp wid s xprv TxHistory
-mRemovePendingTx :: Ord wid => wid -> Hash "Tx" -> ModelOp wid s xprv ()
-mPutPrivateKey :: Ord wid => wid -> xprv -> ModelOp wid s xprv ()
-mReadPrivateKey :: Ord wid => wid -> ModelOp wid s xprv (Maybe xprv)
-mPutTxParameters :: Ord wid => wid -> TxParameters -> ModelOp wid s xprv ()
-mReadTxParameters :: Ord wid => wid -> ModelOp wid s xprv (Maybe TxParameters)
-instance Data.Traversable.Traversable Cardano.Wallet.DB.Model.Err
-instance Data.Foldable.Foldable Cardano.Wallet.DB.Model.Err
-instance GHC.Base.Functor Cardano.Wallet.DB.Model.Err
-instance GHC.Classes.Eq wid => GHC.Classes.Eq (Cardano.Wallet.DB.Model.Err wid)
-instance GHC.Show.Show wid => GHC.Show.Show (Cardano.Wallet.DB.Model.Err wid)
-instance Data.Traversable.Traversable Cardano.Wallet.DB.Model.ErrErasePendingTx
-instance Data.Foldable.Foldable Cardano.Wallet.DB.Model.ErrErasePendingTx
-instance GHC.Base.Functor Cardano.Wallet.DB.Model.ErrErasePendingTx
-instance GHC.Classes.Eq wid => GHC.Classes.Eq (Cardano.Wallet.DB.Model.ErrErasePendingTx wid)
-instance GHC.Show.Show wid => GHC.Show.Show (Cardano.Wallet.DB.Model.ErrErasePendingTx wid)
-instance GHC.Generics.Generic (Cardano.Wallet.DB.Model.Database wid s xprv)
-instance GHC.Generics.Generic (Cardano.Wallet.DB.Model.WalletDatabase s xprv)
-instance (GHC.Classes.Eq s, GHC.Classes.Eq xprv) => GHC.Classes.Eq (Cardano.Wallet.DB.Model.WalletDatabase s xprv)
-instance (GHC.Show.Show s, GHC.Show.Show xprv) => GHC.Show.Show (Cardano.Wallet.DB.Model.WalletDatabase s xprv)
-instance (GHC.Show.Show wid, GHC.Show.Show s, GHC.Show.Show xprv) => GHC.Show.Show (Cardano.Wallet.DB.Model.Database wid s xprv)
-instance (GHC.Classes.Eq wid, GHC.Classes.Eq xprv, GHC.Classes.Eq s) => GHC.Classes.Eq (Cardano.Wallet.DB.Model.Database wid s xprv)
-
-
 -- | Provides the API of Coin Selection algorithm and Fee Calculation This
 --   module contains the implementation of adjusting coin selection for a
 --   fee. The sender pays for the fee and additional inputs are picked
@@ -3796,6 +3708,102 @@ instance GHC.Exception.Type.Exception Cardano.Wallet.Network.ErrCurrentNodeTip
 instance GHC.Exception.Type.Exception Cardano.Wallet.Network.ErrNetworkUnavailable
 
 
+-- | An implementation of the wallet database using only pure functions.
+--   
+--   These functions and types model the behaviour of the SQLite database
+--   backend, and are used for QuickCheck state machine testing, and the
+--   MVar database backend.
+module Cardano.Wallet.DB.Model
+
+-- | Model database, parameterised by the wallet ID type, the wallet AD
+--   state type, the target backend, and the private key type.
+--   
+--   Tne type parameters exist so that simpler mock types can be used in
+--   place of actual wallet types.
+data Database wid s xprv
+Database :: !Map wid (WalletDatabase s xprv) -> Map (Hash "Tx") Tx -> Database wid s xprv
+
+-- | Wallet-related information.
+[$sel:wallets:Database] :: Database wid s xprv -> !Map wid (WalletDatabase s xprv)
+
+-- | In the database, transactions are global and not associated with any
+--   particular wallet.
+[$sel:txs:Database] :: Database wid s xprv -> Map (Hash "Tx") Tx
+
+-- | Model database record for a single wallet.
+data WalletDatabase s xprv
+WalletDatabase :: !Map SlotId (Wallet s) -> !Map SlotId (Maybe PoolId) -> !WalletMetadata -> !Map (Hash "Tx") TxMeta -> !Maybe xprv -> !TxParameters -> WalletDatabase s xprv
+[$sel:checkpoints:WalletDatabase] :: WalletDatabase s xprv -> !Map SlotId (Wallet s)
+[$sel:certificates:WalletDatabase] :: WalletDatabase s xprv -> !Map SlotId (Maybe PoolId)
+[$sel:metadata:WalletDatabase] :: WalletDatabase s xprv -> !WalletMetadata
+[$sel:txHistory:WalletDatabase] :: WalletDatabase s xprv -> !Map (Hash "Tx") TxMeta
+[$sel:xprv:WalletDatabase] :: WalletDatabase s xprv -> !Maybe xprv
+[$sel:txParameters:WalletDatabase] :: WalletDatabase s xprv -> !TxParameters
+
+-- | Produces an empty model database.
+emptyDatabase :: Ord wid => Database wid s xprv
+
+-- | Shorthand for the readTxHistory result type.
+type TxHistory = [(Tx, TxMeta)]
+
+-- | Shorthand for the putTxHistory argument type.
+type TxHistoryMap = Map (Hash "Tx") (Tx, TxMeta)
+
+-- | Apply optional filters on slotId and sort using the default sort order
+--   (first time/slotId, then by TxId) to a <a>TxHistory</a>.
+filterTxHistory :: SortOrder -> Range SlotId -> TxHistory -> TxHistory
+
+-- | A database model operation, which is a function that takes a database
+--   and returns: * a value, which is a query of the database, or an error;
+--   and * a (possibly) modified database.
+type ModelOp wid s xprv a = Database wid s xprv -> (Either (Err wid) a, Database wid s xprv)
+
+-- | All of the possible errors that any of the model database functions
+--   might return.
+data Err wid
+NoSuchWallet :: wid -> Err wid
+WalletAlreadyExists :: wid -> Err wid
+CannotRemovePendingTx :: ErrErasePendingTx wid -> Err wid
+data ErrErasePendingTx wid
+ErrErasePendingTxNoSuchWallet :: wid -> ErrErasePendingTx wid
+ErrErasePendingTxNoTx :: Hash "Tx" -> ErrErasePendingTx wid
+ErrErasePendingTxNoPendingTx :: Hash "Tx" -> ErrErasePendingTx wid
+mCleanDB :: Ord wid => ModelOp wid s xprv ()
+mInitializeWallet :: forall wid s xprv. Ord wid => wid -> Wallet s -> WalletMetadata -> TxHistory -> TxParameters -> ModelOp wid s xprv ()
+mRemoveWallet :: Ord wid => wid -> ModelOp wid s xprv ()
+mListWallets :: Ord wid => ModelOp wid s xprv [wid]
+mPutCheckpoint :: Ord wid => wid -> Wallet s -> ModelOp wid s xprv ()
+mReadCheckpoint :: Ord wid => wid -> ModelOp wid s xprv (Maybe (Wallet s))
+mListCheckpoints :: Ord wid => wid -> ModelOp wid s xprv [BlockHeader]
+mRollbackTo :: Ord wid => wid -> SlotId -> ModelOp wid s xprv SlotId
+mPutWalletMeta :: Ord wid => wid -> WalletMetadata -> ModelOp wid s xprv ()
+mReadWalletMeta :: Ord wid => wid -> ModelOp wid s xprv (Maybe WalletMetadata)
+mPutDelegationCertificate :: Ord wid => wid -> DelegationCertificate -> SlotId -> ModelOp wid s xprv ()
+mPutTxHistory :: forall wid s xprv. Ord wid => wid -> TxHistory -> ModelOp wid s xprv ()
+mReadTxHistory :: forall wid s xprv. Ord wid => wid -> SortOrder -> Range SlotId -> Maybe TxStatus -> ModelOp wid s xprv [TransactionInfo]
+mRemovePendingTx :: Ord wid => wid -> Hash "Tx" -> ModelOp wid s xprv ()
+mPutPrivateKey :: Ord wid => wid -> xprv -> ModelOp wid s xprv ()
+mReadPrivateKey :: Ord wid => wid -> ModelOp wid s xprv (Maybe xprv)
+mPutTxParameters :: Ord wid => wid -> TxParameters -> ModelOp wid s xprv ()
+mReadTxParameters :: Ord wid => wid -> ModelOp wid s xprv (Maybe TxParameters)
+instance Data.Traversable.Traversable Cardano.Wallet.DB.Model.Err
+instance Data.Foldable.Foldable Cardano.Wallet.DB.Model.Err
+instance GHC.Base.Functor Cardano.Wallet.DB.Model.Err
+instance GHC.Classes.Eq wid => GHC.Classes.Eq (Cardano.Wallet.DB.Model.Err wid)
+instance GHC.Show.Show wid => GHC.Show.Show (Cardano.Wallet.DB.Model.Err wid)
+instance Data.Traversable.Traversable Cardano.Wallet.DB.Model.ErrErasePendingTx
+instance Data.Foldable.Foldable Cardano.Wallet.DB.Model.ErrErasePendingTx
+instance GHC.Base.Functor Cardano.Wallet.DB.Model.ErrErasePendingTx
+instance GHC.Classes.Eq wid => GHC.Classes.Eq (Cardano.Wallet.DB.Model.ErrErasePendingTx wid)
+instance GHC.Show.Show wid => GHC.Show.Show (Cardano.Wallet.DB.Model.ErrErasePendingTx wid)
+instance GHC.Generics.Generic (Cardano.Wallet.DB.Model.Database wid s xprv)
+instance GHC.Generics.Generic (Cardano.Wallet.DB.Model.WalletDatabase s xprv)
+instance (GHC.Classes.Eq s, GHC.Classes.Eq xprv) => GHC.Classes.Eq (Cardano.Wallet.DB.Model.WalletDatabase s xprv)
+instance (GHC.Show.Show s, GHC.Show.Show xprv) => GHC.Show.Show (Cardano.Wallet.DB.Model.WalletDatabase s xprv)
+instance (GHC.Show.Show wid, GHC.Show.Show s, GHC.Show.Show xprv) => GHC.Show.Show (Cardano.Wallet.DB.Model.Database wid s xprv)
+instance (GHC.Classes.Eq wid, GHC.Classes.Eq xprv, GHC.Classes.Eq s) => GHC.Classes.Eq (Cardano.Wallet.DB.Model.Database wid s xprv)
+
+
 -- | Database / Persistence layer for the wallet backend. This is where we
 --   define the interface allowing us to store and fetch various data on
 --   our wallets.
@@ -3837,7 +3845,7 @@ module Cardano.Wallet.DB
 --   <tt>let</tt> binding here as the semantic for those are slightly
 --   different: we really need a pattern match here!
 data DBLayer m s k
-DBLayer :: (PrimaryKey WalletId -> Wallet s -> WalletMetadata -> [(Tx, TxMeta)] -> TxParameters -> ExceptT ErrWalletAlreadyExists stm ()) -> (PrimaryKey WalletId -> ExceptT ErrNoSuchWallet stm ()) -> stm [PrimaryKey WalletId] -> (PrimaryKey WalletId -> Wallet s -> ExceptT ErrNoSuchWallet stm ()) -> (PrimaryKey WalletId -> stm (Maybe (Wallet s))) -> (PrimaryKey WalletId -> stm [BlockHeader]) -> (PrimaryKey WalletId -> WalletMetadata -> ExceptT ErrNoSuchWallet stm ()) -> (PrimaryKey WalletId -> stm (Maybe WalletMetadata)) -> (PrimaryKey WalletId -> DelegationCertificate -> SlotId -> ExceptT ErrNoSuchWallet stm ()) -> (PrimaryKey WalletId -> [(Tx, TxMeta)] -> ExceptT ErrNoSuchWallet stm ()) -> (PrimaryKey WalletId -> SortOrder -> Range SlotId -> Maybe TxStatus -> stm [(Tx, TxMeta)]) -> (PrimaryKey WalletId -> Hash "Tx" -> ExceptT ErrRemovePendingTx stm ()) -> (PrimaryKey WalletId -> (k  'RootK XPrv, Hash "encryption") -> ExceptT ErrNoSuchWallet stm ()) -> (PrimaryKey WalletId -> stm (Maybe (k  'RootK XPrv, Hash "encryption"))) -> (PrimaryKey WalletId -> TxParameters -> ExceptT ErrNoSuchWallet stm ()) -> (PrimaryKey WalletId -> stm (Maybe TxParameters)) -> (PrimaryKey WalletId -> SlotId -> ExceptT ErrNoSuchWallet stm SlotId) -> (PrimaryKey WalletId -> ExceptT ErrNoSuchWallet stm ()) -> (forall a. stm a -> m a) -> DBLayer m s k
+DBLayer :: (PrimaryKey WalletId -> Wallet s -> WalletMetadata -> [(Tx, TxMeta)] -> TxParameters -> ExceptT ErrWalletAlreadyExists stm ()) -> (PrimaryKey WalletId -> ExceptT ErrNoSuchWallet stm ()) -> stm [PrimaryKey WalletId] -> (PrimaryKey WalletId -> Wallet s -> ExceptT ErrNoSuchWallet stm ()) -> (PrimaryKey WalletId -> stm (Maybe (Wallet s))) -> (PrimaryKey WalletId -> stm [BlockHeader]) -> (PrimaryKey WalletId -> WalletMetadata -> ExceptT ErrNoSuchWallet stm ()) -> (PrimaryKey WalletId -> stm (Maybe WalletMetadata)) -> (PrimaryKey WalletId -> DelegationCertificate -> SlotId -> ExceptT ErrNoSuchWallet stm ()) -> (PrimaryKey WalletId -> [(Tx, TxMeta)] -> ExceptT ErrNoSuchWallet stm ()) -> (PrimaryKey WalletId -> SortOrder -> Range SlotId -> Maybe TxStatus -> stm [TransactionInfo]) -> (PrimaryKey WalletId -> Hash "Tx" -> ExceptT ErrRemovePendingTx stm ()) -> (PrimaryKey WalletId -> (k  'RootK XPrv, Hash "encryption") -> ExceptT ErrNoSuchWallet stm ()) -> (PrimaryKey WalletId -> stm (Maybe (k  'RootK XPrv, Hash "encryption"))) -> (PrimaryKey WalletId -> TxParameters -> ExceptT ErrNoSuchWallet stm ()) -> (PrimaryKey WalletId -> stm (Maybe TxParameters)) -> (PrimaryKey WalletId -> SlotId -> ExceptT ErrNoSuchWallet stm SlotId) -> (PrimaryKey WalletId -> ExceptT ErrNoSuchWallet stm ()) -> (forall a. stm a -> m a) -> DBLayer m s k
 
 -- | Initialize a database entry for a given wallet. <a>putCheckpoint</a>,
 --   <a>putWalletMeta</a>, <a>putTxHistory</a> or <a>putTxParameters</a>
@@ -3903,7 +3911,7 @@ DBLayer :: (PrimaryKey WalletId -> Wallet s -> WalletMetadata -> [(Tx, TxMeta)] 
 --   descending slot number.
 --   
 --   Returns an empty list if the wallet isn't found.
-[readTxHistory] :: DBLayer m s k -> PrimaryKey WalletId -> SortOrder -> Range SlotId -> Maybe TxStatus -> stm [(Tx, TxMeta)]
+[readTxHistory] :: DBLayer m s k -> PrimaryKey WalletId -> SortOrder -> Range SlotId -> Maybe TxStatus -> stm [TransactionInfo]
 
 -- | Remove a pending transaction.
 [removePendingTx] :: DBLayer m s k -> PrimaryKey WalletId -> Hash "Tx" -> ExceptT ErrRemovePendingTx stm ()
